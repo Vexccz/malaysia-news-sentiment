@@ -128,7 +128,7 @@ const TIME_OPTIONS = [
 ];
 
 // Consistent card style
-const CARD = 'bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl dark:shadow-[0_0_15px_rgba(59,130,246,0.03)]';
+const CARD = 'border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card';
 
 const Dashboard = () => {
   const { user, toggleBookmark } = useAuth();
@@ -572,10 +572,10 @@ const Dashboard = () => {
         className="mb-6 flex items-start justify-between"
       >
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">
             {user?.name ? `Welcome back, ${user.name.split(' ')[0]}` : 'Dashboard'}
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-sm text-ink-muted dark:text-ink-faint font-sans">
             Malaysia News Sentiment Analysis
           </p>
         </div>
@@ -583,7 +583,7 @@ const Dashboard = () => {
         {/* Language Toggle */}
         <button
           onClick={() => setLang(lang === 'en' ? 'ms' : 'en')}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-white dark:bg-[#1a1a1a] border-2 border-gray-200 dark:border-[#2a2a2a] rounded-xl hover:border-blue-500 dark:hover:border-blue-500 transition-colors text-gray-700 dark:text-gray-300"
+          className="text-xs font-medium uppercase tracking-wider text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-colors font-sans"
         >
           <Globe size={14} />
           <span>{lang === 'en' ? 'BM' : 'ENG'}</span>
@@ -599,7 +599,7 @@ const Dashboard = () => {
         <motion.div
           initial={{ opacity: 0, y: -5 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-4 flex items-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-2xl text-red-600 dark:text-red-400 text-sm"
+          className="mt-4 flex items-center gap-2 px-4 py-3 border-l-3 border-red-600 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 text-sm font-sans"
           role="alert"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -647,13 +647,13 @@ const Dashboard = () => {
                 )}
                 <div className="flex items-center gap-2 ml-auto flex-wrap">
                   {isHistoryView && (
-                    <div className="flex gap-0.5 bg-gray-50 dark:bg-white/5 rounded-lg p-0.5">
+                    <div className="flex items-center gap-0">
                       {TIME_OPTIONS.map(opt => (
                         <button
                           key={opt.key}
-                          className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                          className={`px-2 text-xs font-medium uppercase tracking-wider transition-colors font-sans ${
                             timeframe === opt.key 
-                              ? 'bg-white dark:bg-[#2a2a2a] text-blue-600 shadow-sm' 
+                              ? 'text-ink dark:text-paper font-bold' : 'text-ink-faint hover:text-ink-muted' 
                               : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                           }`}
                           onClick={() => { setTimeframe(opt.key); setPage(1); }}
@@ -665,26 +665,26 @@ const Dashboard = () => {
                   )}
                   {/* Desktop action buttons - icon-only for cleanliness */}
                   <div className="hidden md:flex items-center gap-1 border-l border-gray-200 dark:border-[#2a2a2a] pl-2 ml-1">
-                    <button onClick={() => setShowCustomizer(true)} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors" title="Customize">
+                    <button onClick={() => setShowCustomizer(true)} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="Customize">
                       <Settings2 size={14} />
                     </button>
-                    <button onClick={handleManualForecast} className="p-1.5 text-purple-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-500/10 rounded-lg transition-colors" title="AI Forecast">
+                    <button onClick={handleManualForecast} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="AI Forecast">
                       <Sparkles size={14} />
                     </button>
                     <ExportPPT articles={articles} distribution={distribution} sources={sources} query={currentQuery} />
-                    <button onClick={handleDownloadPDF} className="p-1.5 text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors" title="Download PDF">
+                    <button onClick={handleDownloadPDF} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="Download PDF">
                       <FileDown size={14} />
                     </button>
-                    <button onClick={handlePrint} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors" title="Print Report">
+                    <button onClick={handlePrint} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="Print Report">
                       <Printer size={14} />
                     </button>
-                    <button onClick={handleExport} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors" title="Export CSV">
+                    <button onClick={handleExport} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="Export CSV">
                       <Download size={14} />
                     </button>
                   </div>
                   {/* Mobile: only customize + AI forecast inline, rest in FAB */}
                   <div className="flex md:hidden items-center gap-1">
-                    <button onClick={() => setShowCustomizer(true)} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg transition-colors">
+                    <button onClick={() => setShowCustomizer(true)} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors">
                       <Settings2 size={14} />
                     </button>
                   </div>
