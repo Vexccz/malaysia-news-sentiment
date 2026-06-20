@@ -81,6 +81,12 @@ class ErrorBoundary extends React.Component {
             }}>
               {this.state.error?.message || 'An unexpected error occurred. This could be a temporary issue.'}
             </p>
+            {this.state.errorInfo?.componentStack && (
+              <details style={{ marginBottom: '16px', textAlign: 'left', fontSize: '11px', color: 'var(--text-400, #94a3b8)', fontFamily: 'monospace', maxHeight: '120px', overflow: 'auto', background: 'rgba(0,0,0,0.2)', padding: '8px 12px', borderRadius: '8px' }}>
+                <summary style={{ cursor: 'pointer', marginBottom: '4px' }}>Stack trace</summary>
+                <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{this.state.errorInfo.componentStack}</pre>
+              </details>
+            )}
 
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
               <button
