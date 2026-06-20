@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { getAdminStats } from '../services/api';
 import toast from 'react-hot-toast';
 import ScrollToTop from '../components/ScrollToTop';
@@ -285,29 +286,63 @@ const AdminDashboard = () => {
             </div>
 
             {/* Activity Timeline */}
-            {stats.activityTimeline?.length > 0 && (
-              <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card mb-6">
-                <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
-                  <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">Activity by Hour</h3>
-                </div>
-                <div className="px-5 py-4">
-                  <div className="flex items-end gap-1 h-28">
-                    {Array.from({ length: 24 }, (_, h) => {
-                      const entry = stats.activityTimeline.find(a => a._id === h);
-                      const count = entry?.count || 0;
-                      const maxCount = Math.max(...stats.activityTimeline.map(a => a.count), 1);
-                      const heightPct = Math.max(4, (count / maxCount) * 100);
-                      return (
-                        <div key={h} title={`${String(h).padStart(2,'0')}:00 - ${count} activities`} className="flex-1 flex flex-col items-center justify-end h-full gap-1">
-                          <div className="w-full" style={{ height: `${heightPct}%`, background: count > 0 ? '#1A1A1A' : '#E8E4DB', opacity: count > 0 ? 0.6 : 0.3 }} />
-                          {h % 6 === 0 && <span className="text-[9px] text-ink-faint font-sans">{String(h).padStart(2,'0')}</span>}
-                        </div>
-                      );
-                    })}
+            {stats.activityTimeline?.length > 0 && (() => {
+              const chartData = Array.from({ length: 24 }, (_, h) => {
+                const entry = stats.activityTimeline.find(a => a._id === h);
+                return {
+                  hour: `${String(h).padStart(2, '0')}:00`,
+                  activities: entry?.count || 0,
+                };
+              });
+              return (
+                <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card mb-6">
+                  <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+                    <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">Activity by Hour</h3>
+                    <p className="text-[11px] text-ink-faint mt-0.5 font-sans">Article analyses and user interactions over 24 hours</p>
+                  </div>
+                  <div className="px-4 py-4">
+                    <div className="h-[200px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="2 4" stroke="#E8E4DB" opacity={0.5} vertical={false} />
+                          <XAxis
+                            dataKey="hour"
+                            tick={{ fontSize: 9, fill: '#A8A59E', fontFamily: 'Inter' }}
+                            tickFormatter={(val) => val.replace(':00', '')}
+                            axisLine={{ stroke: '#E8E4DB' }}
+                            tickLine={false}
+                            interval={2}
+                          />
+                          <YAxis
+                            tick={{ fontSize: 9, fill: '#A8A59E', fontFamily: 'Inter' }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              background: '#FFFFFF',
+                              border: '1px solid #E8E4DB',
+                              borderRadius: '0',
+                              fontSize: '11px',
+                              fontFamily: 'Inter',
+                              boxShadow: 'none',
+                            }}
+                            formatter={(value) => [`${value} activities`, 'Count']}
+                            labelFormatter={(val) => val}
+                          />
+                          <Bar
+                            dataKey="activities"
+                            fill="#1A1A1A"
+                            opacity={0.5}
+                            radius={[1, 1, 0, 0]}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </motion.div>
         )}
 
