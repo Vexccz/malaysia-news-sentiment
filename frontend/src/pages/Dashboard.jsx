@@ -653,8 +653,8 @@ const Dashboard = () => {
                           key={opt.key}
                           className={`px-2 text-xs font-medium uppercase tracking-wider transition-colors font-sans ${
                             timeframe === opt.key 
-                              ? 'text-ink dark:text-paper font-bold' : 'text-ink-faint hover:text-ink-muted' 
-                              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                              ? 'text-ink dark:text-paper font-bold' 
+                              : 'text-ink-faint hover:text-ink-muted'
                           }`}
                           onClick={() => { setTimeframe(opt.key); setPage(1); }}
                         >
