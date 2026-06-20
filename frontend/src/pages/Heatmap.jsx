@@ -1,155 +1,275 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import api from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 
-// Simplified Malaysia state SVG paths (approximate boundaries)
-const STATE_PATHS = {
-  'Perlis': 'M 95 30 L 105 25 L 115 30 L 110 40 L 100 42 Z',
-  'Kedah': 'M 85 42 L 115 35 L 125 50 L 130 70 L 115 80 L 95 75 L 80 60 Z',
-  'Pulau Pinang': 'M 80 80 L 95 75 L 100 85 L 90 92 L 78 88 Z',
-  'Perak': 'M 100 80 L 130 70 L 155 85 L 160 110 L 150 130 L 125 135 L 110 120 L 95 100 Z',
-  'Kelantan': 'M 155 30 L 185 25 L 200 40 L 195 65 L 175 75 L 155 70 L 145 50 Z',
-  'Terengganu': 'M 175 75 L 200 65 L 210 90 L 205 120 L 190 130 L 170 110 L 165 85 Z',
-  'Pahang': 'M 150 100 L 170 90 L 190 110 L 200 140 L 190 170 L 165 175 L 145 160 L 140 130 Z',
-  'Selangor': 'M 110 130 L 140 125 L 145 155 L 135 170 L 115 168 L 105 150 Z',
-  'Kuala Lumpur': 'M 122 145 L 132 143 L 134 153 L 125 155 Z',
-  'Putrajaya': 'M 130 158 L 138 156 L 140 163 L 132 164 Z',
-  'Negeri Sembilan': 'M 115 170 L 140 165 L 150 180 L 140 195 L 120 192 L 110 180 Z',
-  'Melaka': 'M 115 195 L 135 192 L 140 205 L 125 210 L 112 205 Z',
-  'Johor': 'M 120 200 L 150 190 L 175 195 L 185 215 L 175 235 L 145 240 L 120 230 L 115 210 Z',
-  'Sabah': 'M 320 30 L 380 20 L 400 35 L 395 65 L 375 80 L 345 75 L 325 60 L 315 45 Z',
-  'Sarawak': 'M 250 55 L 320 40 L 345 60 L 350 85 L 330 100 L 290 105 L 260 95 L 245 75 Z',
-  'Labuan': 'M 310 42 L 318 40 L 320 47 L 313 48 Z',
+// Malaysia GeoJSON from public source
+const GEOJSON_URL = 'https://raw.githubusercontent.com/dosm-malaysia/data-open/main/datasets/geodata/administrative_1_state.geojson';
+
+// Fallback: simplified state name mapping (GeoJSON name → backend name)
+const STATE_NAME_MAP = {
+  'Johor': 'Johor',
+  'Kedah': 'Kedah',
+  'Kelantan': 'Kelantan',
+  'Melaka': 'Melaka',
+  'Negeri Sembilan': 'Negeri Sembilan',
+  'Pahang': 'Pahang',
+  'Perak': 'Perak',
+  'Perlis': 'Perlis',
+  'Pulau Pinang': 'Pulau Pinang',
+  'Sabah': 'Sabah',
+  'Sarawak': 'Sarawak',
+  'Selangor': 'Selangor',
+  'Terengganu': 'Terengganu',
+  'W.P. Kuala Lumpur': 'Kuala Lumpur',
+  'W.P. Putrajaya': 'Putrajaya',
+  'W.P. Labuan': 'Labuan',
 };
 
-const getSentimentColor = (value, isDark) => {
-  if (value > 0.3) return isDark ? '#22c55e' : '#16a34a';
-  if (value > 0.1) return isDark ? '#4ade80' : '#22c55e';
-  if (value > -0.1) return isDark ? '#eab308' : '#ca8a04';
-  if (value > -0.3) return isDark ? '#f97316' : '#ea580c';
-  return isDark ? '#ef4444' : '#dc2626';
+const getSentimentColor = (val) => {
+  if (val === null || val === undefined) return '#6b7280';
+  if (val > 0.3) return '#16a34a';
+  if (val > 0.1) return '#22c55e';
+  if (val > -0.1) return '#eab308';
+  if (val > -0.3) return '#f97316';
+  return '#ef4444';
+};
+
+const getSentimentLabel = (val) => {
+  if (val === null || val === undefined) return 'No data';
+  if (val > 0.1) return 'Positive';
+  if (val > -0.1) return 'Neutral';
+  return 'Negative';
 };
 
 const Heatmap = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [dataLoading, setDataLoading] = useState(false);
   const [days, setDays] = useState(7);
-  const [hoveredState, setHoveredState] = useState(null);
   const [selectedState, setSelectedState] = useState(null);
-  const [tooltip, setTooltip] = useState({ x: 0, y: 0, visible: false });
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [touchDistance, setTouchDistance] = useState(0);
-  const svgRef = useRef(null);
+  const [geoError, setGeoError] = useState(false);
+  const [geoLoaded, setGeoLoaded] = useState(false);
   const { theme } = useTheme();
   const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
+  const mapContainer = useRef(null);
+  const mapRef = useRef(null);
+  const popupRef = useRef(null);
+  const hoveredIdRef = useRef(null);
+  const dataRef = useRef([]);
+  const geojsonRef = useRef(null);
+
+  // Fetch sentiment data
   useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const res = await api.get(`/news/heatmap?days=${days}`);
+        setData(res.data);
+        dataRef.current = res.data;
+      } catch (err) {
+        console.error('Heatmap fetch error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchData();
   }, [days]);
 
-  const fetchData = async () => {
-    setDataLoading(true);
-    try {
-      const res = await api.get(`/news/heatmap?days=${days}`);
-      setData(res.data);
-    } catch (err) {
-      console.error('Heatmap fetch error:', err);
-    } finally {
-      setDataLoading(false);
-      setLoading(false);
-    }
-  };
+  // Build state data lookup
+  const getStateData = useCallback((stateName) => {
+    return data.find(d => d.state === stateName) || { avgSentiment: null, articleCount: 0, topTopic: 'N/A' };
+  }, [data]);
 
-  // Zoom controls
-  const handleZoomIn = () => {
-    setZoom(prev => Math.min(prev + 0.3, 3));
-  };
-
-  const handleZoomOut = () => {
-    setZoom(prev => Math.max(prev - 0.3, 0.5));
-  };
-
-  const handleResetView = () => {
-    setZoom(1);
-    setPan({ x: 0, y: 0 });
-  };
-
-  // Mouse drag for panning
-  const handleMouseDown = (e) => {
-    if (e.target.tagName !== 'path') {
-      setIsDragging(true);
-      setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
-    }
-  };
-
-  const handleMouseMove = (e) => {
-    if (isDragging) {
-      setPan({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
-    }
-    if (hoveredState) {
-      setTooltip({ x: e.clientX, y: e.clientY, visible: true });
-    }
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  // Touch gestures for mobile
-  const handleTouchStart = (e) => {
-    if (e.touches.length === 2) {
-      const distance = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      setTouchDistance(distance);
-    } else if (e.touches.length === 1 && e.target.tagName !== 'path') {
-      setIsDragging(true);
-      setDragStart({ x: e.touches[0].clientX - pan.x, y: e.touches[0].clientY - pan.y });
-    }
-  };
-
-  const handleTouchMove = (e) => {
-    if (e.touches.length === 2 && touchDistance > 0) {
-      e.preventDefault();
-      const distance = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      const delta = distance - touchDistance;
-      setZoom(prev => Math.max(0.5, Math.min(3, prev + delta * 0.005)));
-      setTouchDistance(distance);
-    } else if (e.touches.length === 1 && isDragging) {
-      setPan({ x: e.touches[0].clientX - dragStart.x, y: e.touches[0].clientY - dragStart.y });
-    }
-  };
-
-  const handleTouchEnd = () => {
-    setIsDragging(false);
-    setTouchDistance(0);
-  };
-
-  // Mouse wheel zoom
-  const handleWheel = (e) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    setZoom(prev => Math.max(0.5, Math.min(3, prev + delta)));
-  };
-
+  // Init map
   useEffect(() => {
-    if (isDragging) {
-      document.body.style.cursor = 'grabbing';
-    } else {
-      document.body.style.cursor = 'default';
-    }
-  }, [isDragging]);
+    if (!mapContainer.current || mapRef.current) return;
 
-  const getStateData = (stateName) => data.find(d => d.state === stateName) || { avgSentiment: 0, articleCount: 0, topTopic: 'N/A' };
+    const map = new maplibregl.Map({
+      container: mapContainer.current,
+      style: isDark
+        ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
+        : 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+      center: [109.5, 4.0],
+      zoom: 5.2,
+      minZoom: 4,
+      maxZoom: 10,
+      attributionControl: false,
+    });
+
+    map.addControl(new maplibregl.NavigationControl(), 'top-right');
+    map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+
+    mapRef.current = map;
+    popupRef.current = new maplibregl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      className: 'sentiment-popup',
+    });
+
+    map.on('load', () => {
+      loadGeoJSON(map);
+    });
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  // Switch map style on theme change
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.loaded()) return;
+
+    const newStyle = isDark
+      ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
+      : 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+
+    map.once('style.load', () => {
+      loadGeoJSON(map);
+    });
+    map.setStyle(newStyle);
+  }, [isDark]);
+
+  // Load GeoJSON and add layers
+  const loadGeoJSON = async (map) => {
+    try {
+      const res = await fetch(GEOJSON_URL);
+      if (!res.ok) throw new Error('GeoJSON fetch failed');
+      const geojson = await res.json();
+
+      // Normalize state names
+      geojson.features.forEach((f, i) => {
+        const rawName = f.properties.state || f.properties.name || '';
+        f.properties._normalizedName = STATE_NAME_MAP[rawName] || rawName;
+        f.id = i;
+      });
+
+      geojsonRef.current = geojson;
+
+      if (map.getSource('states')) {
+        map.removeLayer('state-borders');
+        map.removeLayer('state-fills');
+        map.removeLayer('state-fills-hover');
+        map.removeSource('states');
+      }
+
+      map.addSource('states', { type: 'geojson', data: geojson });
+
+      map.addLayer({
+        id: 'state-fills',
+        type: 'fill',
+        source: 'states',
+        paint: {
+          'fill-color': '#6b7280',
+          'fill-opacity': 0.6,
+        },
+      });
+
+      map.addLayer({
+        id: 'state-fills-hover',
+        type: 'fill',
+        source: 'states',
+        paint: {
+          'fill-color': '#6b7280',
+          'fill-opacity': 0.85,
+        },
+        filter: ['==', ['id'], ''],
+      });
+
+      map.addLayer({
+        id: 'state-borders',
+        type: 'line',
+        source: 'states',
+        paint: {
+          'line-color': isDark ? '#555' : '#999',
+          'line-width': 1,
+        },
+      });
+
+      // Hover
+      map.on('mousemove', 'state-fills', (e) => {
+        if (e.features.length === 0) return;
+        map.getCanvas().style.cursor = 'pointer';
+
+        if (hoveredIdRef.current !== null) {
+          map.setFilter('state-fills-hover', ['==', ['id'], '']);
+        }
+
+        const feat = e.features[0];
+        hoveredIdRef.current = feat.id;
+        map.setFilter('state-fills-hover', ['==', ['id'], feat.id]);
+
+        const name = feat.properties._normalizedName;
+        const sd = dataRef.current.find(d => d.state === name) || { avgSentiment: null, articleCount: 0, topTopic: 'N/A' };
+        const sentLabel = getSentimentLabel(sd.avgSentiment);
+        const sentVal = sd.avgSentiment !== null ? (sd.avgSentiment > 0 ? '+' : '') + sd.avgSentiment.toFixed(2) : 'N/A';
+
+        popupRef.current
+          .setLngLat(e.lngLat)
+          .setHTML(`
+            <div style="font-family:system-ui;min-width:140px">
+              <div style="font-weight:700;font-size:13px;margin-bottom:4px">${name}</div>
+              <div style="font-size:11px;color:#888;margin-bottom:2px">Sentiment: <span style="color:${getSentimentColor(sd.avgSentiment)};font-weight:600">${sentVal} (${sentLabel})</span></div>
+              <div style="font-size:11px;color:#888;margin-bottom:2px">Articles: <strong>${sd.articleCount}</strong></div>
+              <div style="font-size:11px;color:#888">Top: <strong>${sd.topTopic}</strong></div>
+            </div>
+          `)
+          .addTo(map);
+      });
+
+      map.on('mouseleave', 'state-fills', () => {
+        map.getCanvas().style.cursor = '';
+        hoveredIdRef.current = null;
+        map.setFilter('state-fills-hover', ['==', ['id'], '']);
+        popupRef.current.remove();
+      });
+
+      // Click
+      map.on('click', 'state-fills', (e) => {
+        if (e.features.length === 0) return;
+        const name = e.features[0].properties._normalizedName;
+        setSelectedState(prev => prev === name ? null : name);
+      });
+
+      setGeoError(false);
+      setGeoLoaded(true);
+    } catch (err) {
+      console.error('GeoJSON load error:', err);
+      setGeoError(true);
+    }
+  };
+
+  // Update fill colors when data changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.loaded() || !map.getSource('states')) return;
+
+    const geojson = geojsonRef.current;
+    if (!geojson || !geojson.features) return;
+
+    // Build color expression
+    const colorExpr = ['match', ['get', '_normalizedName']];
+    geojson.features.forEach(f => {
+      const name = f.properties._normalizedName;
+      const sd = data.find(d => d.state === name);
+      const color = sd && sd.articleCount > 0
+        ? getSentimentColor(sd.avgSentiment)
+        : '#6b7280';
+      colorExpr.push(name, color);
+    });
+    colorExpr.push('#6b7280'); // default
+
+    try {
+      map.setPaintProperty('state-fills', 'fill-color', colorExpr);
+      map.setPaintProperty('state-fills-hover', 'fill-color', colorExpr);
+    } catch (e) {
+      // layers might not exist yet
+    }
+  }, [data, geoLoaded]);
 
   return (
     <motion.div
@@ -164,7 +284,6 @@ const Heatmap = () => {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Sentiment Heatmap</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Geographic sentiment distribution across Malaysia</p>
         </div>
-
         <select
           value={days}
           onChange={e => setDays(Number(e.target.value))}
@@ -182,267 +301,85 @@ const Heatmap = () => {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.1 }}
-        className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-6 relative overflow-hidden"
+        className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl overflow-hidden relative"
       >
-        {loading ? (
-          <div className="space-y-4 p-6">
-            <div className="h-64 bg-[#f0f0f0] dark:bg-[#2a2a2a] rounded-xl animate-pulse" />
-            <div className="flex justify-center gap-4">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-4 w-16 bg-[#f0f0f0] dark:bg-[#2a2a2a] rounded animate-pulse" />
-              ))}
+        {loading && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 dark:bg-black/40 backdrop-blur-sm rounded-2xl">
+            <div className="flex items-center gap-3">
+              <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm text-gray-500 dark:text-gray-400">Loading sentiment data...</span>
             </div>
           </div>
-        ) : (
-          <>
-            {/* Zoom controls */}
-            <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
-              <button
-                onClick={handleZoomIn}
-                className="w-9 h-9 rounded-lg bg-white dark:bg-[#222] border border-[#eee] dark:border-[#333] shadow-md hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors flex items-center justify-center"
-                title="Zoom in"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-700 dark:text-gray-300">
-                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-              </button>
-              <button
-                onClick={handleZoomOut}
-                className="w-9 h-9 rounded-lg bg-white dark:bg-[#222] border border-[#eee] dark:border-[#333] shadow-md hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors flex items-center justify-center"
-                title="Zoom out"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-700 dark:text-gray-300">
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-              </button>
-              <button
-                onClick={handleResetView}
-                className="w-9 h-9 rounded-lg bg-white dark:bg-[#222] border border-[#eee] dark:border-[#333] shadow-md hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors flex items-center justify-center"
-                title="Reset view"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-700 dark:text-gray-300">
-                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-                  <path d="M21 3v5h-5"/>
-                </svg>
-              </button>
-            </div>
-
-            {/* Data loading indicator */}
-            {dataLoading && (
-              <div className="absolute top-4 left-4 z-10 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                <span className="text-xs font-medium text-blue-600 dark:text-blue-400">Updating...</span>
-              </div>
-            )}
-
-            <div 
-              className="relative select-none"
-              style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-              onWheel={handleWheel}
-            >
-              <svg 
-                ref={svgRef}
-                viewBox="0 0 430 260" 
-                className="w-full h-auto max-h-[500px]"
-                style={{
-                  transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
-                  transformOrigin: 'center center',
-                  transition: isDragging ? 'none' : 'transform 0.2s ease-out'
-                }}
-              >
-              {/* Background */}
-              <rect width="430" height="260" fill="transparent" />
-
-              {/* State paths */}
-              {Object.entries(STATE_PATHS).map(([state, path]) => {
-                const stateData = getStateData(state);
-                const color = stateData.articleCount > 0
-                  ? getSentimentColor(stateData.avgSentiment, isDark)
-                  : (isDark ? '#333' : '#e5e7eb');
-
-                return (
-                  <path
-                    key={state}
-                    d={path}
-                    fill={color}
-                    stroke={hoveredState === state ? '#2563eb' : (isDark ? '#555' : '#999')}
-                    strokeWidth={hoveredState === state ? 2 : 0.8}
-                    className="cursor-pointer transition-all duration-200"
-                    style={{ opacity: hoveredState && hoveredState !== state ? 0.5 : 1 }}
-                    onMouseEnter={() => setHoveredState(state)}
-                    onMouseLeave={() => setHoveredState(null)}
-                    onClick={() => setSelectedState(state === selectedState ? null : state)}
-                    onTouchStart={(e) => {
-                      e.stopPropagation();
-                      setHoveredState(state);
-                    }}
-                    onTouchEnd={(e) => {
-                      e.stopPropagation();
-                      setSelectedState(state === selectedState ? null : state);
-                      setTimeout(() => setHoveredState(null), 2000);
-                    }}
-                  />
-                );
-              })}
-
-              {/* State labels */}
-              {Object.entries(STATE_PATHS).map(([state, path]) => {
-                // Calculate centroid from path (simplified)
-                const nums = path.match(/\d+/g).map(Number);
-                const xs = nums.filter((_, i) => i % 2 === 0);
-                const ys = nums.filter((_, i) => i % 2 === 1);
-                const cx = xs.reduce((a, b) => a + b, 0) / xs.length;
-                const cy = ys.reduce((a, b) => a + b, 0) / ys.length;
-
-                if (['Labuan', 'Putrajaya', 'Kuala Lumpur'].includes(state)) return null;
-
-                return (
-                  <text
-                    key={`label-${state}`}
-                    x={cx}
-                    y={cy}
-                    textAnchor="middle"
-                    fontSize="6"
-                    fill={isDark ? '#ccc' : '#333'}
-                    className="pointer-events-none select-none"
-                    fontWeight="500"
-                  >
-                    {state.length > 10 ? state.slice(0, 8) + '.' : state}
-                  </text>
-                );
-              })}
-            </svg>
-
-            {/* Tooltip */}
-            <AnimatePresence>
-              {hoveredState && tooltip.visible && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.15 }}
-                  className="fixed z-50 pointer-events-none bg-white dark:bg-[#222] border border-[#eee] dark:border-[#333] rounded-xl p-3 shadow-xl"
-                  style={{ left: tooltip.x + 15, top: tooltip.y - 10 }}
-                >
-                  {(() => {
-                    const sd = getStateData(hoveredState);
-                    const sentimentColor = sd.avgSentiment > 0.1 ? 'text-green-600 dark:text-green-400' : 
-                                          sd.avgSentiment < -0.1 ? 'text-red-600 dark:text-red-400' : 
-                                          'text-yellow-600 dark:text-yellow-400';
-                    return (
-                      <div className="space-y-1">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{hoveredState}</p>
-                        <div className="flex items-center gap-2 text-xs">
-                          <span className="text-gray-500 dark:text-gray-400">Sentiment:</span>
-                          <span className={`font-semibold ${sentimentColor}`}>
-                            {sd.avgSentiment > 0 ? '+' : ''}{sd.avgSentiment.toFixed(3)}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs">
-                          <span className="text-gray-500 dark:text-gray-400">Articles:</span>
-                          <span className="font-medium text-gray-700 dark:text-gray-300">{sd.articleCount}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs">
-                          <span className="text-gray-500 dark:text-gray-400">Topic:</span>
-                          <span className="font-medium text-gray-700 dark:text-gray-300 capitalize">{sd.topTopic}</span>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </>
         )}
 
-        {/* Enhanced Legend with sentiment ranges */}
-        <div className="mt-6 pt-4 border-t border-[#eee] dark:border-[#2a2a2a]">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-3 text-center">Sentiment Scale</p>
-          <div className="flex items-center justify-center gap-6 flex-wrap">
-            <div className="flex items-center gap-1.5">
-              <div className="w-4 h-4 rounded-sm bg-[#22c55e] dark:bg-[#22c55e]" />
-              <span className="text-xs text-gray-600 dark:text-gray-400">Very Positive (+0.3)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-4 h-4 rounded-sm bg-[#4ade80] dark:bg-[#4ade80]" />
-              <span className="text-xs text-gray-600 dark:text-gray-400">Positive (+0.1)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-4 h-4 rounded-sm bg-[#eab308] dark:bg-[#eab308]" />
-              <span className="text-xs text-gray-600 dark:text-gray-400">Neutral (±0.1)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-4 h-4 rounded-sm bg-[#f97316] dark:bg-[#f97316]" />
-              <span className="text-xs text-gray-600 dark:text-gray-400">Negative (-0.1)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-4 h-4 rounded-sm bg-[#ef4444] dark:bg-[#ef4444]" />
-              <span className="text-xs text-gray-600 dark:text-gray-400">Very Negative (-0.3)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-4 h-4 rounded-sm bg-[#e5e7eb] dark:bg-[#333]" />
-              <span className="text-xs text-gray-600 dark:text-gray-400">No data</span>
+        {geoError && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80 dark:bg-black/60 rounded-2xl">
+            <div className="text-center p-6">
+              <p className="text-sm text-red-500 font-medium">Failed to load map boundaries</p>
+              <p className="text-xs text-gray-400 mt-1">Check your internet connection</p>
             </div>
           </div>
-          <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-3">
-            Pinch to zoom • Drag to pan • Click state for details
-          </p>
+        )}
+
+        <div ref={mapContainer} className="w-full" style={{ height: '480px' }} />
+
+        {/* Legend */}
+        <div className="flex items-center justify-center gap-4 py-3 border-t border-[#eee] dark:border-[#2a2a2a] flex-wrap">
+          {[
+            { color: '#22c55e', label: 'Positive' },
+            { color: '#eab308', label: 'Neutral' },
+            { color: '#ef4444', label: 'Negative' },
+            { color: '#6b7280', label: 'No data' },
+          ].map(item => (
+            <div key={item.label} className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: item.color }} />
+              <span className="text-xs text-gray-600 dark:text-gray-400">{item.label}</span>
+            </div>
+          ))}
         </div>
       </motion.div>
 
       {/* Selected state detail */}
       <AnimatePresence>
-        {selectedState && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-6"
-          >
-            {(() => {
-              const sd = getStateData(selectedState);
-              return (
-                <>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{selectedState}</h2>
-                    <button
-                      onClick={() => setSelectedState(null)}
-                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                      </svg>
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center p-3 rounded-xl bg-gray-50 dark:bg-[#111]">
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">{sd.articleCount}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Articles</p>
-                    </div>
-                    <div className="text-center p-3 rounded-xl bg-gray-50 dark:bg-[#111]">
-                      <p className={`text-2xl font-bold ${sd.avgSentiment > 0 ? 'text-green-500' : sd.avgSentiment < 0 ? 'text-red-500' : 'text-yellow-500'}`}>
-                        {sd.avgSentiment > 0 ? '+' : ''}{sd.avgSentiment.toFixed(2)}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Avg Sentiment</p>
-                    </div>
-                    <div className="text-center p-3 rounded-xl bg-gray-50 dark:bg-[#111]">
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white capitalize">{sd.topTopic}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Top Topic</p>
-                    </div>
-                  </div>
-                </>
-              );
-            })()}
-          </motion.div>
-        )}
+        {selectedState && (() => {
+          const sd = getStateData(selectedState);
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-6"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{selectedState}</h2>
+                <button
+                  onClick={() => setSelectedState(null)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center p-3 rounded-xl bg-gray-50 dark:bg-[#111]">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{sd.articleCount}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Articles</p>
+                </div>
+                <div className="text-center p-3 rounded-xl bg-gray-50 dark:bg-[#111]">
+                  <p className={`text-2xl font-bold ${sd.avgSentiment > 0 ? 'text-green-500' : sd.avgSentiment < 0 ? 'text-red-500' : 'text-yellow-500'}`}>
+                    {sd.avgSentiment !== null ? (sd.avgSentiment > 0 ? '+' : '') + sd.avgSentiment.toFixed(2) : 'N/A'}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Avg Sentiment</p>
+                </div>
+                <div className="text-center p-3 rounded-xl bg-gray-50 dark:bg-[#111]">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white capitalize">{sd.topTopic}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Top Topic</p>
+                </div>
+              </div>
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
 
       {/* State summary table */}
@@ -498,6 +435,25 @@ const Heatmap = () => {
           )}
         </div>
       </motion.div>
+
+      {/* Custom popup styles */}
+      <style>{`
+        .sentiment-popup .maplibregl-popup-content {
+          background: ${isDark ? '#1a1a1a' : '#fff'};
+          color: ${isDark ? '#fff' : '#111'};
+          border: 1px solid ${isDark ? '#333' : '#eee'};
+          border-radius: 12px;
+          padding: 10px 14px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .sentiment-popup .maplibregl-popup-tip {
+          border-top-color: ${isDark ? '#1a1a1a' : '#fff'};
+        }
+        .maplibregl-ctrl-attrib {
+          font-size: 10px !important;
+          opacity: 0.6;
+        }
+      `}</style>
     </motion.div>
   );
 };
