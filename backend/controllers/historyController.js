@@ -251,8 +251,7 @@ const getStats = async (req, res) => {
       calculatedTotal += count;
     });
 
-    const finalTotal = Math.max(calculatedTotal, user?.analysisCount || 0);
-    res.json(JSON.parse(JSON.stringify({ total: finalTotal, sentiments: sentimentMap, alerts })));
+    res.json(JSON.parse(JSON.stringify({ total: calculatedTotal, sentiments: sentimentMap, alerts })));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
