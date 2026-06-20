@@ -9,6 +9,7 @@ export default defineConfig({
     boneyardPlugin()
   ],
   build: {
+    sourcemap: true,
     rollupOptions: {
       output: {
         manualChunks(id) {
