@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { getTopViewed } from '../services/api';
 import ArticleCard from '../components/ArticleCard';
 import ArticlePreviewModal from '../components/ArticlePreviewModal';
 import toast from 'react-hot-toast';
-import { TrendingUp, Flame } from 'lucide-react';
 
 const Trending = () => {
   const [articles, setArticles] = useState([]);
@@ -29,111 +28,98 @@ const Trending = () => {
 
   const handlePreview = (article) => setSelectedArticle(article);
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.06 } }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 12 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] } }
-  };
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="max-w-4xl mx-auto"
-    >
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-6"
-      >
+    <div className="max-w-4xl mx-auto">
+      {/* Header — newspaper section style */}
+      <div className="flex items-end justify-between mb-6 gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <TrendingUp size={24} className="text-blue-600" />
-            Trending News
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Most popular stories being read right now
+          <div className="flex items-baseline gap-3 mb-1">
+            <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">
+              Trending News
+            </h1>
+          </div>
+          <div className="editorial-rule mb-2" />
+          <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed font-sans">
+            Most-read stories across Malaysian media, ranked by reader engagement.
           </p>
         </div>
-        <div className="flex gap-1 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-xl p-1">
+
+        {/* Timeframe — editorial tab style */}
+        <div className="flex items-center gap-0">
           {[
             { value: 'today', label: 'Today' },
             { value: 'week', label: 'This Week' },
-          ].map(opt => (
-            <button
-              key={opt.value}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                timeframe === opt.value
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-              }`}
-              onClick={() => setTimeframe(opt.value)}
-            >
-              {opt.label}
-            </button>
+          ].map((opt, i) => (
+            <React.Fragment key={opt.value}>
+              {i > 0 && <span className="text-ink-faint mx-1.5">|</span>}
+              <button
+                onClick={() => setTimeframe(opt.value)}
+                className={`text-xs font-medium uppercase tracking-wider transition-colors font-sans px-1 ${
+                  timeframe === opt.value
+                    ? 'text-ink dark:text-paper font-bold'
+                    : 'text-ink-faint hover:text-ink-muted'
+                }`}
+              >
+                {opt.label}
+              </button>
+            </React.Fragment>
           ))}
         </div>
-      </motion.div>
+      </div>
 
       {/* Content */}
       {loading ? (
-        <div className="space-y-3">
+        <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card divide-y divide-paper-line dark:divide-paper-dark-line">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="flex gap-4 items-start">
-              <div className="shrink-0 w-10 pt-4">
-                <div className="h-8 w-8 bg-[#f0f0f0] dark:bg-[#2a2a2a] rounded animate-pulse mx-auto" />
+            <div key={i} className="px-5 py-4 animate-pulse">
+              <div className="flex items-start gap-4">
+                <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
+                <div className="flex-1">
+                  <div className="h-3.5 bg-gray-200 dark:bg-gray-700 w-3/4 mb-2.5" />
+                  <div className="h-3 bg-gray-100 dark:bg-gray-800 w-full mb-2" />
+                  <div className="h-2.5 bg-gray-100 dark:bg-gray-800 w-24" />
+                </div>
               </div>
-              <div className="flex-1 h-24 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl animate-pulse" />
             </div>
           ))}
         </div>
       ) : articles.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center justify-center py-20 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl"
-        >
-          <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}>
-            <Flame size={48} className="text-gray-300 dark:text-gray-600" />
-          </motion.div>
-          <h3 className="mt-4 text-base font-semibold text-gray-700 dark:text-gray-300">No trending articles yet</h3>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Check back later once more users have viewed the news.</p>
-        </motion.div>
+        <div className="text-center py-20 border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
+          <div className="text-4xl mb-4 opacity-15">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mx-auto text-ink-muted">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <h3 className="text-base font-semibold text-ink dark:text-paper mb-1.5 font-display">
+            No trending articles yet
+          </h3>
+          <p className="text-xs text-ink-faint max-w-sm mx-auto font-sans leading-relaxed">
+            Trending stories appear once enough readers engage with the news. Check back after some activity.
+          </p>
+        </div>
       ) : (
-        <motion.div
-          className="space-y-3"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
+        <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card divide-y divide-paper-line dark:divide-paper-dark-line">
           {articles.map((art, idx) => (
-            <motion.div
-              key={art._id}
-              variants={itemVariants}
-              className="flex gap-4 items-start"
-            >
-              <div className="shrink-0 w-10 pt-4 text-center">
-                <span className={`text-2xl font-black ${
-                  idx === 0 ? 'text-blue-600' : idx === 1 ? 'text-blue-400' : idx === 2 ? 'text-blue-300' : 'text-gray-300 dark:text-gray-600'
+            <div key={art._id} className="flex items-start gap-4">
+              {/* Rank number — editorial style */}
+              <div className="flex-shrink-0 w-10 text-center pt-4">
+                <span className={`text-lg font-black font-display ${
+                  idx < 3 ? 'text-ink dark:text-paper' : 'text-ink-faint'
                 }`}>
                   {idx + 1}
                 </span>
               </div>
-              <div className="flex-1">
+
+              {/* Article content */}
+              <div className="flex-1 min-w-0">
                 <ArticleCard 
                   article={art} 
                   onPreview={handlePreview}
                 />
               </div>
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </div>
       )}
 
       <ArticlePreviewModal 
@@ -142,7 +128,7 @@ const Trending = () => {
         isOpen={!!selectedArticle} 
         onClose={() => setSelectedArticle(null)}
       />
-    </motion.div>
+    </div>
   );
 };
 
