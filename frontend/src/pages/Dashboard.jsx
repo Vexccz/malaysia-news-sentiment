@@ -93,7 +93,6 @@ const DashboardSkeleton = () => (
 );
 
 import SourceCredibility from '../components/SourceCredibility';
-import { List as VirtualList } from 'react-window';
 import ExportPPT from '../components/ExportPPT';
 import { InlineErrorBoundary } from '../components/ErrorBoundary';
 import { Skeleton } from 'boneyard-js/react';
@@ -1316,29 +1315,7 @@ const Dashboard = () => {
                     animate="visible"
                   >
                     <Skeleton name="article-card" loading={isLoading || historyLoading} count={3}>
-                      {filteredArticles.length > 20 ? (
-                        <VirtualList
-                          height={600}
-                          itemCount={filteredArticles.length}
-                          itemSize={140}
-                          width="100%"
-                          style={{ overflow: 'auto' }}
-                        >
-                          {({ index, style }) => {
-                            const article = filteredArticles[index];
-                            return (
-                              <div style={style} key={article._id || article.url}>
-                                <ArticleCardCompact 
-                                  article={article} 
-                                  onBookmark={toggleBookmark}
-                                  isBookmarked={user?.bookmarks?.includes(article._id || article.id)}
-                                />
-                              </div>
-                            );
-                          }}
-                        </VirtualList>
-                      ) : (
-                        filteredArticles.map((article) => (
+                      {filteredArticles.map((article) => (
                           <motion.div
                             key={article._id || article.url}
                             variants={articleVariants}
@@ -1349,8 +1326,7 @@ const Dashboard = () => {
                               isBookmarked={user?.bookmarks?.includes(article._id || article.id)}
                             />
                           </motion.div>
-                        ))
-                      )}
+                        ))}
                     </Skeleton>
                   </motion.div>
 
