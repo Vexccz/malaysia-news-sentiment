@@ -140,7 +140,7 @@ const Forecast = () => {
             exit={{ opacity: 0 }}
             className="space-y-6"
           >
-            {/* Summary strip — newspaper stat bar */}
+            {/* Summary strip — plain language stats */}
             <div className="grid grid-cols-3 divide-x divide-paper-line dark:divide-paper-dark-line border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
               <div className="px-5 py-4">
                 <div className="text-[10px] font-semibold uppercase tracking-widest text-ink-muted dark:text-ink-faint mb-1 font-sans">
@@ -149,6 +149,9 @@ const Forecast = () => {
                 <div className="text-lg font-bold font-display" style={{ color: trendColor }}>
                   {trendLabel}
                 </div>
+                <div className="text-[10px] text-ink-faint font-sans mt-0.5">
+                  {data.trend === 'Improving' ? 'Sentiment rising' : data.trend === 'Declining' ? 'Sentiment falling' : 'Holding steady'}
+                </div>
               </div>
               <div className="px-5 py-4">
                 <div className="text-[10px] font-semibold uppercase tracking-widest text-ink-muted dark:text-ink-faint mb-1 font-sans">
@@ -156,7 +159,9 @@ const Forecast = () => {
                 </div>
                 <div className="text-lg font-bold text-ink dark:text-paper font-display">
                   {data.totalArticles}
-                  <span className="text-xs font-normal text-ink-faint ml-1.5 font-sans">/ {data.daysAnalyzed}d</span>
+                </div>
+                <div className="text-[10px] text-ink-faint font-sans mt-0.5">
+                  from past {data.daysAnalyzed} days
                 </div>
               </div>
               <div className="px-5 py-4">
@@ -166,10 +171,13 @@ const Forecast = () => {
                 <div className="text-lg font-bold text-ink dark:text-paper font-display">
                   {data.predicted.length > 0 ? `${Math.round(data.predicted[0].confidence * 100)}%` : 'N/A'}
                 </div>
+                <div className="text-[10px] text-ink-faint font-sans mt-0.5">
+                  {data.predicted.length > 0 && data.predicted[0].confidence >= 0.7 ? 'High certainty' : data.predicted.length > 0 && data.predicted[0].confidence >= 0.4 ? 'Moderate' : 'Low certainty'}
+                </div>
               </div>
             </div>
 
-            {/* Chart */}
+            {/* Chart — non-technical friendly */}
             {chartData.length > 0 && (
               <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
                 <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
@@ -177,25 +185,52 @@ const Forecast = () => {
                     Forecast Projection
                   </h3>
                   <p className="text-xs text-ink-faint mt-0.5 font-sans">
-                    Solid = historical &nbsp;&middot;&nbsp; Dashed = predicted
+                    Solid line = actual sentiment &nbsp;&middot;&nbsp; Dashed line = AI prediction
                   </p>
                 </div>
                 <div className="px-4 py-4">
+                  {/* Sentiment scale legend */}
+                  <div className="flex items-center justify-center gap-1 mb-3 text-[10px] font-sans text-ink-faint">
+                    <span className="inline-block w-3 h-0.5 bg-red-500" />
+                    <span>Negative</span>
+                    <span className="mx-1.5">|</span>
+                    <span className="inline-block w-3 h-0.5 bg-gray-400" />
+                    <span>Neutral</span>
+                    <span className="mx-1.5">|</span>
+                    <span className="inline-block w-3 h-0.5 bg-green-600" />
+                    <span>Positive</span>
+                  </div>
                   <div className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={chartData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
+                      <ComposedChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="2 4" stroke="#E8E4DB" opacity={0.5} />
+                        {/* Coloured zone bands */}
+                        <Area type="monotone" dataKey={() => 1} stroke="none" fill="#16a34a" fillOpacity={0.03} />
+                        <Area type="monotone" dataKey={() => -1} stroke="none" fill="#dc2626" fillOpacity={0.03} />
+                        {/* Reference lines */}
+                        <Line type="monotone" dataKey={() => 0} stroke="#E8E4DB" strokeDasharray="4 4" strokeWidth={1} dot={false} name="" legendType="none" />
                         <XAxis
                           dataKey="date"
                           tick={{ fontSize: 10, fill: '#A8A59E', fontFamily: 'Inter' }}
-                          tickFormatter={(val) => val.slice(5)}
+                          tickFormatter={(val) => {
+                            const d = new Date(val);
+                            return d.toLocaleDateString('en-MY', { day: 'numeric', month: 'short' });
+                          }}
                           axisLine={{ stroke: '#E8E4DB' }}
                           tickLine={false}
                         />
                         <YAxis
                           domain={[-1, 1]}
+                          ticks={[-1, -0.5, 0, 0.5, 1]}
                           tick={{ fontSize: 10, fill: '#A8A59E', fontFamily: 'Inter' }}
-                          tickFormatter={(val) => val.toFixed(1)}
+                          tickFormatter={(val) => {
+                            if (val === 1) return 'Positive';
+                            if (val === 0.5) return '+';
+                            if (val === 0) return 'Neutral';
+                            if (val === -0.5) return '−';
+                            if (val === -1) return 'Negative';
+                            return '';
+                          }}
                           axisLine={false}
                           tickLine={false}
                         />
@@ -208,28 +243,39 @@ const Forecast = () => {
                             fontFamily: 'Inter',
                             boxShadow: 'none',
                           }}
-                          formatter={(value, name) => [
-                            value?.toFixed(3),
-                            name === 'sentiment' ? 'Historical' : name === 'predicted' ? 'Predicted' : name
-                          ]}
+                          formatter={(value, name) => {
+                            const sentimentLabel = (v) => {
+                              if (v >= 0.6) return 'Very Positive';
+                              if (v >= 0.2) return 'Positive';
+                              if (v >= -0.2) return 'Neutral';
+                              if (v >= -0.6) return 'Negative';
+                              return 'Very Negative';
+                            };
+                            const label = name === 'sentiment' ? 'Actual' : name === 'predicted' ? 'Predicted' : name;
+                            return [`${sentimentLabel(value)} (${value?.toFixed(2)})`, label];
+                          }}
+                          labelFormatter={(val) => {
+                            const d = new Date(val);
+                            return d.toLocaleDateString('en-MY', { weekday: 'short', day: 'numeric', month: 'short' });
+                          }}
                         />
                         <Legend
                           wrapperStyle={{ fontSize: '11px', fontFamily: 'Inter' }}
                         />
-                        {/* Confidence band */}
+                        {/* Prediction range band */}
                         <Area
                           type="monotone"
                           dataKey="confidenceUpper"
                           stroke="none"
-                          fill="#1A1A1A"
-                          fillOpacity={0.04}
-                          name="Confidence"
+                          fill="#dc2626"
+                          fillOpacity={0.06}
+                          name="Prediction Range"
                         />
                         <Area
                           type="monotone"
                           dataKey="confidenceLower"
                           stroke="none"
-                          fill="#FAF8F3"
+                          fill="#ffffff"
                           fillOpacity={1}
                           name=" "
                           legendType="none"
@@ -241,7 +287,7 @@ const Forecast = () => {
                           stroke="#1A1A1A"
                           strokeWidth={2}
                           dot={{ r: 2, fill: '#1A1A1A' }}
-                          name="Historical"
+                          name="Actual Sentiment"
                           connectNulls={false}
                         />
                         {/* Predicted line (dashed) */}
@@ -252,7 +298,7 @@ const Forecast = () => {
                           strokeWidth={2}
                           strokeDasharray="6 3"
                           dot={{ r: 2.5, fill: '#dc2626' }}
-                          name="Predicted"
+                          name="AI Prediction"
                           connectNulls={false}
                         />
                       </ComposedChart>

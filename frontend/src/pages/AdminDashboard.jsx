@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getAdminStats } from '../services/api';
 import toast from 'react-hot-toast';
 import ScrollToTop from '../components/ScrollToTop';
 import { useSocket } from '../context/SocketContext';
-import { Shield, RefreshCw, FileText, Activity, Users, Eye, TrendingUp, AlertTriangle, Clock, Cpu, Zap, Search } from 'lucide-react';
+import { Shield, RefreshCw, FileText, Activity, Users, Eye, TrendingUp, AlertTriangle, Clock, Cpu, Zap, Search, ArrowUpDown, ChevronUp, ChevronDown, MoreVertical, Trash2, UserX, Crown } from 'lucide-react';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
@@ -15,7 +15,12 @@ const AdminDashboard = () => {
   const [metrics, setMetrics] = useState(null);
   const [metricsLoading, setMetricsLoading] = useState(false);
   const socket = useSocket();
-  const [userSearch, setUserSearch] = useState('');
+
+  // User table state
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userSortField, setUserSortField] = useState('createdAt');
+  const [userSortOrder, setUserSortOrder] = useState('desc');
+  const [userRoleFilter, setUserRoleFilter] = useState('all');
 
   const loadData = useCallback(async () => {
     try {
@@ -29,6 +34,64 @@ const AdminDashboard = () => {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Filtered and sorted users
+  const filteredUsers = useMemo(() => {
+    if (!stats?.recentUsers) return [];
+    
+    let filtered = stats.recentUsers;
+
+    // Apply role filter
+    if (userRoleFilter !== 'all') {
+      filtered = filtered.filter(u => u.role === userRoleFilter);
+    }
+
+    // Apply search filter
+    if (userSearchQuery.trim()) {
+      const query = userSearchQuery.toLowerCase();
+      filtered = filtered.filter(u => 
+        u.name?.toLowerCase().includes(query) || 
+        u.email?.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply sorting
+    filtered = [...filtered].sort((a, b) => {
+      let aVal = a[userSortField];
+      let bVal = b[userSortField];
+
+      if (userSortField === 'analysisCount') {
+        aVal = a.analysisCount || 0;
+        bVal = b.analysisCount || 0;
+      } else if (userSortField === 'createdAt') {
+        aVal = new Date(a.createdAt).getTime();
+        bVal = new Date(b.createdAt).getTime();
+      } else if (userSortField === 'name' || userSortField === 'email') {
+        aVal = (aVal || '').toLowerCase();
+        bVal = (bVal || '').toLowerCase();
+      }
+
+      if (aVal < bVal) return userSortOrder === 'asc' ? -1 : 1;
+      if (aVal > bVal) return userSortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return filtered;
+  }, [stats?.recentUsers, userSearchQuery, userSortField, userSortOrder, userRoleFilter]);
+
+  const handleSort = (field) => {
+    if (userSortField === field) {
+      setUserSortOrder(userSortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setUserSortField(field);
+      setUserSortOrder('asc');
+    }
+  };
+
+  const SortIcon = ({ field }) => {
+    if (userSortField !== field) return <ArrowUpDown size={12} className="opacity-40" />;
+    return userSortOrder === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />;
+  };
 
   const loadMetrics = async () => {
     setMetricsLoading(true);
@@ -276,42 +339,209 @@ const AdminDashboard = () => {
 
         {activeTab === 'users' && (
           <motion.div key="users" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-            <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-5">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
-                Registered Users
-                <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-500/10 text-amber-600 uppercase">{stats.overview.totalUsers} total</span>
-              </h3>
+            <div className="bg-white dark:bg-[#1a1a1a] border border-[#000] dark:border-[#2a2a2a] rounded-none p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wide">
+                    User Management
+                  </h3>
+                  <span className="text-[9px] font-bold px-2.5 py-1 bg-[#000] text-white dark:bg-[#fff] dark:text-[#000] uppercase tracking-wider">
+                    {stats.overview.totalUsers} Total
+                  </span>
+                  <span className="text-[9px] font-bold px-2.5 py-1 bg-[#dc2626] text-white uppercase tracking-wider">
+                    {filteredUsers.length} Shown
+                  </span>
+                </div>
+              </div>
+
+              {/* Filters and Search Bar */}
+              <div className="flex flex-col md:flex-row gap-3 mb-6 pb-6 border-b-2 border-[#000] dark:border-[#fff]">
+                {/* Search Input */}
+                <div className="flex-1 relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by name or email..."
+                    value={userSearchQuery}
+                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2.5 text-xs font-medium bg-white dark:bg-[#1a1a1a] border-2 border-[#000] dark:border-[#fff] focus:outline-none focus:border-[#dc2626] dark:focus:border-[#dc2626] transition-colors"
+                  />
+                </div>
+
+                {/* Role Filter */}
+                <div className="flex gap-2">
+                  {['all', 'admin', 'user'].map(role => (
+                    <button
+                      key={role}
+                      onClick={() => setUserRoleFilter(role)}
+                      className={`px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider border-2 transition-all ${
+                        userRoleFilter === role
+                          ? 'bg-[#000] text-white border-[#000] dark:bg-[#fff] dark:text-[#000] dark:border-[#fff]'
+                          : 'bg-white text-gray-700 border-[#000] hover:bg-gray-50 dark:bg-[#1a1a1a] dark:text-gray-300 dark:border-[#fff] dark:hover:bg-[#2a2a2a]'
+                      }`}
+                    >
+                      {role === 'all' ? 'All Roles' : role}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Clear Filters */}
+                {(userSearchQuery || userRoleFilter !== 'all') && (
+                  <button
+                    onClick={() => {
+                      setUserSearchQuery('');
+                      setUserRoleFilter('all');
+                    }}
+                    className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider bg-[#dc2626] text-white border-2 border-[#dc2626] hover:bg-[#b91c1c] transition-colors"
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+
+              {/* Users Table */}
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full border-collapse">
                   <thead>
-                    <tr className="border-b border-[#eee] dark:border-[#2a2a2a]">
-                      <th className="text-left py-2 px-3 text-[10px] font-bold text-gray-500 uppercase tracking-wide">User</th>
-                      <th className="text-left py-2 px-3 text-[10px] font-bold text-gray-500 uppercase tracking-wide">Role</th>
-                      <th className="text-left py-2 px-3 text-[10px] font-bold text-gray-500 uppercase tracking-wide">Analyses</th>
-                      <th className="text-left py-2 px-3 text-[10px] font-bold text-gray-500 uppercase tracking-wide">Joined</th>
+                    <tr className="border-b-2 border-[#000] dark:border-[#fff]">
+                      <th 
+                        onClick={() => handleSort('name')}
+                        className="text-left py-4 px-4 text-[10px] font-bold text-gray-900 dark:text-white uppercase tracking-wider cursor-pointer hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          User
+                          <SortIcon field="name" />
+                        </div>
+                      </th>
+                      <th 
+                        onClick={() => handleSort('email')}
+                        className="text-left py-4 px-4 text-[10px] font-bold text-gray-900 dark:text-white uppercase tracking-wider cursor-pointer hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          Email
+                          <SortIcon field="email" />
+                        </div>
+                      </th>
+                      <th 
+                        onClick={() => handleSort('role')}
+                        className="text-left py-4 px-4 text-[10px] font-bold text-gray-900 dark:text-white uppercase tracking-wider cursor-pointer hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          Role
+                          <SortIcon field="role" />
+                        </div>
+                      </th>
+                      <th 
+                        onClick={() => handleSort('analysisCount')}
+                        className="text-left py-4 px-4 text-[10px] font-bold text-gray-900 dark:text-white uppercase tracking-wider cursor-pointer hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          Analyses
+                          <SortIcon field="analysisCount" />
+                        </div>
+                      </th>
+                      <th 
+                        onClick={() => handleSort('createdAt')}
+                        className="text-left py-4 px-4 text-[10px] font-bold text-gray-900 dark:text-white uppercase tracking-wider cursor-pointer hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          Joined
+                          <SortIcon field="createdAt" />
+                        </div>
+                      </th>
+                      <th className="text-right py-4 px-4 text-[10px] font-bold text-gray-900 dark:text-white uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {stats.recentUsers?.map((u, i) => (
-                      <tr key={i} className="border-b border-[#eee] dark:border-[#2a2a2a] last:border-0 hover:bg-gray-50 dark:hover:bg-white/[0.02]">
-                        <td className="py-3 px-3">
-                          <div className="text-xs font-semibold text-gray-900 dark:text-white">{u.name}</div>
-                          <div className="text-[10px] text-gray-400">{u.email}</div>
+                    {filteredUsers.length > 0 ? filteredUsers.map((u, i) => (
+                      <tr key={i} className="border-b border-[#eee] dark:border-[#2a2a2a] last:border-0 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-2">
+                            {u.role === 'admin' && <Crown size={14} className="text-[#dc2626]" />}
+                            <span className="text-xs font-bold text-gray-900 dark:text-white">{u.name}</span>
+                          </div>
                         </td>
-                        <td className="py-3 px-3">
-                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase ${
+                        <td className="py-4 px-4">
+                          <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400">{u.email}</span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className={`inline-block text-[9px] font-bold px-2.5 py-1 uppercase tracking-wider border-2 ${
                             u.role === 'admin' 
-                              ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 border border-indigo-200 dark:border-indigo-500/20' 
-                              : 'bg-gray-50 dark:bg-white/5 text-gray-500 border border-gray-200 dark:border-gray-700'
-                          }`}>{u.role}</span>
+                              ? 'bg-[#dc2626] text-white border-[#dc2626]' 
+                              : 'bg-white text-gray-900 border-[#000] dark:bg-[#1a1a1a] dark:text-white dark:border-[#fff]'
+                          }`}>
+                            {u.role}
+                          </span>
                         </td>
-                        <td className="py-3 px-3 text-xs font-bold text-emerald-600">{u.analysisCount || 0}</td>
-                        <td className="py-3 px-3 text-[11px] text-gray-400">{new Date(u.createdAt).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-2">
+                            <Activity size={12} className="text-emerald-600" />
+                            <span className="text-xs font-bold text-emerald-600">{u.analysisCount || 0}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                            {new Date(u.createdAt).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <button 
+                              onClick={() => toast.error('User management actions coming soon')}
+                              className="p-2 border-2 border-[#000] dark:border-[#fff] hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors group"
+                              title="More actions"
+                            >
+                              <MoreVertical size={14} className="text-gray-700 dark:text-gray-300" />
+                            </button>
+                            <button 
+                              onClick={() => toast.error('Delete user feature coming soon')}
+                              className="p-2 border-2 border-[#dc2626] hover:bg-[#dc2626] hover:text-white transition-colors group"
+                              title="Delete user"
+                            >
+                              <Trash2 size={14} className="text-[#dc2626] group-hover:text-white" />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
-                    ))}
+                    )) : (
+                      <tr>
+                        <td colSpan="6" className="py-12 text-center">
+                          <div className="flex flex-col items-center gap-3">
+                            <UserX size={32} className="text-gray-300 dark:text-gray-600" />
+                            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No users found matching your filters</p>
+                            <button 
+                              onClick={() => {
+                                setUserSearchQuery('');
+                                setUserRoleFilter('all');
+                              }}
+                              className="text-xs font-bold text-[#dc2626] hover:underline"
+                            >
+                              Clear all filters
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
+
+              {/* Table Footer Info */}
+              {filteredUsers.length > 0 && (
+                <div className="flex items-center justify-between mt-6 pt-6 border-t-2 border-[#000] dark:border-[#fff]">
+                  <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                    Showing {filteredUsers.length} of {stats.overview.totalUsers} users
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase">Sort:</span>
+                    <span className="text-[10px] font-bold text-gray-900 dark:text-white uppercase">
+                      {userSortField} ({userSortOrder})
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         )}

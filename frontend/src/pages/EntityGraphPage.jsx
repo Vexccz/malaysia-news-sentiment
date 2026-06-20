@@ -2,13 +2,27 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Graph } from '@antv/g6';
 import { useTheme } from '../context/ThemeContext';
-import { Search, List, Network, X } from 'lucide-react';
+import { Search, List, Network, X, TrendingUp, BarChart3, FileText, Share2, PieChart } from 'lucide-react';
+import { LineChart, Line, PieChart as RechartsPie, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
 const SENTIMENT_COLORS = { Positive: '#10B981', Negative: '#EF4444', Neutral: '#F59E0B' };
 const SENTIMENT_GLOW = { Positive: 'rgba(16,185,129,0.4)', Negative: 'rgba(239,68,68,0.4)', Neutral: 'rgba(245,158,11,0.4)' };
 const TYPE_LABELS = { politicians: 'Politicians', parties: 'Parties', organizations: 'Organizations', locations: 'Locations' };
 const TYPE_COLORS = { politicians: '#6366f1', parties: '#8b5cf6', organizations: '#06b6d4', locations: '#f59e0b' };
-const TYPE_ICONS = { politicians: '', parties: '', organizations: '', locations: '' };
+
+// Sentiment edge color calculator
+const getSentimentEdgeColor = (avgSentiment) => {
+  if (avgSentiment <= -0.3) return '#EF4444'; // red for negative
+  if (avgSentiment >= 0.3) return '#10B981'; // green for positive
+  return '#6B7280'; // grey for neutral
+};
+
+// Convert sentiment label to numeric value
+const sentimentToValue = (sentiment) => {
+  if (sentiment === 'Positive') return 1;
+  if (sentiment === 'Negative') return -1;
+  return 0;
+};
 
 export default function EntityGraphPage() {
   const { theme } = useTheme();
@@ -16,27 +30,27 @@ export default function EntityGraphPage() {
 
   const [data, setData] = useState({ nodes: [], edges: [] });
   const [loading, setLoading] = useState(true);
-  const [selectedNode, setSelectedNode] = useState(null);
   const [graphRendering, setGraphRendering] = useState(false);
+  const [selectedNode, setSelectedNode] = useState(null);
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [searchHighlight, setSearchHighlight] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [entityTypeFilters, setEntityTypeFilters] = useState({
+    politicians: true,
+    parties: true,
+    organizations: true,
+    locations: true
+  });
   const [timeframe, setTimeframe] = useState('');
   const [viewMode, setViewMode] = useState('graph');
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  
-  // Phase 1: New state variables
-  const [entityTypeFilter, setEntityTypeFilter] = useState({ 
-    PERSON: true, 
-    ORGANIZATION: true, 
-    LOCATION: true 
-  });
-  const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
   const graphRef = useRef(null);
   const containerRef = useRef(null);
   const graphInstance = useRef(null);
+  const layoutAnimationRef = useRef(null);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -49,14 +63,6 @@ export default function EntityGraphPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Phase 1: Helper function for edge sentiment colors
-  const getEdgeColor = (edge) => {
-    const sentiment = edge.sentiment || 0;
-    if (sentiment <= -0.3) return '#FF5C5C'; // Red
-    if (sentiment >= 0.3) return '#34D882';  // Green
-    return '#94A3B8'; // Grey
-  };
-
   const fetchGraph = useCallback(async () => {
     setLoading(true);
     try {
@@ -67,9 +73,9 @@ export default function EntityGraphPage() {
       if (timeframe) params.set('timeframe', timeframe);
       if (typeFilter) params.set('type', typeFilter);
       const res = await fetch(`${API}/entities/graph?${params}`, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) { const errText = await res.text(); console.error("API Error:", res.status, errText); throw new Error(`Failed: ${res.status}`); }
+      if (!res.ok) throw new Error('Failed');
       setData(await res.json());
-    } catch (err) { console.error("Fetch Graph Error:", err, "Status:", err.message); setData({ nodes: [], edges: [] }); }
+    } catch { setData({ nodes: [], edges: [] }); }
     finally { setLoading(false); }
   }, [search, timeframe, typeFilter]);
 
@@ -91,7 +97,50 @@ export default function EntityGraphPage() {
     else { setSelectedNode(name); fetchDetail(name); }
   };
 
-  // Initialize/update G6 graph
+  // Filter nodes based on entity type checkboxes and search highlight
+  const getFilteredData = useCallback(() => {
+    let filteredNodes = data.nodes.filter(node => {
+      const categoryKey = node.category;
+      return entityTypeFilters[categoryKey] !== false;
+    });
+
+    // Apply search highlight filter
+    if (searchHighlight) {
+      const searchLower = searchHighlight.toLowerCase();
+      filteredNodes = filteredNodes.map(node => {
+        const matches = node.label.toLowerCase().includes(searchLower);
+        return { ...node, highlighted: matches };
+      });
+    } else {
+      filteredNodes = filteredNodes.map(node => ({ ...node, highlighted: true }));
+    }
+
+    const nodeIds = new Set(filteredNodes.map(n => n.id));
+    const filteredEdges = data.edges.filter(e => nodeIds.has(e.source) && nodeIds.has(e.target));
+
+    return { nodes: filteredNodes, edges: filteredEdges };
+  }, [data, entityTypeFilters, searchHighlight]);
+
+  // Calculate edge sentiment colors based on connected nodes
+  const calculateEdgeSentiments = useCallback((nodes, edges) => {
+    const nodeMap = new Map(nodes.map(n => [n.id, n]));
+    
+    return edges.map(edge => {
+      const sourceNode = nodeMap.get(edge.source);
+      const targetNode = nodeMap.get(edge.target);
+      
+      if (sourceNode && targetNode) {
+        const sourceSentiment = sentimentToValue(sourceNode.sentiment);
+        const targetSentiment = sentimentToValue(targetNode.sentiment);
+        const avgSentiment = (sourceSentiment + targetSentiment) / 2;
+        
+        return { ...edge, avgSentiment };
+      }
+      return { ...edge, avgSentiment: 0 };
+    });
+  }, []);
+
+  // Initialize/update G6 graph with performance optimizations
   useEffect(() => {
     if (loading || !data.nodes.length || !graphRef.current) return;
     if (isMobile && viewMode === 'list') {
@@ -99,8 +148,11 @@ export default function EntityGraphPage() {
         graphInstance.current.destroy();
         graphInstance.current = null;
       }
+      setGraphRendering(false);
       return;
     }
+
+    setGraphRendering(true);
 
     if (graphInstance.current) {
       graphInstance.current.destroy();
@@ -112,107 +164,118 @@ export default function EntityGraphPage() {
     const height = container.offsetHeight || 600;
 
     const mobileGraphMode = isMobile && viewMode === 'graph';
-    let graphNodes = data.nodes;
-    let graphEdges = data.edges;
-
-    // Phase 1: Apply entity type filter
-    graphNodes = graphNodes.filter(node => {
-      const nodeType = node.type || 'ORGANIZATION'; // Default fallback
-      return entityTypeFilter[nodeType] !== false;
-    });
     
-    // Phase 1: Apply search query (don't filter out, just mark for highlighting)
-    const searchLower = searchQuery.toLowerCase();
-    const matchingNodeIds = new Set();
-    if (searchQuery) {
-      graphNodes.forEach(node => {
-        if (node.label?.toLowerCase().includes(searchLower) || 
-            node.id?.toLowerCase().includes(searchLower)) {
-          matchingNodeIds.add(node.id);
-        }
-      });
-    }
+    // Apply filters
+    const filtered = getFilteredData();
+    let graphNodes = filtered.nodes;
+    let graphEdges = calculateEdgeSentiments(filtered.nodes, filtered.edges);
+    
     if (mobileGraphMode) {
-      const sorted = [...data.nodes].sort((a, b) => b.mentions - a.mentions);
+      const sorted = [...graphNodes].sort((a, b) => b.mentions - a.mentions);
       graphNodes = sorted.slice(0, 15);
       const nodeIds = new Set(graphNodes.map(n => n.id));
-      graphEdges = data.edges.filter(e => nodeIds.has(e.source) && nodeIds.has(e.target));
+      graphEdges = graphEdges.filter(e => nodeIds.has(e.source) && nodeIds.has(e.target));
     }
 
     const maxMentions = Math.max(...graphNodes.map(n => n.mentions), 1);
     const baseNodeSize = mobileGraphMode ? 20 : 28;
     const sizeRange = mobileGraphMode ? 20 : 52;
 
-
     const g6Data = {
       nodes: graphNodes.map(n => {
         const color = SENTIMENT_COLORS[n.sentiment] || SENTIMENT_COLORS.Neutral;
         const nodeSize = baseNodeSize + (n.mentions / maxMentions) * sizeRange;
-        
-        // Phase 1: Highlight matching search results
-        const isMatch = searchQuery ? matchingNodeIds.has(n.id) : true;
-        const opacity = searchQuery && !isMatch ? 0.2 : 0.8;
-        const strokeWidth = isMatch && searchQuery ? 4 : 2.5;
-        
+        const isHighlighted = n.highlighted !== false;
         return {
           id: n.id,
-          label: mobileGraphMode ? '' : (n.label.length > 18 ? n.label.slice(0, 16) + '…' : n.label),
-          mentions: n.mentions,
-          sentiment: n.sentiment,
-          category: n.category,
-          size: nodeSize,
+          data: { label: n.label, mentions: n.mentions, sentiment: n.sentiment, category: n.category },
           style: {
+            size: nodeSize,
             fill: color,
+            fillOpacity: isHighlighted ? 0.35 : 0.1,
             stroke: color,
-            lineWidth: strokeWidth,
-            opacity: opacity,
-          },
-          labelCfg: {
-            style: {
-              fill: isDark ? '#f1f5f9' : '#0f172a',
-              fontSize: mobileGraphMode ? 10 : 13,
-              fontWeight: 600,
-            },
-            position: 'bottom',
-            offset: 6,
+            lineWidth: 2.5,
+            strokeOpacity: isHighlighted ? 1 : 0.3,
+            shadowColor: isHighlighted ? (SENTIMENT_GLOW[n.sentiment] || SENTIMENT_GLOW.Neutral) : 'transparent',
+            shadowBlur: isHighlighted ? 12 : 0,
+            labelText: mobileGraphMode ? '' : (n.label.length > 18 ? n.label.slice(0, 16) + '…' : n.label),
+            labelFill: isDark ? '#f1f5f9' : '#0f172a',
+            labelFontSize: mobileGraphMode ? 10 : 12,
+            labelFontWeight: 600,
+            labelPlacement: 'bottom',
+            labelOffsetY: 6,
+            labelOpacity: isHighlighted ? 1 : 0.3,
+            labelBackground: !mobileGraphMode,
+            labelBackgroundFill: isDark ? 'rgba(15,23,42,0.8)' : 'rgba(255,255,255,0.85)',
+            labelBackgroundRadius: 4,
+            labelBackgroundPadding: [2, 6, 2, 6],
           },
         };
       }),
-      edges: graphEdges.map((e, i) => ({
-        id: `edge-${i}`,
-        source: e.source,
-        target: e.target,
-        data: { weight: e.weight, sentiment: e.sentiment },
-        style: {
-          stroke: getEdgeColor(e), // Phase 1: Sentiment color
-          lineWidth: Math.min(5, 1.5 + e.weight * 0.6),
-          endArrow: false,
-        },
-      })),
+      edges: graphEdges.map((e, i) => {
+        const edgeColor = getSentimentEdgeColor(e.avgSentiment || 0);
+        return {
+          id: `edge-${i}`,
+          source: e.source,
+          target: e.target,
+          data: { weight: e.weight, avgSentiment: e.avgSentiment },
+          style: {
+            stroke: edgeColor,
+            lineWidth: Math.min(5, 1.5 + e.weight * 0.6),
+            strokeOpacity: 0.6,
+            endArrow: false,
+          },
+        };
+      }),
     };
 
     const graph = new Graph({
       container,
       width,
       height,
-      renderer: 'canvas',
-      enableOptimize: true,
-      optimizeZoom: 0.7,
       data: g6Data,
       layout: {
         type: 'force',
         preventOverlap: true,
-        nodeSpacing: mobileGraphMode ? 100 : 120,
-        linkDistance: mobileGraphMode ? 120 : 250,
-        nodeStrength: mobileGraphMode ? -800 : -2000,
+        nodeSpacing: mobileGraphMode ? 100 : 80,
+        linkDistance: (edge) => (mobileGraphMode ? 120 : 180) + (edge.data?.weight || 1) * 12,
+        nodeStrength: mobileGraphMode ? -800 : -1200,
         edgeStrength: 0.25,
         collideStrength: 1,
         alphaDecay: 0.015,
         alphaMin: 0.001,
       },
-      modes: {
-        default: ['drag-canvas', 'zoom-canvas', 'drag-node'],
-      },
+      behaviors: [
+        {
+          key: 'drag-canvas',
+          type: 'drag-canvas',
+          enable: true,
+          sensitivity: mobileGraphMode ? 1.2 : 1,
+          enableOptimize: true,
+        },
+        {
+          key: 'zoom-canvas',
+          type: 'zoom-canvas',
+          enable: true,
+          sensitivity: mobileGraphMode ? 1.5 : 1,
+          minZoom: 0.3,
+          maxZoom: 3,
+          enableOptimize: true,
+          optimizeZoom: 0.7,
+        },
+        {
+          key: 'drag-element',
+          type: 'drag-element',
+          enable: true,
+          enableTransient: false,
+        },
+        {
+          key: 'hover-activate',
+          type: 'hover-activate',
+          enable: true,
+          degree: 1,
+        },
+      ],
       node: {
         style: { cursor: 'pointer' },
         state: {
@@ -229,40 +292,54 @@ export default function EntityGraphPage() {
       animation: true,
       autoFit: 'view',
       padding: 60,
+      enableOptimize: true,
+      renderer: 'canvas',
     });
 
-    graph.on('node:click', (evt) => {
-      const nodeId = evt.item?._cfg?.id;
-      const node = data.nodes.find(n => n.id === nodeId);
-      if (node) handleNodeClick(node.label);
-    });
-
-    setGraphRendering(true);
-    graph.render();
-    graph.on('afterlayout', () => setGraphRendering(false));
-    setTimeout(() => setGraphRendering(false), 3000); // Fallback
-    graphInstance.current = graph;
-
-    // Mobile double-tap to reset zoom
-    if (isMobile) {
-      let lastTap = 0;
-      container.addEventListener('touchend', (e) => {
-        const now = Date.now();
-        if (now - lastTap < 300) {
-          e.preventDefault();
-          graph.fitView();
-        }
-        lastTap = now;
-      });
+    // Mobile touch handling
+    if (mobileGraphMode) {
+      const canvas = container.querySelector('canvas');
+      if (canvas) {
+        let lastTap = 0;
+        canvas.addEventListener('touchend', (e) => {
+          const currentTime = Date.now();
+          const tapGap = currentTime - lastTap;
+          if (tapGap < 300 && tapGap > 0) {
+            // Double tap to reset zoom
+            graph.fitView({ padding: 60 });
+            e.preventDefault();
+          }
+          lastTap = currentTime;
+        }, { passive: false });
+      }
     }
 
+    graph.on('node:click', (evt) => {
+      const nodeId = evt.target?.id;
+      if (nodeId) handleNodeClick(nodeId);
+    });
+
+    // Layout completion handling
+    graph.on('afterlayout', () => {
+      setGraphRendering(false);
+    });
+
+    graph.render();
+    graphInstance.current = graph;
+
+    // Set timeout fallback in case layout event doesn't fire
+    const timeout = setTimeout(() => {
+      setGraphRendering(false);
+    }, 3000);
+
     return () => {
+      clearTimeout(timeout);
       if (graphInstance.current) {
         graphInstance.current.destroy();
         graphInstance.current = null;
       }
     };
-  }, [data, loading, isDark, viewMode, isMobile, entityTypeFilter, searchQuery]);
+  }, [data, loading, isDark, viewMode, isMobile, getFilteredData, calculateEdgeSentiments]);
 
   // Handle resize
   useEffect(() => {
@@ -281,12 +358,12 @@ export default function EntityGraphPage() {
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="flex flex-col h-full">
       {/* Header */}
       <div className="mb-4">
-        <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight uppercase">
-          
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <Network size={24} className="text-blue-600" />
           Entity Graph
         </h1>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 tracking-wide">
-          Entity relationships extracted from news articles
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          Explore relationships between entities in the news
         </p>
       </div>
 
@@ -312,11 +389,11 @@ export default function EntityGraphPage() {
               onClick={() => setTypeFilter(t)}
               className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
                 typeFilter === t
-                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
+                  ? 'bg-blue-50 dark:bg-blue-500/15 text-blue-600'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               }`}
             >
-              {t ? `${TYPE_ICONS[t]} ${TYPE_LABELS[t]}` : '🌐 All'}
+              {t ? TYPE_LABELS[t] : 'All'}
             </button>
           ))}
         </div>
@@ -329,7 +406,7 @@ export default function EntityGraphPage() {
               onClick={() => setTimeframe(o.k)}
               className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
                 timeframe === o.k
-                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
+                  ? 'bg-blue-50 dark:bg-blue-500/15 text-blue-600'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               }`}
             >
@@ -338,35 +415,6 @@ export default function EntityGraphPage() {
           ))}
         </div>
 
-
-        {/* Phase 1: NER Type Filter */}
-        <div className="flex gap-2 items-center bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-xl px-3 py-2">
-          <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-400">Filter:</span>
-          {['PERSON', 'ORGANIZATION', 'LOCATION'].map(type => (
-            <label key={type} className="flex items-center gap-1.5 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={entityTypeFilter[type]}
-                onChange={(e) => setEntityTypeFilter(prev => ({ ...prev, [type]: e.target.checked }))}
-                className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-[11px] font-medium text-gray-700 dark:text-gray-300">
-                {type === 'PERSON' ? '👤' : type === 'ORGANIZATION' ? '🏢' : '📍'} {type === 'PERSON' ? 'People' : type === 'ORGANIZATION' ? 'Orgs' : 'Places'}
-              </span>
-            </label>
-          ))}
-        </div>
-
-        {/* Phase 1: Search Highlight */}
-        <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            className="pl-8 pr-3 py-2 text-sm bg-white dark:bg-[#1a1a1a] border-2 border-emerald-500/50 dark:border-emerald-500/30 rounded-xl outline-none focus:border-emerald-500 transition-colors w-48 text-gray-900 dark:text-white placeholder:text-gray-400"
-            placeholder="Highlight..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-          />
-        </div>
         {/* Stats */}
         {!loading && data.nodes.length > 0 && (
           <div className="ml-auto flex gap-4 items-center text-[11px] font-medium text-gray-500 dark:text-gray-400">
@@ -379,7 +427,7 @@ export default function EntityGraphPage() {
         <div className="flex gap-3 text-[11px] text-gray-500 dark:text-gray-400">
           {Object.entries(SENTIMENT_COLORS).map(([k, v]) => (
             <span key={k} className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ background: v }} />{k}
+              <span className="w-2.5 h-2.5 rounded-full" style={{ background: v, boxShadow: `0 0 6px ${v}` }} />{k}
             </span>
           ))}
         </div>
@@ -388,14 +436,14 @@ export default function EntityGraphPage() {
         {isMobile && data.nodes.length > 0 && (
           <div className="flex gap-1 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-lg p-0.5">
             <button
-              className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900' : 'text-gray-400'}`}
+              className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-blue-50 dark:bg-blue-500/15 text-blue-600' : 'text-gray-400'}`}
               onClick={() => setViewMode('list')}
               title="List View"
             >
               <List size={16} />
             </button>
             <button
-              className={`p-1.5 rounded-md transition-all ${viewMode === 'graph' ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900' : 'text-gray-400'}`}
+              className={`p-1.5 rounded-md transition-all ${viewMode === 'graph' ? 'bg-blue-50 dark:bg-blue-500/15 text-blue-600' : 'text-gray-400'}`}
               onClick={() => setViewMode('graph')}
               title="Graph View"
             >
@@ -406,7 +454,7 @@ export default function EntityGraphPage() {
       </div>
 
       {/* Graph + Sidebar Container */}
-      <div className="flex-1 flex rounded-2xl  border border-[#eee] dark:border-[#2a2a2a] bg-[#fafaf9] dark:bg-[#0f0f0f] relative min-h-[400px]">
+      <div className="flex-1 flex rounded-2xl overflow-hidden border border-[#eee] dark:border-[#2a2a2a] bg-[#fafaf9] dark:bg-[#0f0f0f] relative min-h-[400px]">
         {/* Background gradient */}
         {isDark && <div className="absolute inset-0 pointer-events-none z-0" style={{ background: 'radial-gradient(ellipse at 30% 40%, rgba(99,102,241,0.06) 0%, transparent 60%), radial-gradient(ellipse at 70% 60%, rgba(16,185,129,0.04) 0%, transparent 50%)' }} />}
 
@@ -430,14 +478,14 @@ export default function EntityGraphPage() {
                       <div>
                         <span className="text-sm font-semibold text-gray-900 dark:text-white">{node.label}</span>
                         <span className="ml-2 text-[10px] font-semibold px-2 py-0.5 rounded-md" style={{ background: `${TYPE_COLORS[node.category] || '#6366f1'}15`, color: TYPE_COLORS[node.category] || '#6366f1' }}>
-                          {TYPE_ICONS[node.category] || '📊'} {TYPE_LABELS[node.category] || node.category}
+                          {TYPE_LABELS[node.category] || node.category}
                         </span>
                       </div>
                       <span className="text-lg font-bold text-gray-900 dark:text-white">{node.mentions}</span>
                     </div>
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full" style={{ background: SENTIMENT_COLORS[node.sentiment] || SENTIMENT_COLORS.Neutral }} />
+                        <span className="w-2 h-2 rounded-full" style={{ background: SENTIMENT_COLORS[node.sentiment] || SENTIMENT_COLORS.Neutral, boxShadow: `0 0 6px ${SENTIMENT_COLORS[node.sentiment] || SENTIMENT_COLORS.Neutral}` }} />
                         <span className="text-[11px] text-gray-500 dark:text-gray-400">{node.sentiment}</span>
                       </div>
                       <span className="text-[11px] text-gray-400 dark:text-gray-500">{connectedCount} connection{connectedCount !== 1 ? 's' : ''}</span>
@@ -454,10 +502,10 @@ export default function EntityGraphPage() {
             {(loading || graphRendering) && (
               <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 gap-3">
                 <div className="w-10 h-10 border-3 border-blue-100 dark:border-blue-500/20 border-t-blue-600 rounded-full animate-spin" />
-                <span className="text-sm">{loading ? "Loading entity data..." : "Rendering graph layout..."}</span>
+                <span className="text-sm">{loading ? 'Loading entity data...' : 'Rendering graph layout...'}</span>
               </div>
             )}
-            {!loading && !data.nodes.length && (
+            {!loading && !graphRendering && !data.nodes.length && (
               <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500 gap-4">
                 <Network size={56} strokeWidth={1.2} className="opacity-30" />
                 <p className="text-sm font-medium">No entity data yet</p>
@@ -502,7 +550,6 @@ export default function EntityGraphPage() {
                   {/* Header */}
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">{TYPE_ICONS[detail.category] || '📊'}</span>
                       <h3 className="text-lg font-bold text-gray-900 dark:text-white">{detail.name}</h3>
                     </div>
                     <span className="inline-block mt-2 text-[11px] font-semibold text-blue-600 bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded capitalize">{detail.category}</span>
