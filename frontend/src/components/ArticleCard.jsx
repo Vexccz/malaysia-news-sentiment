@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import React, { useState, useEffect, useMemo } from 'react';
 import SentimentBadge from './SentimentBadge';
 import SentimentSparkline from './SentimentSparkline';
@@ -281,7 +282,20 @@ const ArticleCard = ({ article, onPreview, onDelete, onBookmark, isBookmarked })
                </button>
              )}
 
-             <a 
+              <Link
+              to={'/articles/' + articleId}
+              className="art-external-link"
+              title="View full analysis"
+              onClick={(e) => e.stopPropagation()}
+              style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textDecoration: 'none', padding: '2px 6px' }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+              </svg>
+              Details
+            </Link>
+
+            <a 
               href={url} 
               target="_blank" 
               rel="noopener noreferrer" 
