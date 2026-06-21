@@ -483,7 +483,7 @@ const getArticleById = async (req, res) => {
       _id: { $ne: article._id },
       $or: [
         { source: article.source },
-        ...(article.categories?.length ? [{ categories: { $in: article.categories } }] : []),,
+        ...(article.categories?.length ? [{ categories: { $in: article.categories } }] : []),
       ],
     };
     const related = await Article.find(relatedFilter)
