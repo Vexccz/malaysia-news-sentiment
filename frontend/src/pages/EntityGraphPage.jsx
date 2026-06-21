@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Graph } from '@antv/g6';
+import { Graph, Minimap } from '@antv/g6';
 import { useTheme } from '../context/ThemeContext';
 import { Search, List, Network, X, TrendingUp, BarChart3, FileText, Share2, PieChart } from 'lucide-react';
 import { LineChart, Line, PieChart as RechartsPie, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
@@ -51,6 +51,26 @@ export default function EntityGraphPage() {
   const containerRef = useRef(null);
   const graphInstance = useRef(null);
   const layoutAnimationRef = useRef(null);
+  const pulseIntervalRef = useRef(null);
+
+  // Feature 3: Physics sliders state
+  const [linkDistance, setLinkDistance] = useState(250);
+  const [nodeStrength, setNodeStrength] = useState(2000);
+  const [showPhysics, setShowPhysics] = useState(false);
+
+  // Feature 5: Path highlight state
+  const [pathMode, setPathMode] = useState(false);
+  const [selectedPathNodes, setSelectedPathNodes] = useState([]);
+  const [highlightedPath, setHighlightedPath] = useState(null);
+
+  // Feature 6: Timeline animation state
+  const [timelineValue, setTimelineValue] = useState(100);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const timelineRef = useRef(null);
+
+  // Feature 7: Expanded neighborhood tracking
+  const [expandedNodes, setExpandedNodes] = useState(new Set());
+  const [graphDataExtra, setGraphDataExtra] = useState({ nodes: [], edges: [] });
 
   useEffect(() => {
     const checkMobile = () => {
@@ -61,6 +81,13 @@ export default function EntityGraphPage() {
     if (window.innerWidth <= 768) setViewMode('list');
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Cleanup timeline animation on unmount
+  useEffect(() => {
+    return () => {
+      if (timelineRef.current) cancelAnimationFrame(timelineRef.current);
+    };
   }, []);
 
   const fetchGraph = useCallback(async () => {
@@ -93,9 +120,94 @@ export default function EntityGraphPage() {
   };
 
   const handleNodeClick = (name) => {
+    if (pathMode) {
+      // Feature 5: Path highlight - select nodes for path finding
+      setSelectedPathNodes(prev => {
+        if (prev.includes(name)) {
+          return prev.filter(n => n !== name);
+        }
+        if (prev.length >= 2) return [name];
+        const next = [...prev, name];
+        if (next.length === 2) {
+          // Find path between the two selected nodes
+          const sourceId = data.nodes.find(n => n.label === next[0])?.id;
+          const targetId = data.nodes.find(n => n.label === next[1])?.id;
+          if (sourceId && targetId) {
+            const path = findShortestPath(sourceId, targetId);
+            setHighlightedPath(path);
+          }
+        }
+        return next;
+      });
+      return;
+    }
     if (selectedNode === name) { setSelectedNode(null); setDetail(null); }
     else { setSelectedNode(name); fetchDetail(name); }
   };
+
+  // Feature 5: BFS shortest path algorithm
+  const findShortestPath = useCallback((sourceId, targetId) => {
+    const adjacency = new Map();
+    data.edges.forEach(e => {
+      if (!adjacency.has(e.source)) adjacency.set(e.source, []);
+      if (!adjacency.has(e.target)) adjacency.set(e.target, []);
+      adjacency.get(e.source).push(e.target);
+      adjacency.get(e.target).push(e.source);
+    });
+    const visited = new Set();
+    const queue = [[sourceId]];
+    visited.add(sourceId);
+    while (queue.length > 0) {
+      const path = queue.shift();
+      const current = path[path.length - 1];
+      if (current === targetId) return path;
+      const neighbors = adjacency.get(current) || [];
+      for (const neighbor of neighbors) {
+        if (!visited.has(neighbor)) {
+          visited.add(neighbor);
+          queue.push([...path, neighbor]);
+        }
+      }
+    }
+    return null;
+  }, [data]);
+
+  // Feature 7: Expand neighborhood for a node
+  const expandNeighborhood = useCallback((nodeId) => {
+    if (expandedNodes.has(nodeId)) return;
+    const connectedEdges = data.edges.filter(e => e.source === nodeId || e.target === nodeId);
+    const connectedNodeIds = new Set();
+    connectedEdges.forEach(e => {
+      if (e.source !== nodeId) connectedNodeIds.add(e.source);
+      if (e.target !== nodeId) connectedNodeIds.add(e.target);
+    });
+    // Find nodes that are 2 hops away (not direct neighbors, not already present)
+    const directNeighbors = new Set([nodeId, ...connectedNodeIds]);
+    const secondHopNodes = new Set();
+    connectedNodeIds.forEach(nid => {
+      data.edges.forEach(e => {
+        const other = e.source === nid ? e.target : (e.target === nid ? e.source : null);
+        if (other && !directNeighbors.has(other)) secondHopNodes.add(other);
+      });
+    });
+    const newNodes = [...secondHopNodes].slice(0, 5).map(nid => {
+      const orig = data.nodes.find(n => n.id === nid);
+      if (!orig) return null;
+      return { ...orig, _expanded: true };
+    }).filter(Boolean);
+    const newNodeIds = new Set(newNodes.map(n => n.id));
+    const newEdges = data.edges.filter(e =>
+      (e.source === nodeId && newNodeIds.has(e.target)) ||
+      (e.target === nodeId && newNodeIds.has(e.source)) ||
+      (newNodeIds.has(e.source) && directNeighbors.has(e.target)) ||
+      (newNodeIds.has(e.target) && directNeighbors.has(e.source))
+    ).slice(0, 8);
+    setExpandedNodes(prev => new Set([...prev, nodeId]));
+    setGraphDataExtra(prev => ({
+      nodes: [...prev.nodes, ...newNodes.filter(n => !prev.nodes.find(p => p.id === n.id))],
+      edges: [...prev.edges, ...newEdges.filter(e => !prev.edges.find(p => p.id === e.id))],
+    }));
+  }, [data, expandedNodes]);
 
   // Filter nodes based on entity type checkboxes and search highlight
   const getFilteredData = useCallback(() => {
@@ -169,6 +281,26 @@ export default function EntityGraphPage() {
     const filtered = getFilteredData();
     let graphNodes = filtered.nodes;
     let graphEdges = calculateEdgeSentiments(filtered.nodes, filtered.edges);
+
+    // Feature 6: Timeline filtering - progressively reveal nodes
+    if (timelineValue < 100) {
+      const sortedByMentions = [...graphNodes].sort((a, b) => b.mentions - a.mentions);
+      const cutoff = Math.max(2, Math.ceil(sortedByMentions.length * (timelineValue / 100)));
+      const visibleIds = new Set(sortedByMentions.slice(0, cutoff).map(n => n.id));
+      graphNodes = graphNodes.filter(n => visibleIds.has(n.id));
+      graphEdges = graphEdges.filter(e => visibleIds.has(e.source) && visibleIds.has(e.target));
+    }
+
+    // Feature 7: Merge expanded neighborhood nodes
+    if (graphDataExtra.nodes.length > 0) {
+      const existingIds = new Set(graphNodes.map(n => n.id));
+      const extraNodes = graphDataExtra.nodes.filter(n => !existingIds.has(n.id));
+      graphNodes = [...graphNodes, ...extraNodes];
+      const allIds = new Set(graphNodes.map(n => n.id));
+      const extraEdges = graphDataExtra.edges.filter(e => allIds.has(e.source) && allIds.has(e.target));
+      const existingEdgeKeys = new Set(graphEdges.map(e => `${e.source}-${e.target}`));
+      graphEdges = [...graphEdges, ...extraEdges.filter(e => !existingEdgeKeys.has(`${e.source}-${e.target}`))];
+    }
     
     if (mobileGraphMode) {
       const sorted = [...graphNodes].sort((a, b) => b.mentions - a.mentions);
@@ -186,16 +318,21 @@ export default function EntityGraphPage() {
         const color = SENTIMENT_COLORS[n.sentiment] || SENTIMENT_COLORS.Neutral;
         const nodeSize = baseNodeSize + (n.mentions / maxMentions) * sizeRange;
         const isHighlighted = n.highlighted !== false;
+        // Feature 5: Path highlight dimming
+        const onPath = !highlightedPath || highlightedPath.includes(n.id);
+        // Feature 7: Expanded nodes get a distinct border
+        const isExpanded = n._expanded;
         return {
           id: n.id,
           label: n.label,
           data: { label: n.label, mentions: n.mentions, sentiment: n.sentiment, category: n.category },
-          size: nodeSize,
+          size: isExpanded ? nodeSize * 0.85 : nodeSize,
           style: {
             fill: color,
-            stroke: color,
-            lineWidth: 2.5,
-            opacity: isHighlighted ? 1 : 0.3,
+            stroke: isExpanded ? '#6366F1' : color,
+            lineWidth: isExpanded ? 3.5 : 2.5,
+            opacity: (isHighlighted && onPath) ? 1 : 0.08,
+            lineDash: isExpanded ? [4, 2] : undefined,
           },
           labelCfg: {
             style: {
@@ -210,16 +347,21 @@ export default function EntityGraphPage() {
       }),
       edges: graphEdges.map((e, i) => {
         const edgeColor = getSentimentEdgeColor(e.avgSentiment || 0);
+        // Feature 5: Highlight edges on the path
+        const isOnPath = highlightedPath && highlightedPath.includes(e.source) && highlightedPath.includes(e.target);
+        const pathIdxSrc = highlightedPath ? highlightedPath.indexOf(e.source) : -1;
+        const pathIdxTgt = highlightedPath ? highlightedPath.indexOf(e.target) : -1;
+        const isPathEdge = isOnPath && Math.abs(pathIdxSrc - pathIdxTgt) === 1;
         return {
           id: `edge-${i}`,
           source: e.source,
           target: e.target,
           data: { weight: e.weight, avgSentiment: e.avgSentiment },
           style: {
-            stroke: edgeColor,
-            lineWidth: Math.min(5, 1.5 + e.weight * 0.6),
-            strokeOpacity: 0.6,
-            endArrow: false,
+            stroke: isPathEdge ? '#6366F1' : edgeColor,
+            lineWidth: isPathEdge ? 5 : Math.min(5, 1.5 + e.weight * 0.6),
+            strokeOpacity: (highlightedPath && !isPathEdge) ? 0.05 : 0.6,
+            endArrow: isPathEdge ? { path: 'M 0,0 L 8,4 L 8,-4 Z', fill: '#6366F1' } : false,
           },
         };
       }),
@@ -237,21 +379,33 @@ export default function EntityGraphPage() {
         type: 'force',
         preventOverlap: true,
         nodeSpacing: mobileGraphMode ? 100 : 120,
-        linkDistance: mobileGraphMode ? 120 : 250,
-        nodeStrength: mobileGraphMode ? -800 : -2000,
+        linkDistance: mobileGraphMode ? 120 : linkDistance,
+        nodeStrength: mobileGraphMode ? -800 : -nodeStrength,
         edgeStrength: 0.25,
         collideStrength: 1,
         alphaDecay: 0.015,
         alphaMin: 0.001,
       },
       modes: {
-        default: ['drag-canvas', 'zoom-canvas', 'drag-node'],
+        default: [
+          'drag-canvas',
+          'zoom-canvas',
+          'drag-node',
+          ['hover-activate', { degree: 1, trigger: 'mouseenter' }],
+        ],
       },
+      plugins: [
+        new Minimap({
+          size: [150, 100],
+          className: 'g6-minimap',
+        }),
+      ],
       node: {
         style: { cursor: 'pointer' },
         state: {
-          active: { lineWidth: 4, fillOpacity: 0.6, shadowBlur: 24 },
-          inactive: { fillOpacity: 0.08, strokeOpacity: 0.2, labelOpacity: 0.25, shadowBlur: 0 },
+          active: { lineWidth: 5, fillOpacity: 1, shadowBlur: 30, shadowColor: 'rgba(99,102,241,0.5)' },
+          inactive: { fillOpacity: 0.06, strokeOpacity: 0.15, labelOpacity: 0.15, shadowBlur: 0 },
+          selected: { lineWidth: 5, stroke: '#6366F1', shadowBlur: 24, shadowColor: 'rgba(99,102,241,0.6)' },
         },
       },
       edge: {
@@ -271,6 +425,54 @@ export default function EntityGraphPage() {
       if (node) handleNodeClick(node.label);
     });
 
+    // Feature 7: Double-click to expand neighborhood
+    graph.on('node:dblclick', (evt) => {
+      const nodeId = evt.item?._cfg?.id;
+      if (nodeId) expandNeighborhood(nodeId);
+    });
+
+    // Feature 4: Pulse animation on hover - gentle size pulse
+    graph.on('node:mouseenter', (evt) => {
+      const item = evt.item;
+      if (!item) return;
+      const originalSize = item.getModel().size;
+      let growing = true;
+      let currentSize = originalSize;
+      if (pulseIntervalRef.current) clearInterval(pulseIntervalRef.current);
+      pulseIntervalRef.current = setInterval(() => {
+        if (!graphInstance.current || !item.destroyed === false) {
+          clearInterval(pulseIntervalRef.current);
+          return;
+        }
+        if (growing) {
+          currentSize += 1.2;
+          if (currentSize >= originalSize * 1.25) growing = false;
+        } else {
+          currentSize -= 1.2;
+          if (currentSize <= originalSize) growing = true;
+        }
+        try { graphInstance.current.updateItem(item, { size: currentSize }); } catch { /* item may be removed */ }
+      }, 50);
+    });
+    graph.on('node:mouseleave', () => {
+      if (pulseIntervalRef.current) {
+        clearInterval(pulseIntervalRef.current);
+        pulseIntervalRef.current = null;
+      }
+      // Reset all node sizes
+      try {
+        const nodes = graphInstance.current?.getNodes();
+        if (nodes) {
+          nodes.forEach(n => {
+            const model = n.getModel();
+            if (model.size !== model.data?._originalSize) {
+              // Size was pulsed, but we'll just let the next render reset it
+            }
+          });
+        }
+      } catch { /* ignore */ }
+    });
+
     setGraphRendering(true);
     graph.render();
     graph.on('afterlayout', () => setGraphRendering(false));
@@ -284,12 +486,13 @@ export default function EntityGraphPage() {
 
     return () => {
       clearTimeout(timeout);
+      if (pulseIntervalRef.current) clearInterval(pulseIntervalRef.current);
       if (graphInstance.current) {
         graphInstance.current.destroy();
         graphInstance.current = null;
       }
     };
-  }, [data, loading, isDark, viewMode, isMobile, getFilteredData, calculateEdgeSentiments]);
+  }, [data, loading, isDark, viewMode, isMobile, getFilteredData, calculateEdgeSentiments, linkDistance, nodeStrength, highlightedPath, timelineValue, graphDataExtra, pathMode]);
 
   // Handle resize
   useEffect(() => {
@@ -306,6 +509,40 @@ export default function EntityGraphPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="flex flex-col h-full">
+      {/* Minimap & Range Slider Styles */}
+      <style>{`
+        .g6-minimap {
+          position: absolute !important;
+          bottom: 12px !important;
+          right: 12px !important;
+          border-radius: 8px !important;
+          overflow: hidden !important;
+          border: 1px solid ${isDark ? '#2a2a2a' : '#eee'} !important;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.15) !important;
+          z-index: 10 !important;
+        }
+        .g6-minimap-viewport {
+          border: 2px solid #6366F1 !important;
+          border-radius: 4px !important;
+        }
+        input[type="range"] {
+          -webkit-appearance: none;
+          height: 6px;
+          border-radius: 3px;
+          outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          width: 14px;
+          height: 14px;
+          border-radius: 50%;
+          cursor: pointer;
+          border: 2px solid white;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+        }
+        input[type="range"].accent-purple-500::-webkit-slider-thumb { background: #a855f7; }
+        input[type="range"].accent-cyan-500::-webkit-slider-thumb { background: #06b6d4; }
+      `}</style>
       {/* Header */}
       <div className="mb-4">
         <div className="flex items-baseline gap-3 mb-1">
@@ -405,6 +642,155 @@ export default function EntityGraphPage() {
           </div>
         )}
       </div>
+
+      {/* Feature Controls Row */}
+      {!loading && data.nodes.length > 0 && !isMobile && (
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          {/* Feature 3: Physics Controls Toggle */}
+          <button
+            onClick={() => setShowPhysics(!showPhysics)}
+            className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all border ${
+              showPhysics
+                ? 'bg-purple-50 dark:bg-purple-500/15 text-purple-600 border-purple-200 dark:border-purple-500/30'
+                : 'bg-white dark:bg-[#1a1a1a] text-gray-500 dark:text-gray-400 border-[#eee] dark:border-[#2a2a2a] hover:text-gray-700 dark:hover:text-gray-200'
+            }`}
+          >
+            <span className="flex items-center gap-1"><BarChart3 size={12} /> Physics</span>
+          </button>
+
+          {/* Feature 5: Path Mode Toggle */}
+          <button
+            onClick={() => { setPathMode(!pathMode); setSelectedPathNodes([]); setHighlightedPath(null); }}
+            className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all border ${
+              pathMode
+                ? 'bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 border-indigo-200 dark:border-indigo-500/30'
+                : 'bg-white dark:bg-[#1a1a1a] text-gray-500 dark:text-gray-400 border-[#eee] dark:border-[#2a2a2a] hover:text-gray-700 dark:hover:text-gray-200'
+            }`}
+          >
+            <span className="flex items-center gap-1"><Share2 size={12} /> Path Mode {pathMode ? 'ON' : ''}</span>
+          </button>
+
+          {/* Feature 5: Path info */}
+          {pathMode && (
+            <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-medium">
+              {selectedPathNodes.length === 0 && 'Click first node...'}
+              {selectedPathNodes.length === 1 && `Selected: ${selectedPathNodes[0]} → Click second node`}
+              {selectedPathNodes.length === 2 && `Path: ${selectedPathNodes[0]} ↔ ${selectedPathNodes[1]}${highlightedPath ? ` (${highlightedPath.length} nodes)` : ' (no path found)'}`}
+            </span>
+          )}
+          {highlightedPath && (
+            <button
+              onClick={() => { setSelectedPathNodes([]); setHighlightedPath(null); }}
+              className="px-2 py-1 rounded-md text-[10px] font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+            >
+              Clear Path
+            </button>
+          )}
+
+          {/* Feature 6: Timeline Toggle */}
+          <button
+            onClick={() => { if (timelineValue === 100) setTimelineValue(0); else setTimelineValue(100); }}
+            className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all border ${
+              timelineValue < 100
+                ? 'bg-cyan-50 dark:bg-cyan-500/15 text-cyan-600 border-cyan-200 dark:border-cyan-500/30'
+                : 'bg-white dark:bg-[#1a1a1a] text-gray-500 dark:text-gray-400 border-[#eee] dark:border-[#2a2a2a] hover:text-gray-700 dark:hover:text-gray-200'
+            }`}
+          >
+            <span className="flex items-center gap-1"><TrendingUp size={12} /> Timeline</span>
+          </button>
+
+          {/* Feature 7: Expand hint */}
+          <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-auto">
+            Double-click a node to expand its neighborhood
+          </span>
+        </div>
+      )}
+
+      {/* Feature 3: Physics Sliders Panel */}
+      {showPhysics && !isMobile && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          className="flex flex-wrap items-center gap-4 mb-3 px-4 py-2.5 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-xl"
+        >
+          <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+            <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap">Link Distance</label>
+            <input
+              type="range"
+              min={50}
+              max={500}
+              value={linkDistance}
+              onChange={e => setLinkDistance(Number(e.target.value))}
+              className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full appearance-none cursor-pointer accent-purple-500"
+            />
+            <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400 w-8 text-right">{linkDistance}</span>
+          </div>
+          <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+            <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap">Repulsion</label>
+            <input
+              type="range"
+              min={200}
+              max={5000}
+              value={nodeStrength}
+              onChange={e => setNodeStrength(Number(e.target.value))}
+              className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full appearance-none cursor-pointer accent-purple-500"
+            />
+            <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400 w-10 text-right">{nodeStrength}</span>
+          </div>
+          <button
+            onClick={() => { setLinkDistance(250); setNodeStrength(2000); }}
+            className="px-2 py-1 rounded-md text-[10px] font-semibold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+          >
+            Reset
+          </button>
+        </motion.div>
+      )}
+
+      {/* Feature 6: Timeline Slider */}
+      {timelineValue < 100 && !isMobile && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          className="flex items-center gap-3 mb-3 px-4 py-2.5 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-xl"
+        >
+          <TrendingUp size={14} className="text-cyan-500 flex-shrink-0" />
+          <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap">Reveal Progress</label>
+          <input
+            type="range"
+            min={5}
+            max={100}
+            value={timelineValue}
+            onChange={e => setTimelineValue(Number(e.target.value))}
+            className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full appearance-none cursor-pointer accent-cyan-500"
+          />
+          <span className="text-[10px] font-mono text-cyan-600 dark:text-cyan-400 w-10 text-right">{timelineValue}%</span>
+          <button
+            onClick={() => {
+              setIsAnimating(true);
+              let v = 5;
+              const step = () => {
+                v += 2;
+                if (v > 100) { setTimelineValue(100); setIsAnimating(false); return; }
+                setTimelineValue(v);
+                timelineRef.current = requestAnimationFrame(step);
+              };
+              timelineRef.current = requestAnimationFrame(step);
+            }}
+            disabled={isAnimating}
+            className="px-2.5 py-1 rounded-md text-[10px] font-semibold bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 hover:bg-cyan-100 dark:hover:bg-cyan-500/20 transition-colors disabled:opacity-50"
+          >
+            {isAnimating ? '...' : '▶ Animate'}
+          </button>
+          <button
+            onClick={() => { if (timelineRef.current) cancelAnimationFrame(timelineRef.current); setTimelineValue(100); setIsAnimating(false); }}
+            className="px-2 py-1 rounded-md text-[10px] font-semibold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+          >
+            Reset
+          </button>
+        </motion.div>
+      )}
 
       {/* Graph + Sidebar Container */}
       <div className="flex-1 flex rounded-2xl overflow-hidden border border-[#eee] dark:border-[#2a2a2a] bg-[#fafaf9] dark:bg-[#0f0f0f] relative min-h-[400px]">
