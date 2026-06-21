@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import SentimentBadge from './SentimentBadge';
+import SentimentSparkline from './SentimentSparkline';
 import AlertBadge from './AlertBadge';
 import ShareButton from './ShareButton';
 import { useArticleAnalysis } from '../context/ArticleAnalysisContext';
@@ -204,6 +205,9 @@ const ArticleCard = ({ article, onPreview, onDelete, onBookmark, isBookmarked })
         <div className="art-footer">
           <div className="art-footer-left">
             <SentimentBadge sentiment={sentiment} />
+            {sentiment && (
+              <SentimentSparkline sentiment={sentiment} score={confidence} />
+            )}
             {confidence !== undefined && confidence > 0 && (
               <div className="art-confidence-container">
                 <div className="art-confidence-track">

@@ -22,6 +22,7 @@ import { Search, Clock, ArrowLeft, Sparkles, FileDown, Printer, ChevronLeft, Che
 import DashboardCustomizer from '../components/DashboardCustomizer';
 import EmptyState from '../components/EmptyState';
 import DashboardSummary from '../components/DashboardSummary';
+import OnboardingTour, { useOnboardingTour } from '../components/OnboardingTour';
 
 // Lazy load chart components
 const SentimentBarChart = lazy(() => import('../components/SentimentBarChart'));
@@ -179,6 +180,9 @@ const Dashboard = () => {
   const [dashboardLayout, setDashboardLayout] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [showFabTooltip, setShowFabTooltip] = useState(false);
+
+  // Onboarding tour
+  const { key: tourKey, startTour } = useOnboardingTour();
 
   const handleTabSwitch = useCallback((tab) => {
     if (tab === mobileTab) return;
@@ -605,6 +609,7 @@ const Dashboard = () => {
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         className="mb-6 flex items-start justify-between"
+        data-tour="metrics"
       >
         <div>
           <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">
@@ -614,13 +619,21 @@ const Dashboard = () => {
             Malaysia News Sentiment Analysis
           </p>
         </div>
-        <button
-          onClick={() => setLang(lang === 'en' ? 'ms' : 'en')}
-          className="text-xs font-medium uppercase tracking-wider text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-colors font-sans"
-        >
+        <div className="flex items-center gap-2">
+          <button
+            onClick={startTour}
+            className="text-xs font-medium uppercase tracking-wider text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-colors font-sans border border-ink/10 dark:border-paper/10 px-2 py-1"
+          >
+            Show Tour
+          </button>
+          <button
+            onClick={() => setLang(lang === 'en' ? 'ms' : 'en')}
+            className="text-xs font-medium uppercase tracking-wider text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-colors font-sans"
+          >
           <Globe size={14} />
           <span>{lang === 'en' ? 'BM' : 'ENG'}</span>
         </button>
+        </div>
       </motion.div>
 
       <SearchBarClean onSearch={handleSearch} loading={searchLoading} />
@@ -1509,6 +1522,9 @@ const Dashboard = () => {
       </AnimatePresence>
 
       <ScrollToTop />
+
+      {/* Onboarding Tour */}
+      <OnboardingTour key={tourKey} />
 
       {/* Dashboard Customizer Modal */}
       <DashboardCustomizer

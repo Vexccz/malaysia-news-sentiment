@@ -200,6 +200,9 @@ const SentimentTimeline = () => {
                   dot={{ r: 2.5, fill: '#111', stroke: '#111' }}
                   activeDot={{ r: 4, fill: '#111', stroke: '#fff', strokeWidth: 2 }}
                   className="dark:[&>path]:!stroke-white dark:[&>circle]:!fill-white"
+                  isAnimationActive={true}
+                  animationDuration={1500}
+                  animationEasing="ease-out"
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -220,9 +223,9 @@ const SentimentTimeline = () => {
                 />
                 <YAxis tick={{ fontSize: 10, fill: '#999' }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="positiveCount" stackId="1" stroke="#22c55e" fill="#22c55e" fillOpacity={0.25} />
-                <Area type="monotone" dataKey="neutralCount" stackId="1" stroke="#9ca3af" fill="#9ca3af" fillOpacity={0.15} />
-                <Area type="monotone" dataKey="negativeCount" stackId="1" stroke="#ef4444" fill="#ef4444" fillOpacity={0.25} />
+                <Area type="monotone" dataKey="positiveCount" stackId="1" stroke="#22c55e" fill="#22c55e" fillOpacity={0.25} isAnimationActive={true} animationDuration={1500} animationEasing="ease-out" />
+                <Area type="monotone" dataKey="neutralCount" stackId="1" stroke="#9ca3af" fill="#9ca3af" fillOpacity={0.15} isAnimationActive={true} animationDuration={1500} animationEasing="ease-out" />
+                <Area type="monotone" dataKey="negativeCount" stackId="1" stroke="#ef4444" fill="#ef4444" fillOpacity={0.25} isAnimationActive={true} animationDuration={1500} animationEasing="ease-out" />
               </AreaChart>
             </ResponsiveContainer>
             <div className="flex items-center gap-4 mt-2 text-[10px] text-gray-400 uppercase tracking-wider">

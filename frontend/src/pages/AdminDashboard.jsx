@@ -335,6 +335,9 @@ const AdminDashboard = () => {
                             fill="#1A1A1A"
                             opacity={0.5}
                             radius={[1, 1, 0, 0]}
+                            isAnimationActive={true}
+                            animationDuration={1500}
+                            animationEasing="ease-out"
                           />
                         </BarChart>
                       </ResponsiveContainer>

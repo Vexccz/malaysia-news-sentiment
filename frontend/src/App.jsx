@@ -31,6 +31,7 @@ const Alerts = lazy(() => import('./pages/Alerts'));
 const SourceCredibility = lazy(() => import('./pages/SourceCredibility'));
 const ApiDocs = lazy(() => import('./pages/ApiDocs'));
 const SharedArticle = lazy(() => import('./pages/SharedArticle'));
+const ArticleDetail = lazy(() => import('./pages/ArticleDetail'));
 
 // Use case pages (lazy loaded)
 const ResearchersPage = lazy(() => import('./pages/usecases/ResearchersPage'));
@@ -59,6 +60,10 @@ import PageTransition from './components/PageTransition';
 import { ArticleAnalysisProvider } from './context/ArticleAnalysisContext';
 import OfflineBanner from './components/OfflineBanner';
 import Layout from './components/Layout';
+import useKeyboardShortcuts from './hooks/useKeyboardShortcuts';
+import KeyboardShortcutsModal from './components/KeyboardShortcutsModal';
+import { FreshnessProvider } from './context/FreshnessContext';
+import OnboardingTour from './components/OnboardingTour';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
@@ -493,6 +498,7 @@ const AppInner = () => (
     <Route path="/heatmap" element={<ProtectedRoute><Layout><Heatmap /></Layout></ProtectedRoute>} />
     <Route path="/categories" element={<ProtectedRoute><Layout><Categories /></Layout></ProtectedRoute>} />
     <Route path="/forecast" element={<ProtectedRoute><Layout><Forecast /></Layout></ProtectedRoute>} />
+    <Route path="/articles/:id" element={<ProtectedRoute><Layout><ArticleDetail /></Layout></ProtectedRoute>} />
     
     {/* Public shared article page (no auth, no layout) */}
     <Route path="/shared/:id" element={<SharedArticle />} />
@@ -520,18 +526,38 @@ const AppInner = () => (
   </Suspense>
 );
 
+const AppRoutes = () => {
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  useKeyboardShortcuts({
+    onShowHelp: () => setShowShortcuts(true),
+    onCloseModals: () => setShowShortcuts(false),
+  });
+
+  return (
+    <>
+      <AppInner />
+      <OnboardingTour />
+      <KeyboardShortcutsModal
+        isOpen={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+      />
+    </>
+  );
+};
+
 const App = () => (
   <ErrorBoundary>
   <QueryClientProvider client={queryClient}>
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <ThemeProvider>
-        <LanguageProvider>
+        <FreshnessProvider><LanguageProvider>
           <AuthProvider>
             <SocketProvider>
               <ArticleAnalysisProvider>
                 <Router>
-                  <AppInner />
-                  <Toaster 
+                  <AppRoutes />
+                  <Toaster
                     position={window.innerWidth <= 768 ? 'bottom-center' : 'top-center'}
                     containerStyle={window.innerWidth <= 768 ? { bottom: 80 } : { top: 10 }}
                     toastOptions={{
@@ -551,7 +577,7 @@ const App = () => (
               </ArticleAnalysisProvider>
             </SocketProvider>
           </AuthProvider>
-        </LanguageProvider>
+        </LanguageProvider></FreshnessProvider>
       </ThemeProvider>
     </GoogleOAuthProvider>
   </QueryClientProvider>

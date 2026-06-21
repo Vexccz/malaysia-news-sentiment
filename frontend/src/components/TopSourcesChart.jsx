@@ -77,9 +77,9 @@ const TopSourcesChart = ({ sourcesData = [] }) => {
           <YAxis type="category" dataKey="name" width={130} tick={{ fill: 'var(--text-500)', fontSize: 11, fontFamily: 'Inter' }} axisLine={false} tickLine={false} />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--bg)', opacity: 0.5 }} />
           <Legend formatter={v => <span style={{ color: 'var(--text-500)', fontSize: 12, fontFamily: 'Inter' }}>{v}</span>} />
-          <Bar isAnimationActive={true} animationDuration={1000} dataKey="Positive" stackId="a" fill="url(#topPos)" />
-          <Bar isAnimationActive={true} animationDuration={1000} dataKey="Negative" stackId="a" fill="url(#topNeg)" />
-          <Bar isAnimationActive={true} animationDuration={1000} dataKey="Neutral"  stackId="a" fill="url(#topNeu)" radius={[0, 4, 4, 0]} />
+          <Bar isAnimationActive={true} animationDuration={1500} animationEasing="ease-out" dataKey="Positive" stackId="a" fill="url(#topPos)" />
+          <Bar isAnimationActive={true} animationDuration={1500} animationEasing="ease-out" dataKey="Negative" stackId="a" fill="url(#topNeg)" />
+          <Bar isAnimationActive={true} animationDuration={1500} animationEasing="ease-out" dataKey="Neutral"  stackId="a" fill="url(#topNeu)" radius={[0, 4, 4, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

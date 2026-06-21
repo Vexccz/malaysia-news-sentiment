@@ -279,10 +279,10 @@ const Heatmap = () => {
       className="space-y-6"
     >
       {/* Header */}
-      <div className="flex items-end justify-between flex-wrap gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <div className="flex items-baseline gap-3 mb-1">
-            <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">Sentiment Heatmap</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">Sentiment Heatmap</h1>
           </div>
           <div className="editorial-rule mb-2" />
           <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed font-sans">Geographic sentiment distribution across Malaysian states.</p>
@@ -324,7 +324,7 @@ const Heatmap = () => {
           </div>
         )}
 
-        <div ref={mapContainer} className="w-full" style={{ height: '480px' }} />
+        <div ref={mapContainer} className="w-full h-[320px] sm:h-[480px]" />
 
         {/* Legend */}
         <div className="flex items-center justify-center gap-4 py-3 border-t border-[#eee] dark:border-[#2a2a2a] flex-wrap">
@@ -364,7 +364,7 @@ const Heatmap = () => {
                   </svg>
                 </button>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4">
                 <div className="text-center p-3 bg-paper dark:bg-paper-dark border border-paper-line dark:border-paper-dark-line">
                   <p className="text-xl font-bold font-display text-ink dark:text-paper">{sd.articleCount}</p>
                   <p className="text-[10px] text-ink-faint font-sans">Articles</p>

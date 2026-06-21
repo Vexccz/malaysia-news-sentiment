@@ -270,6 +270,9 @@ const Forecast = () => {
                           fill="#dc2626"
                           fillOpacity={0.06}
                           name="Prediction Range"
+                          isAnimationActive={true}
+                          animationDuration={1500}
+                          animationEasing="ease-out"
                         />
                         <Area
                           type="monotone"
@@ -279,6 +282,9 @@ const Forecast = () => {
                           fillOpacity={1}
                           name=" "
                           legendType="none"
+                          isAnimationActive={true}
+                          animationDuration={1500}
+                          animationEasing="ease-out"
                         />
                         {/* Historical line */}
                         <Line
@@ -289,6 +295,9 @@ const Forecast = () => {
                           dot={{ r: 2, fill: '#1A1A1A' }}
                           name="Actual Sentiment"
                           connectNulls={false}
+                          isAnimationActive={true}
+                          animationDuration={1500}
+                          animationEasing="ease-out"
                         />
                         {/* Predicted line (dashed) */}
                         <Line
@@ -300,6 +309,9 @@ const Forecast = () => {
                           dot={{ r: 2.5, fill: '#dc2626' }}
                           name="AI Prediction"
                           connectNulls={false}
+                          isAnimationActive={true}
+                          animationDuration={1500}
+                          animationEasing="ease-out"
                         />
                       </ComposedChart>
                     </ResponsiveContainer>

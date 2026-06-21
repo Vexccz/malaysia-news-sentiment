@@ -106,7 +106,7 @@ const Compare = () => {
             </div>
           ))}
         </div>
-        <div className="px-5 py-3 border-t border-paper-line dark:border-paper-dark-line flex items-center gap-3">
+        <div className="px-5 py-3 border-t border-paper-line dark:border-paper-dark-line flex flex-wrap items-center gap-3">
           {topics.length < 5 && (
             <button
               onClick={addTopic}
@@ -159,7 +159,7 @@ const Compare = () => {
           )}
 
           {/* Charts Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* Radar Chart */}
             <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
               <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
@@ -182,6 +182,9 @@ const Compare = () => {
                         fill={COLORS[i]}
                         fillOpacity={0.1}
                         strokeWidth={2}
+                        isAnimationActive={true}
+                        animationDuration={1500}
+                        animationEasing="ease-out"
                       />
                     ))}
                     <Legend wrapperStyle={{ fontSize: 11 }} />
@@ -205,9 +208,9 @@ const Compare = () => {
                     <YAxis tick={{ fontSize: 11 }} unit="%" />
                     <Tooltip contentStyle={{ borderRadius: 0, border: '1px solid #e5e7eb', fontSize: 12 }} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Bar dataKey="Positive" fill="#10b981" />
-                    <Bar dataKey="Neutral" fill="#f59e0b" />
-                    <Bar dataKey="Negative" fill="#ef4444" />
+                    <Bar dataKey="Positive" fill="#10b981" isAnimationActive={true} animationDuration={1500} animationEasing="ease-out" />
+                    <Bar dataKey="Neutral" fill="#f59e0b" isAnimationActive={true} animationDuration={1500} animationEasing="ease-out" />
+                    <Bar dataKey="Negative" fill="#ef4444" isAnimationActive={true} animationDuration={1500} animationEasing="ease-out" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

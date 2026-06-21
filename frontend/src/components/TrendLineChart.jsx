@@ -53,9 +53,9 @@ const TrendLineChart = ({ trendsData = [] }) => (
           <YAxis tick={{ fill: 'var(--text-400)', fontSize: 11, fontFamily: 'Inter' }} axisLine={false} tickLine={false} allowDecimals={false} />
           <Tooltip content={<CustomTooltip />} />
           <Legend formatter={v => <span style={{ color: 'var(--text-500)', fontSize: 12, fontFamily: 'Inter' }}>{v}</span>} />
-          <Area isAnimationActive={true} animationDuration={1800} animationBegin={200} type="monotone" dataKey="Positive" stroke="#30CF79" strokeWidth={2.5} fill="url(#gPos)" dot={false} activeDot={{ r: 6, strokeWidth: 2, stroke: 'var(--bg)', fill: '#30CF79' }} />
-          <Area isAnimationActive={true} animationDuration={1800} animationBegin={400} type="monotone" dataKey="Negative" stroke="#F54E4E" strokeWidth={2.5} fill="url(#gNeg)" dot={false} activeDot={{ r: 6, strokeWidth: 2, stroke: 'var(--bg)', fill: '#F54E4E' }} />
-          <Area isAnimationActive={true} animationDuration={1800} animationBegin={600} type="monotone" dataKey="Neutral"  stroke="#F7A501" strokeWidth={2.5} fill="url(#gNeu)" dot={false} activeDot={{ r: 6, strokeWidth: 2, stroke: 'var(--bg)', fill: '#F7A501' }} />
+          <Area isAnimationActive={true} animationDuration={1500} animationEasing="ease-out" type="monotone" dataKey="Positive" stroke="#30CF79" strokeWidth={2.5} fill="url(#gPos)" dot={false} activeDot={{ r: 6, strokeWidth: 2, stroke: 'var(--bg)', fill: '#30CF79' }} />
+          <Area isAnimationActive={true} animationDuration={1500} animationEasing="ease-out" type="monotone" dataKey="Negative" stroke="#F54E4E" strokeWidth={2.5} fill="url(#gNeg)" dot={false} activeDot={{ r: 6, strokeWidth: 2, stroke: 'var(--bg)', fill: '#F54E4E' }} />
+          <Area isAnimationActive={true} animationDuration={1500} animationEasing="ease-out" type="monotone" dataKey="Neutral"  stroke="#F7A501" strokeWidth={2.5} fill="url(#gNeu)" dot={false} activeDot={{ r: 6, strokeWidth: 2, stroke: 'var(--bg)', fill: '#F7A501' }} />
         </AreaChart>
       </ResponsiveContainer>
     )}

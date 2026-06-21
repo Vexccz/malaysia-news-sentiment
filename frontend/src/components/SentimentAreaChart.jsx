@@ -108,6 +108,9 @@ const SentimentAreaChart = ({ trendsData = [] }) => {
             stroke="#10b981" 
             strokeWidth={2}
             fill="url(#colorPositive)" 
+            isAnimationActive={true}
+            animationDuration={1500}
+            animationEasing="ease-out"
           />
           <Area 
             type="monotone" 
@@ -116,6 +119,9 @@ const SentimentAreaChart = ({ trendsData = [] }) => {
             stroke="#ef4444" 
             strokeWidth={2}
             fill="url(#colorNegative)" 
+            isAnimationActive={true}
+            animationDuration={1500}
+            animationEasing="ease-out"
           />
           <Area 
             type="monotone" 
@@ -124,6 +130,9 @@ const SentimentAreaChart = ({ trendsData = [] }) => {
             stroke="#f59e0b" 
             strokeWidth={2}
             fill="url(#colorNeutral)" 
+            isAnimationActive={true}
+            animationDuration={1500}
+            animationEasing="ease-out"
           />
         </AreaChart>
       </ResponsiveContainer>

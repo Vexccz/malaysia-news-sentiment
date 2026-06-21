@@ -558,12 +558,12 @@ export default function EntityGraphPage() {
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-3 mb-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-4">
         {/* Search */}
-        <div className="relative">
+        <div className="relative w-full sm:w-auto">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
-            className="pl-8 pr-3 py-2 text-sm bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-xl outline-none focus:border-blue-500 dark:focus:border-blue-500 transition-colors w-52 text-gray-900 dark:text-white placeholder:text-gray-400"
+            className="pl-8 pr-3 py-2 text-sm bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-xl outline-none focus:border-blue-500 dark:focus:border-blue-500 transition-colors w-full sm:w-52 text-gray-900 dark:text-white placeholder:text-gray-400"
             placeholder="Search entities..."
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -797,7 +797,7 @@ export default function EntityGraphPage() {
       )}
 
       {/* Graph + Sidebar Container */}
-      <div className="flex-1 flex rounded-2xl overflow-hidden border border-[#eee] dark:border-[#2a2a2a] bg-[#fafaf9] dark:bg-[#0f0f0f] relative min-h-[400px]">
+      <div className="flex-1 flex flex-col md:flex-row rounded-2xl overflow-hidden border border-[#eee] dark:border-[#2a2a2a] bg-[#fafaf9] dark:bg-[#0f0f0f] relative min-h-[300px] md:min-h-[400px]">
         {/* Background gradient */}
         {isDark && <div className="absolute inset-0 pointer-events-none z-0" style={{ background: 'radial-gradient(ellipse at 30% 40%, rgba(99,102,241,0.06) 0%, transparent 60%), radial-gradient(ellipse at 70% 60%, rgba(16,185,129,0.04) 0%, transparent 50%)' }} />}
 
