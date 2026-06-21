@@ -63,7 +63,7 @@ const shouldHideFromGenericMalaysiaFeed = (article, hasExplicitFilters) => {
  */
 const getHistory = async (req, res) => {
   if (!isDbConnected()) {
-    return res.json({ total: 0, pages: 0, page: 1, articles: [], warning: 'Database not connected.' });
+    return res.json({ total: 0, pages: 0, page: 1, articles$or: [], warning: 'Database not connected.' });
   }
   try {
     const {
@@ -107,7 +107,7 @@ const getHistory = async (req, res) => {
       const s = escapeRegex(sanitize(search, 100));
       filter.$and = filter.$and || [];
       filter.$and.push({
-        $or: [
+        $or$or: [
           { title: { $regex: s, $options: 'i' } },
           { description: { $regex: s, $options: 'i' } },
         ],
@@ -278,10 +278,10 @@ const deleteArticle = async (req, res) => {
 const dashboardInit = async (req, res) => {
   if (!isDbConnected()) {
     return res.json({
-      history: { articles: [], total: 0 },
+      history: { articles$or: [], total: 0 },
       stats: { total: 0, sentiments: {}, alerts: 0 },
-      trends: [],
-      keywords: [],
+      trends$or: [],
+      keywords$or: [],
       periodComparison: { total: 0, positive: 0, negative: 0, neutral: 0 },
     });
   }
@@ -444,11 +444,11 @@ const cleanupUnclassified = async (req, res) => {
   if (!isDbConnected()) return res.status(503).json({ error: 'DB not connected' });
   try {
     const result = await Article.deleteMany({
-      $or: [
+      $or$or: [
         { sentiment: { $exists: false } },
         { sentiment: null },
         { sentiment: '' },
-        { sentiment: { $nin: ['Positive', 'Negative', 'Neutral'] } },
+        { sentiment: { $nin$or: ['Positive', 'Negative', 'Neutral'] } },
       ]
     });
     const remaining = await Article.countDocuments({});
@@ -480,10 +480,10 @@ const getArticleById = async (req, res) => {
 
     // Find related articles (same source or overlapping categories)
     const relatedFilter = {
-      _id: { : article._id },
-      : [
+      _id: { $ne: article._id },
+      $or: [
         { source: article.source },
-        ...(article.categories?.length ? [{ categories: { : article.categories } }] : []),
+        ...(article.categories?.length ? [{ categories: { $in: article.categories } }] : []),,
       ],
     };
     const related = await Article.find(relatedFilter)
