@@ -237,18 +237,6 @@ const ArticleDetail = () => {
           {title}
         </h1>
 
-        {urlToImage && (
-          <div className="mb-6">
-            <img
-              src={urlToImage}
-              alt={title}
-              className="w-full max-h-96 object-cover"
-              loading="lazy"
-              onError={(e) => { e.target.style.display = 'none'; }}
-            />
-          </div>
-        )}
-
         <div className="border-t border-ink/10 my-6" />
 
         <article
