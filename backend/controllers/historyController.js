@@ -458,4 +458,45 @@ const cleanupUnclassified = async (req, res) => {
   }
 };
 
-module.exports = { getHistory, getTrends, getStats, deleteArticle, dashboardInit, getPublicStats, cleanupUnclassified };
+
+/**
+ * GET /api/history/:id
+ * Returns a single article by ID with related articles
+ */
+const getArticleById = async (req, res) => {
+  if (!isDbConnected()) {
+    return res.status(503).json({ error: 'Database not connected.' });
+  }
+  try {
+    const { id } = req.params;
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ error: 'Invalid article ID.' });
+    }
+
+    const article = await Article.findById(id).lean();
+    if (!article) {
+      return res.status(404).json({ error: 'Article not found.' });
+    }
+
+    // Find related articles (same source or overlapping categories)
+    const relatedFilter = {
+      _id: { : article._id },
+      : [
+        { source: article.source },
+        ...(article.categories?.length ? [{ categories: { : article.categories } }] : []),
+      ],
+    };
+    const related = await Article.find(relatedFilter)
+      .sort({ publishedAt: -1 })
+      .limit(5)
+      .select('title source sentiment publishedAt url urlToImage categories confidence')
+      .lean();
+
+    res.json({ article, related });
+  } catch (err) {
+    console.error('[getArticleById] error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch article.' });
+  }
+};
+
+module.exports = { getHistory, getTrends, getStats, deleteArticle, dashboardInit, getPublicStats, cleanupUnclassified, getArticleById };
