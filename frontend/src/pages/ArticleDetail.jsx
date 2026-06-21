@@ -48,6 +48,8 @@ const SentimentBreakdown = ({ sentiment, confidence, feedback }) => {
   const isNeg = label === 'Negative';
   const color = isPos ? '#059669' : isNeg ? '#dc2626' : '#6b7280';
 
+  const fbText = typeof feedback === 'string' ? feedback : null;
+
   return (
     <div>
       <div className="flex items-center gap-3 mb-2">
@@ -57,8 +59,14 @@ const SentimentBreakdown = ({ sentiment, confidence, feedback }) => {
       <div className="w-full h-2 bg-ink/5 overflow-hidden">
         <div className="h-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: color }} />
       </div>
-      {feedback && (
-        <p className="text-xs text-ink/50 mt-2 italic">{feedback}</p>
+      {fbText && (
+        <p className="text-xs text-ink/50 mt-2 italic">{fbText}</p>
+      )}
+      {typeof feedback === 'object' && feedback && (
+        <div className="flex gap-3 mt-2 text-[11px] text-ink/40">
+          <span>+{feedback.upVotes || 0}</span>
+          <span>-{feedback.downVotes || 0}</span>
+        </div>
       )}
     </div>
   );
