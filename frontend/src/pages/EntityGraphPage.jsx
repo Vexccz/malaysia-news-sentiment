@@ -233,49 +233,24 @@ export default function EntityGraphPage() {
       container,
       width,
       height,
+      renderer: 'canvas',
+      enableOptimize: true,
+      optimizeZoom: 0.7,
       data: g6Data,
       layout: {
         type: 'force',
         preventOverlap: true,
-        nodeSpacing: mobileGraphMode ? 100 : 80,
-        linkDistance: (edge) => (mobileGraphMode ? 120 : 180) + (edge.data?.weight || 1) * 12,
-        nodeStrength: mobileGraphMode ? -800 : -1200,
+        nodeSpacing: mobileGraphMode ? 100 : 120,
+        linkDistance: mobileGraphMode ? 120 : 250,
+        nodeStrength: mobileGraphMode ? -800 : -2000,
         edgeStrength: 0.25,
         collideStrength: 1,
         alphaDecay: 0.015,
         alphaMin: 0.001,
       },
-      behaviors: [
-        {
-          key: 'drag-canvas',
-          type: 'drag-canvas',
-          enable: true,
-          sensitivity: mobileGraphMode ? 1.2 : 1,
-          enableOptimize: true,
-        },
-        {
-          key: 'zoom-canvas',
-          type: 'zoom-canvas',
-          enable: true,
-          sensitivity: mobileGraphMode ? 1.5 : 1,
-          minZoom: 0.3,
-          maxZoom: 3,
-          enableOptimize: true,
-          optimizeZoom: 0.7,
-        },
-        {
-          key: 'drag-element',
-          type: 'drag-element',
-          enable: !mobileGraphMode,
-          enableTransient: false,
-        },
-        {
-          key: 'hover-activate',
-          type: 'hover-activate',
-          enable: true,
-          degree: 1,
-        },
-      ],
+      modes: {
+        default: ['drag-canvas', 'zoom-canvas', 'drag-node'],
+      },
       node: {
         style: { cursor: 'pointer' },
         state: {
@@ -292,27 +267,7 @@ export default function EntityGraphPage() {
       animation: true,
       autoFit: 'view',
       padding: 60,
-      enableOptimize: true,
-      renderer: 'canvas',
     });
-
-    // Mobile touch handling
-    if (mobileGraphMode) {
-      const canvas = container.querySelector('canvas');
-      if (canvas) {
-        let lastTap = 0;
-        canvas.addEventListener('touchend', (e) => {
-          const currentTime = Date.now();
-          const tapGap = currentTime - lastTap;
-          if (tapGap < 300 && tapGap > 0) {
-            // Double tap to reset zoom
-            graph.fitView({ padding: 60 });
-            e.preventDefault();
-          }
-          lastTap = currentTime;
-        }, { passive: false });
-      }
-    }
 
     graph.on('node:click', (evt) => {
       const nodeId = evt.item?._cfg?.id;
@@ -320,12 +275,10 @@ export default function EntityGraphPage() {
       if (node) handleNodeClick(node.label);
     });
 
-    // Layout completion handling
-    graph.on('afterlayout', () => {
-      setGraphRendering(false);
-    });
-
+    setGraphRendering(true);
     graph.render();
+    graph.on('afterlayout', () => setGraphRendering(false));
+    setTimeout(() => setGraphRendering(false), 3000); // Fallback
     graphInstance.current = graph;
 
     // Set timeout fallback in case layout event doesn't fire
