@@ -282,6 +282,7 @@ const dashboardInit = async (req, res) => {
       stats: { total: 0, sentiments: {}, alerts: 0 },
       trends: [],
       keywords: [],
+      periodComparison: { total: 0, positive: 0, negative: 0, neutral: 0 },
     });
   }
   try {
@@ -315,6 +316,75 @@ const dashboardInit = async (req, res) => {
       ]),
       Article.find(match).select('title description').limit(200).lean(),
     ]);
+
+    // ── Period-over-period comparison for KPI trends ──────────────────────
+    // Determine current vs previous period boundaries.
+    // If no timeframe is set (all time), compare last 7 days vs 7 days before.
+    const now = new Date();
+    const MS = 24 * 60 * 60 * 1000;
+    let curStart, prevStart, prevEnd;
+    if (timeframe === '24h') {
+      curStart  = new Date(now.getTime() - 1 * MS);
+      prevStart = new Date(now.getTime() - 2 * MS);
+      prevEnd   = curStart;
+    } else if (timeframe === '7d') {
+      curStart  = new Date(now.getTime() - 7 * MS);
+      prevStart = new Date(now.getTime() - 14 * MS);
+      prevEnd   = curStart;
+    } else if (timeframe === '30d') {
+      curStart  = new Date(now.getTime() - 30 * MS);
+      prevStart = new Date(now.getTime() - 60 * MS);
+      prevEnd   = curStart;
+    } else {
+      // All time – compare last 7 days vs 7 days before that
+      curStart  = new Date(now.getTime() - 7 * MS);
+      prevStart = new Date(now.getTime() - 14 * MS);
+      prevEnd   = curStart;
+    }
+
+    const baseMatch = {};
+    if (isValidObjectId(userId)) {
+      baseMatch.userId = new mongoose.Types.ObjectId(userId);
+    } else {
+      baseMatch.$or = [{ userId: null }, { userId: { $exists: false } }];
+    }
+
+    const [curPeriodAgg, prevPeriodAgg] = await Promise.all([
+      Article.aggregate([
+        { $match: { ...baseMatch, createdAt: { $gte: curStart } } },
+        { $group: { _id: '$sentiment', count: { $sum: 1 } } },
+      ]),
+      Article.aggregate([
+        { $match: { ...baseMatch, createdAt: { $gte: prevStart, $lt: prevEnd } } },
+        { $group: { _id: '$sentiment', count: { $sum: 1 } } },
+      ]),
+    ]);
+
+    const curPeriod  = { total: 0, Positive: 0, Negative: 0, Neutral: 0 };
+    const prevPeriod = { total: 0, Positive: 0, Negative: 0, Neutral: 0 };
+    curPeriodAgg.forEach(({ _id, count }) => {
+      const key = _id || 'Neutral';
+      curPeriod[key] = (curPeriod[key] || 0) + count;
+      curPeriod.total += count;
+    });
+    prevPeriodAgg.forEach(({ _id, count }) => {
+      const key = _id || 'Neutral';
+      prevPeriod[key] = (prevPeriod[key] || 0) + count;
+      prevPeriod.total += count;
+    });
+
+    const pctChange = (cur, prev) => {
+      if (!prev) return cur > 0 ? 100 : 0;
+      return Math.round(((cur - prev) / prev) * 100);
+    };
+
+    const periodComparison = {
+      total:    pctChange(curPeriod.total,    prevPeriod.total),
+      positive: pctChange(curPeriod.Positive, prevPeriod.Positive),
+      negative: pctChange(curPeriod.Negative, prevPeriod.Negative),
+      neutral:  pctChange(curPeriod.Neutral,  prevPeriod.Neutral),
+    };
+    // ── end comparison ───────────────────────────────────────────────────
 
     const sentimentMap = { Positive: 0, Negative: 0, Neutral: 0 };
     let total = 0;
@@ -351,6 +421,7 @@ const dashboardInit = async (req, res) => {
       stats:   { total: total, sentiments: sentimentMap, alerts: alertCount },
       trends:  Object.values(grouped),
       keywords,
+      periodComparison,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

@@ -129,6 +129,36 @@ const TIME_OPTIONS = [
 // Consistent card style
 const CARD = 'border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card';
 
+/**
+ * Trend badge – shows % change vs previous period.
+ * `pct` is the raw percentage change (e.g. 12, -5, 0).
+ * `inverted` inverts the arrow colour logic (used for Negative sentiment
+ * where a decrease is actually good).
+ */
+const TrendBadge = ({ pct, inverted = false }) => {
+  if (pct === 0 || pct === undefined || pct === null) {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 mt-1">
+        → 0% vs last week
+      </span>
+    );
+  }
+  const isUp = pct > 0;
+  // For "normal" metrics up = green, down = red.
+  // For inverted metrics (negative sentiment) flip that.
+  const good = inverted ? !isUp : isUp;
+  const colorClass = good
+    ? 'text-emerald-600 dark:text-emerald-400'
+    : 'text-red-500 dark:text-red-400';
+  const arrow = isUp ? '↑' : '↓';
+
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs font-semibold ${colorClass} mt-1`}>
+      {arrow}{Math.abs(pct)}% vs last week
+    </span>
+  );
+};
+
 const Dashboard = () => {
   const { user, toggleBookmark } = useAuth();
   const { t, lang, setLang } = useLanguage();
@@ -258,6 +288,7 @@ const Dashboard = () => {
   };
   const keywords = dashboardData?.keywords || [];
   const stats = dashboardData?.stats || { total: 0, sentiments: {}, alerts: 0 };
+  const periodComparison = dashboardData?.periodComparison || { total: 0, positive: 0, negative: 0, neutral: 0 };
   const error = manualError || (dashboardError ? (dashboardError.friendlyMessage || 'Could not load analysis history. Please check if the server is running.') : '');
   
   const initLoading = isDashboardLoading && isHistoryView;
@@ -423,7 +454,8 @@ const Dashboard = () => {
       gradient: 'from-blue-500 via-blue-600 to-blue-700',
       sub: 'articles analyzed', 
       hero: true,
-      icon: '📊'
+      icon: '📊',
+      trend: periodComparison.total,
     },
     { 
       label: t('positive'), 
@@ -431,7 +463,8 @@ const Dashboard = () => {
       color: 'text-white', 
       gradient: 'from-emerald-500 via-emerald-600 to-emerald-700',
       sub: `${counts.total ? Math.round(counts.positive / counts.total * 100) : 0}% of total`,
-      icon: '✅'
+      icon: '✅',
+      trend: periodComparison.positive,
     },
     { 
       label: t('negative'), 
@@ -439,7 +472,9 @@ const Dashboard = () => {
       color: 'text-white', 
       gradient: 'from-red-500 via-red-600 to-red-700',
       sub: `${counts.total ? Math.round(counts.negative / counts.total * 100) : 0}% of total`,
-      icon: '⚠️'
+      icon: '⚠️',
+      trend: periodComparison.negative,
+      trendInverted: true,
     },
     { 
       label: t('neutral'), 
@@ -447,7 +482,8 @@ const Dashboard = () => {
       color: 'text-white', 
       gradient: 'from-amber-500 via-amber-600 to-amber-700',
       sub: `${counts.total ? Math.round(counts.neutral / counts.total * 100) : 0}% of total`,
-      icon: '➖'
+      icon: '➖',
+      trend: periodComparison.neutral,
     },
   ];
 
@@ -753,19 +789,23 @@ const Dashboard = () => {
                                   <div className="text-sm text-slate-600 dark:text-slate-400">
                                     Complete dataset coverage
                                   </div>
+                                  <TrendBadge pct={periodComparison.total} />
                                 </div>
                                 <div className="hidden md:flex items-center gap-8">
                                   <div className="text-center">
                                     <div className="text-2xl font-bold text-emerald-600">{counts.positive}</div>
                                     <div className="text-xs text-slate-500">Positive</div>
+                                    <TrendBadge pct={periodComparison.positive} />
                                   </div>
                                   <div className="text-center">
                                     <div className="text-2xl font-bold text-red-600">{counts.negative}</div>
                                     <div className="text-xs text-slate-500">Negative</div>
+                                    <TrendBadge pct={periodComparison.negative} inverted />
                                   </div>
                                   <div className="text-center">
                                     <div className="text-2xl font-bold text-amber-600">{counts.neutral}</div>
                                     <div className="text-xs text-slate-500">Neutral</div>
+                                    <TrendBadge pct={periodComparison.neutral} />
                                   </div>
                                 </div>
                               </div>
@@ -797,6 +837,7 @@ const Dashboard = () => {
                               <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">
                                 {counts.positive.toLocaleString()}
                               </div>
+                              <TrendBadge pct={periodComparison.positive} />
                               <div className="flex items-center gap-2">
                                 <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                                   <div 
@@ -830,6 +871,7 @@ const Dashboard = () => {
                               <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">
                                 {counts.negative.toLocaleString()}
                               </div>
+                              <TrendBadge pct={periodComparison.negative} inverted />
                               <div className="flex items-center gap-2">
                                 <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                                   <div 
@@ -863,6 +905,7 @@ const Dashboard = () => {
                               <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">
                                 {counts.neutral.toLocaleString()}
                               </div>
+                              <TrendBadge pct={periodComparison.neutral} />
                               <div className="flex items-center gap-2">
                                 <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                                   <div 
@@ -1091,19 +1134,23 @@ const Dashboard = () => {
                                   <div className="text-sm text-slate-600 dark:text-slate-400">
                                     Complete dataset coverage
                                   </div>
+                                  <TrendBadge pct={periodComparison.total} />
                                 </div>
                                 <div className="hidden md:flex items-center gap-8">
                                   <div className="text-center">
                                     <div className="text-2xl font-bold text-emerald-600">{counts.positive}</div>
                                     <div className="text-xs text-slate-500">Positive</div>
+                                    <TrendBadge pct={periodComparison.positive} />
                                   </div>
                                   <div className="text-center">
                                     <div className="text-2xl font-bold text-red-600">{counts.negative}</div>
                                     <div className="text-xs text-slate-500">Negative</div>
+                                    <TrendBadge pct={periodComparison.negative} inverted />
                                   </div>
                                   <div className="text-center">
                                     <div className="text-2xl font-bold text-amber-600">{counts.neutral}</div>
                                     <div className="text-xs text-slate-500">Neutral</div>
+                                    <TrendBadge pct={periodComparison.neutral} />
                                   </div>
                                 </div>
                               </div>
@@ -1135,6 +1182,7 @@ const Dashboard = () => {
                               <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">
                                 {counts.positive.toLocaleString()}
                               </div>
+                              <TrendBadge pct={periodComparison.positive} />
                               <div className="flex items-center gap-2">
                                 <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                                   <div 
@@ -1168,6 +1216,7 @@ const Dashboard = () => {
                               <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">
                                 {counts.negative.toLocaleString()}
                               </div>
+                              <TrendBadge pct={periodComparison.negative} inverted />
                               <div className="flex items-center gap-2">
                                 <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                                   <div 
@@ -1201,6 +1250,7 @@ const Dashboard = () => {
                               <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">
                                 {counts.neutral.toLocaleString()}
                               </div>
+                              <TrendBadge pct={periodComparison.neutral} />
                               <div className="flex items-center gap-2">
                                 <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                                   <div 

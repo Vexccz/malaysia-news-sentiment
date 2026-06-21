@@ -358,13 +358,16 @@ export default function EntityGraphPage() {
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="flex flex-col h-full">
       {/* Header */}
       <div className="mb-4">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-          <Network size={24} className="text-blue-600" />
-          Entity Graph
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        <div className="flex items-baseline gap-3 mb-1">
+          <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display flex items-center gap-2">
+            <Network size={24} className="text-blue-600" />
+            Entity Graph
+          </h1>
+        </div>
+        <p className="text-xs text-ink-muted dark:text-ink-faint tracking-wide uppercase font-sans">
           Explore relationships between entities in the news
         </p>
+        <div className="editorial-rule mb-3"></div>
       </div>
 
       {/* Toolbar */}

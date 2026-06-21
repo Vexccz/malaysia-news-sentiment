@@ -82,18 +82,18 @@ const Digest = () => {
       className="max-w-4xl mx-auto space-y-6"
     >
       {/* Header - editorial style */}
-      <div className="border-b-2 border-gray-900 dark:border-white pb-3">
+      <div className="editorial-rule pb-4">
         <div className="flex items-end justify-between">
           <div>
-            <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight uppercase">
+            <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">
               News Digest
             </h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 tracking-wide uppercase">
+            <p className="text-xs text-ink-muted dark:text-ink-faint mt-1 tracking-wide uppercase">
               {formatDate()}
             </p>
           </div>
           {currentData && (
-            <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+            <div className="flex items-center gap-4 text-xs text-ink-muted">
               <span>{currentData.articleCount} articles</span>
               {currentData.sentimentBreakdown && (
                 <div className="flex items-center gap-2">
@@ -116,16 +116,16 @@ const Digest = () => {
         </div>
       </div>
 
-      {/* Tabs - minimal underline style */}
-      <div className="flex gap-6 border-b border-gray-200 dark:border-[#2a2a2a]">
+      {/* Tabs - editorial style */}
+      <div className="flex gap-6 border-b border-paper-line">
         {['daily', 'weekly', 'topic'].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`pb-2 text-sm font-medium transition-all border-b-2 -mb-px ${
+            className={`px-3 py-1.5 text-xs font-medium uppercase tracking-widest transition-colors ${
               activeTab === tab
-                ? 'border-gray-900 dark:border-white text-gray-900 dark:text-white'
-                : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                ? 'text-ink dark:text-paper border-b-2 border-ink dark:border-paper'
+                : 'text-ink-muted hover:text-ink dark:hover:text-paper'
             }`}
           >
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -145,46 +145,46 @@ const Digest = () => {
           >
             {loading ? (
               <div className="py-12 text-center">
-                <div className="w-5 h-5 border-2 border-gray-300 dark:border-gray-600 border-t-gray-900 dark:border-t-white rounded-full animate-spin mx-auto" />
-                <p className="text-xs text-gray-400 mt-3">Loading digest...</p>
+                <div className="w-5 h-5 border-2 border-paper-line border-t-ink dark:border-t-paper rounded-full animate-spin mx-auto" />
+                <p className="text-xs text-ink-muted mt-3">Loading digest...</p>
               </div>
             ) : currentData ? (
               <>
                 {/* Sentiment mood - subtle */}
                 {currentData.sentimentMood && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                    <span className="font-medium text-gray-900 dark:text-white">
+                  <div className="flex items-center gap-2 text-sm text-ink-muted">
+                    <span className="font-medium text-ink dark:text-paper">
                       Overall mood:
                     </span>
                     <span>{currentData.sentimentMood.text}</span>
                   </div>
                 )}
 
-                {/* Main Digest */}
-                <div className="space-y-3">
+                {/* Main Digest - editorial card */}
+                <div className="bg-paper-card border border-paper-line rounded-md p-6 space-y-3">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wide">
+                    <h2 className="text-sm font-bold text-ink dark:text-paper uppercase tracking-wide">
                       {activeTab === 'daily' ? 'Today\'s Summary' : 'Weekly Roundup'}
                     </h2>
                     <button
                       onClick={() => handleShare(getDigestText(currentData.digest))}
-                      className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                      className="text-xs text-ink-muted hover:text-ink dark:hover:text-paper transition-colors"
                     >
                       {copied ? 'Copied' : 'Copy'}
                     </button>
                   </div>
-                  <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
+                  <div className="text-sm text-ink-muted leading-relaxed whitespace-pre-wrap">
                     {getDigestText(currentData.digest)}
                   </div>
                 </div>
 
-                {/* Highlights */}
+                {/* Highlights - editorial card */}
                 {currentData.highlights && currentData.highlights.length > 0 && (
-                  <div className="border-t border-gray-200 dark:border-[#2a2a2a] pt-5">
-                    <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wide mb-3">
+                  <div className="bg-paper-card border border-paper-line rounded-md p-6">
+                    <h3 className="text-sm font-bold text-ink dark:text-paper uppercase tracking-wide mb-3">
                       Key Stories
                     </h3>
-                    <div className="space-y-0 divide-y divide-gray-100 dark:divide-[#2a2a2a]">
+                    <div className="space-y-0 divide-y divide-paper-line">
                       {currentData.highlights.map((h, i) => (
                         <motion.div
                           key={i}
@@ -197,10 +197,10 @@ const Digest = () => {
                             h.sentiment === 'Positive' ? 'bg-green-500' :
                             h.sentiment === 'Negative' ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-600'
                           }`} />
-                          <span className="text-sm text-gray-800 dark:text-gray-200 group-hover:text-gray-900 dark:group-hover:text-white transition-colors flex-1">
+                          <span className="text-sm text-ink-muted group-hover:text-ink dark:group-hover:text-paper transition-colors flex-1">
                             {h.title}
                           </span>
-                          <span className="text-[11px] text-gray-400 flex-shrink-0 font-medium">
+                          <span className="text-[11px] text-ink-muted flex-shrink-0 font-medium">
                             {h.source}
                           </span>
                         </motion.div>
@@ -209,16 +209,16 @@ const Digest = () => {
                   </div>
                 )}
 
-                {/* Top Sources (weekly) */}
+                {/* Top Sources (weekly) - editorial card */}
                 {currentData.topSources && (
-                  <div className="border-t border-gray-200 dark:border-[#2a2a2a] pt-5">
-                    <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wide mb-3">
+                  <div className="bg-paper-card border border-paper-line rounded-md p-6">
+                    <h3 className="text-sm font-bold text-ink dark:text-paper uppercase tracking-wide mb-3">
                       Sources
                     </h3>
                     <div className="flex flex-wrap gap-2">
                       {currentData.topSources.map((s, i) => (
-                        <span key={i} className="px-2.5 py-1 text-xs text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-[#333] rounded">
-                          {s.name} <span className="text-gray-400 dark:text-gray-500">({s.count})</span>
+                        <span key={i} className="px-2.5 py-1 text-xs text-ink-muted border border-paper-line rounded">
+                          {s.name} <span className="text-ink-muted opacity-60">({s.count})</span>
                         </span>
                       ))}
                     </div>
@@ -227,7 +227,7 @@ const Digest = () => {
               </>
             ) : (
               <div className="py-12 text-center">
-                <p className="text-sm text-gray-400">No digest available for this period.</p>
+                <p className="text-sm text-ink-muted">No digest available for this period.</p>
               </div>
             )}
           </motion.div>
@@ -247,15 +247,15 @@ const Digest = () => {
               value={topicInput}
               onChange={(e) => setTopicInput(e.target.value)}
               placeholder="Enter a topic..."
-              className="flex-1 px-4 py-2.5 text-sm bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-gray-400 dark:focus:border-gray-500"
+              className="flex-1 px-4 py-2.5 text-sm bg-paper-card border border-paper-line rounded-md text-ink dark:text-paper placeholder-ink-muted focus:outline-none focus:border-ink dark:focus:border-paper"
             />
             <button
               type="submit"
               disabled={topicLoading || !topicInput.trim()}
-              className="px-5 py-2.5 text-sm font-medium bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 disabled:opacity-40 transition-all"
+              className="px-5 py-2.5 text-xs font-medium uppercase tracking-widest bg-ink dark:bg-paper text-paper dark:text-ink rounded-md hover:opacity-90 disabled:opacity-40 transition-all"
             >
               {topicLoading ? (
-                <div className="w-4 h-4 border-2 border-white dark:border-gray-900 border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-paper dark:border-ink border-t-transparent rounded-full animate-spin" />
               ) : 'Search'}
             </button>
           </form>
@@ -266,42 +266,45 @@ const Digest = () => {
               animate={{ opacity: 1, y: 0 }}
               className="space-y-4"
             >
-              <div className="flex items-end justify-between border-b border-gray-200 dark:border-[#2a2a2a] pb-3">
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                    {topicData.topic}
-                  </h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    {topicData.articleCount} articles found
-                  </p>
+              {/* Topic result header - editorial card */}
+              <div className="bg-paper-card border border-paper-line rounded-md p-6">
+                <div className="flex items-end justify-between border-b border-paper-line pb-3 mb-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-ink dark:text-paper font-display">
+                      {topicData.topic}
+                    </h3>
+                    <p className="text-xs text-ink-muted mt-0.5">
+                      {topicData.articleCount} articles found
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {topicData.sentimentBreakdown && (
+                      <div className="flex items-center gap-2 text-xs text-ink-muted">
+                        <span className="flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                          {topicData.sentimentBreakdown.Positive || 0}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                          {topicData.sentimentBreakdown.Neutral || 0}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                          {topicData.sentimentBreakdown.Negative || 0}
+                        </span>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => handleShare(getDigestText(topicData.digest))}
+                      className="text-xs text-ink-muted hover:text-ink dark:hover:text-paper transition-colors"
+                    >
+                      {copied ? 'Copied' : 'Copy'}
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  {topicData.sentimentBreakdown && (
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                        {topicData.sentimentBreakdown.Positive || 0}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                        {topicData.sentimentBreakdown.Neutral || 0}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                        {topicData.sentimentBreakdown.Negative || 0}
-                      </span>
-                    </div>
-                  )}
-                  <button
-                    onClick={() => handleShare(getDigestText(topicData.digest))}
-                    className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                  >
-                    {copied ? 'Copied' : 'Copy'}
-                  </button>
+                <div className="text-sm text-ink-muted leading-relaxed whitespace-pre-wrap">
+                  {getDigestText(topicData.digest)}
                 </div>
-              </div>
-              <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
-                {getDigestText(topicData.digest)}
               </div>
             </motion.div>
           )}
