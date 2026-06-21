@@ -251,9 +251,10 @@ const ArticleDetail = () => {
 
         <div className="border-t border-ink/10 my-6" />
 
-        <article className="text-ink dark:text-paper text-base leading-relaxed whitespace-pre-line mb-8">
-          {bodyText}
-        </article>
+        <article
+          className="text-ink dark:text-paper text-base leading-relaxed mb-8 prose prose-sm max-w-none prose-img:rounded prose-a:text-[#4f46e5]"
+          dangerouslySetInnerHTML={{ __html: bodyText }}
+        />
 
         {url && (
           <a
