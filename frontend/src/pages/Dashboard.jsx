@@ -1,15 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import SearchBarClean from '../components/SearchBarClean';
-import ArticleCardCompact from '../components/ArticleCardCompact';
-import SentimentDonutChart from '../components/SentimentDonutChart';
-import SentimentHorizontalBar from '../components/SentimentHorizontalBar';
-import SentimentAreaChart from '../components/SentimentAreaChart';
-import SentimentHeatmap from '../components/SentimentHeatmap';
-import TopSourcesHorizontal from '../components/TopSourcesHorizontal';
+import SearchBar from '../components/SearchBar';
+import ArticleCard from '../components/ArticleCard';
+import SentimentPieChart from '../components/SentimentPieChart';
 import AiDigestCard from '../components/AiDigestCard';
 import WordCloud from '../components/WordCloud';
 import ForecastCard from '../components/ForecastCard';
@@ -18,7 +14,7 @@ import AnalyzingOverlay from '../components/AnalyzingOverlay';
 import usePullToRefresh from '../hooks/usePullToRefresh';
 import useSwipeTabs from '../hooks/useSwipeTabs';
 import { hapticImpact } from '../utils/haptics';
-import { Search, Clock, ArrowLeft, Sparkles, FileDown, Printer, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Brain, Download, Settings2, Globe } from 'lucide-react';
+import { Search, Clock, ArrowLeft, Sparkles, FileDown, Printer, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Brain, Download, Settings2 } from 'lucide-react';
 import DashboardCustomizer from '../components/DashboardCustomizer';
 import EmptyState from '../components/EmptyState';
 import DashboardSummary from '../components/DashboardSummary';
@@ -93,6 +89,7 @@ const DashboardSkeleton = () => (
 );
 
 import SourceCredibility from '../components/SourceCredibility';
+import { List as VirtualList } from 'react-window';
 import ExportPPT from '../components/ExportPPT';
 import { InlineErrorBoundary } from '../components/ErrorBoundary';
 import { Skeleton } from 'boneyard-js/react';
@@ -120,18 +117,18 @@ const calcDistribution = (arts) => ({
 });
 
 const TIME_OPTIONS = [
-  { key: '',    label: 'All Time' },
-  { key: '24h', label: 'Last 24H' },
-  { key: '7d',  label: 'Last 7D' },
-  { key: '30d', label: 'Last 30D' },
+  { key: '',    labelKey: 'allTime' },
+  { key: '24h', labelKey: 'last24h' },
+  { key: '7d',  labelKey: 'last7d' },
+  { key: '30d', labelKey: 'last30d' },
 ];
 
 // Consistent card style
-const CARD = 'border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card';
+const CARD = 'bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl dark:shadow-[0_0_15px_rgba(59,130,246,0.03)]';
 
 const Dashboard = () => {
   const { user, toggleBookmark } = useAuth();
-  const { t, lang, setLang } = useLanguage();
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const socket = useSocket();
   const [analysisProgress, setAnalysisProgress] = useState(null);
@@ -249,13 +246,6 @@ const Dashboard = () => {
   const trends = dashboardData?.trends || [];
   const sources = sourcesData || [];
   const regionalData = regData || [];
-
-  // Transform distribution for new charts (capital -> lowercase)
-  const chartDistribution = {
-    positive: distribution.Positive || distribution.positive || 0,
-    negative: distribution.Negative || distribution.negative || 0,
-    neutral: distribution.Neutral || distribution.neutral || 0,
-  };
   const keywords = dashboardData?.keywords || [];
   const stats = dashboardData?.stats || { total: 0, sentiments: {}, alerts: 0 };
   const error = manualError || (dashboardError ? (dashboardError.friendlyMessage || 'Could not load analysis history. Please check if the server is running.') : '');
@@ -389,23 +379,11 @@ const Dashboard = () => {
     }
   };
 
-  // Activity 2.3: Memoize filtering logic to prevent unnecessary recalculations
-  // TEMPORARY: Mock data for Module 2 testing
-  const mockArticles = articles.length === 0 ? [
-    { id: 1, title: 'Malaysia GDP grows 5.2%', sentiment: 'Positive', publishedAt: new Date().toISOString(), url: 'https://example.com/1', urlToImage: null, source: { name: 'Test' } },
-    { id: 2, title: 'Traffic congestion worsens', sentiment: 'Negative', publishedAt: new Date().toISOString(), url: 'https://example.com/2', urlToImage: null, source: { name: 'Test' } },
-    { id: 3, title: 'New highway project', sentiment: 'Neutral', publishedAt: new Date().toISOString(), url: 'https://example.com/3', urlToImage: null, source: { name: 'Test' } },
-    { id: 4, title: 'Education reforms praised', sentiment: 'Positive', publishedAt: new Date().toISOString(), url: 'https://example.com/4', urlToImage: null, source: { name: 'Test' } },
-    { id: 5, title: 'Inflation concerns', sentiment: 'Negative', publishedAt: new Date().toISOString(), url: 'https://example.com/5', urlToImage: null, source: { name: 'Test' } },
-  ] : articles;
-
-  const filteredArticles = useMemo(() => {
-    const data = articles.length === 0 ? mockArticles : articles;
-    if (filter === 'All' || filter === 'all') return data;
-    return data.filter(a => a.sentiment === filter);
-  }, [articles, filter]);
-
-
+  const filteredArticles = (() => {
+    if (filter === 'All')    return articles;
+    if (filter === 'Alerts') return articles.filter(a => a.isAlert);
+    return articles.filter(a => a.sentiment === filter);
+  })();
 
   const counts = {
     total:    stats.total || articles.length,
@@ -416,39 +394,10 @@ const Dashboard = () => {
   };
 
   const KPI = [
-    { 
-      label: t('totalArticles'), 
-      value: counts.total, 
-      color: 'text-white', 
-      gradient: 'from-blue-500 via-blue-600 to-blue-700',
-      sub: 'articles analyzed', 
-      hero: true,
-      icon: '📊'
-    },
-    { 
-      label: t('positive'), 
-      value: counts.positive, 
-      color: 'text-white', 
-      gradient: 'from-emerald-500 via-emerald-600 to-emerald-700',
-      sub: `${counts.total ? Math.round(counts.positive / counts.total * 100) : 0}% of total`,
-      icon: '✅'
-    },
-    { 
-      label: t('negative'), 
-      value: counts.negative, 
-      color: 'text-white', 
-      gradient: 'from-red-500 via-red-600 to-red-700',
-      sub: `${counts.total ? Math.round(counts.negative / counts.total * 100) : 0}% of total`,
-      icon: '⚠️'
-    },
-    { 
-      label: t('neutral'), 
-      value: counts.neutral, 
-      color: 'text-white', 
-      gradient: 'from-amber-500 via-amber-600 to-amber-700',
-      sub: `${counts.total ? Math.round(counts.neutral / counts.total * 100) : 0}% of total`,
-      icon: '➖'
-    },
+    { label: t('totalArticles'), value: counts.total,    color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-500/10', sub: t('articlesAnalyzed'), hero: true },
+    { label: t('positive'),       value: counts.positive, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-500/10', sub: `${counts.total ? Math.round(counts.positive / counts.total * 100) : 0}% of total` },
+    { label: t('negative'),       value: counts.negative, color: 'text-red-500', bg: 'bg-red-50 dark:bg-red-500/10', sub: `${counts.total ? Math.round(counts.negative / counts.total * 100) : 0}% of total` },
+    { label: t('neutral'),        value: counts.neutral,  color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-500/10', sub: `${counts.total ? Math.round(counts.neutral  / counts.total * 100) : 0}% of total` },
   ];
 
   // Track previous tab index for slide direction
@@ -461,39 +410,15 @@ const Dashboard = () => {
     prevTabIndex.current = currentTabIndex;
   }, [currentTabIndex]);
 
-  // Activity 2.4: Responsive slide offset based on screen width
   const slideVariants = {
-    enter: (direction) => ({ 
-      x: direction > 0 ? (window.innerWidth < 375 ? 60 : 80) : (window.innerWidth < 375 ? -60 : -80), 
-      opacity: 0 
-    }),
+    enter: (direction) => ({ x: direction > 0 ? 80 : -80, opacity: 0 }),
     center: { x: 0, opacity: 1 },
-    exit: (direction) => ({ 
-      x: direction > 0 ? (window.innerWidth < 375 ? -60 : -80) : (window.innerWidth < 375 ? 60 : 80), 
-      opacity: 0 
-    }),
+    exit: (direction) => ({ x: direction > 0 ? -80 : 80, opacity: 0 }),
   };
 
-  // Click-to-filter on pie chart (Activity 2.2 - Toggle behaviour)
+  // Click-to-filter on pie chart
   const handlePieSegmentClick = (sentimentName) => {
-    // Toggle: if already filtered by this sentiment, reset to 'all'
-    setFilter(filter === sentimentName ? 'All' : sentimentName);
-  };
-
-  // Click-to-filter on KPI cards (Activity 1.1 - Perfective Maintenance)
-  const handleKpiClick = (sentimentLabel) => {
-    // Map KPI label to sentiment filter value
-    const labelToSentiment = {
-      'positive': 'Positive',
-      'negative': 'Negative', 
-      'neutral': 'Neutral'
-    };
-    
-    const sentimentValue = labelToSentiment[sentimentLabel.toLowerCase()];
-    if (sentimentValue) {
-      // Toggle: if already filtered by this sentiment, reset to 'all'
-      setFilter(filter === sentimentValue ? 'All' : sentimentValue);
-    }
+    setFilter(sentimentName);
   };
 
   const isLoading = initLoading || searchLoading;
@@ -568,19 +493,17 @@ const Dashboard = () => {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-6 flex items-start justify-between"
+        className="mb-6"
       >
-        <div>
-          <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">
-            {user?.name ? `${t('welcomeBack')}, ${user.name.split(' ')[0]}` : t('dashboard')}
-          </h1>
-          <p className="text-sm text-ink-muted dark:text-ink-faint font-sans">
-            Malaysia News Sentiment Analysis
-          </p>
-        </div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          {user?.name ? `${t('welcomeBack')}, ${user.name.split(' ')[0]}` : t('dashboard')}
+        </h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          Malaysia News Sentiment Analysis
+        </p>
       </motion.div>
 
-      <SearchBarClean onSearch={handleSearch} loading={searchLoading} />
+      <SearchBar onSearch={handleSearch} loading={searchLoading} />
 
       {/* Dashboard Summary Banner */}
       <DashboardSummary distribution={distribution} keywords={keywords} articles={articles} />
@@ -589,7 +512,7 @@ const Dashboard = () => {
         <motion.div
           initial={{ opacity: 0, y: -5 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-4 flex items-center gap-2 px-4 py-3 border-l-3 border-red-600 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 text-sm font-sans"
+          className="mt-4 flex items-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-2xl text-red-600 dark:text-red-400 text-sm"
           role="alert"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -621,7 +544,7 @@ const Dashboard = () => {
                 {isHistoryView ? (
                   <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                     <Clock size={14} className="text-gray-400" />
-                    <span>Showing <strong className="text-gray-900 dark:text-white">{articles.length}</strong> analyses</span>
+                    <span>{t("showingAnalyses")} <strong className="text-gray-900 dark:text-white">{articles.length}</strong> {t("analyses")}</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
@@ -637,44 +560,44 @@ const Dashboard = () => {
                 )}
                 <div className="flex items-center gap-2 ml-auto flex-wrap">
                   {isHistoryView && (
-                    <div className="flex items-center gap-0">
+                    <div className="flex gap-0.5 bg-gray-50 dark:bg-white/5 rounded-lg p-0.5">
                       {TIME_OPTIONS.map(opt => (
                         <button
                           key={opt.key}
-                          className={`px-2 text-xs font-medium uppercase tracking-wider transition-colors font-sans ${
+                          className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
                             timeframe === opt.key 
-                              ? 'text-ink dark:text-paper font-bold' 
-                              : 'text-ink-faint hover:text-ink-muted'
+                              ? 'bg-white dark:bg-[#2a2a2a] text-blue-600 shadow-sm' 
+                              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                           }`}
                           onClick={() => { setTimeframe(opt.key); setPage(1); }}
                         >
-                          {opt.label}
+                          {t(opt.labelKey)}
                         </button>
                       ))}
                     </div>
                   )}
                   {/* Desktop action buttons - icon-only for cleanliness */}
                   <div className="hidden md:flex items-center gap-1 border-l border-gray-200 dark:border-[#2a2a2a] pl-2 ml-1">
-                    <button onClick={() => setShowCustomizer(true)} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="Customize">
+                    <button onClick={() => setShowCustomizer(true)} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors" title="Customize">
                       <Settings2 size={14} />
                     </button>
-                    <button onClick={handleManualForecast} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="AI Forecast">
+                    <button onClick={handleManualForecast} className="p-1.5 text-purple-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-500/10 rounded-lg transition-colors" title="AI Forecast">
                       <Sparkles size={14} />
                     </button>
                     <ExportPPT articles={articles} distribution={distribution} sources={sources} query={currentQuery} />
-                    <button onClick={handleDownloadPDF} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="Download PDF">
+                    <button onClick={handleDownloadPDF} className="p-1.5 text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors" title="Download PDF">
                       <FileDown size={14} />
                     </button>
-                    <button onClick={handlePrint} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="Print Report">
+                    <button onClick={handlePrint} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors" title="Print Report">
                       <Printer size={14} />
                     </button>
-                    <button onClick={handleExport} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="Export CSV">
+                    <button onClick={handleExport} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors" title="Export CSV">
                       <Download size={14} />
                     </button>
                   </div>
                   {/* Mobile: only customize + AI forecast inline, rest in FAB */}
                   <div className="flex md:hidden items-center gap-1">
-                    <button onClick={() => setShowCustomizer(true)} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors">
+                    <button onClick={() => setShowCustomizer(true)} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg transition-colors">
                       <Settings2 size={14} />
                     </button>
                   </div>
@@ -717,158 +640,35 @@ const Dashboard = () => {
                     transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
                   >
                   <div className="space-y-6">
-                    {/* KPI Cards - PROPER DESIGN */}
+                    {/* KPI Cards */}
                     <div>
-                      <SectionHeader title="Key Metrics" />
+                      <SectionHeader title={t("keyMetrics")} />
                       <Skeleton name="kpi-row" loading={isLoading}>
                         <motion.div 
-                          className="space-y-5"
+                          className="grid grid-cols-2 gap-3"
                           variants={containerVariants}
                           initial="hidden"
                           animate="visible"
                         >
-                          {/* Main Stats Row */}
-                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            {/* Total Articles */}
+                          {KPI.map(c => (
                             <motion.div 
-                              className="md:col-span-4 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-6 relative overflow-hidden"
+                              key={c.label} 
+                              className={`${CARD} ${
+                                c.hero ? 'col-span-2 p-5 bg-gradient-to-br from-blue-50 to-white dark:from-blue-500/5 dark:to-[#1a1a1a]' : 'p-4'
+                              }`}
                               variants={kpiItemVariants}
                               whileHover={{ y: -2 }}
+                              transition={{ duration: 0.15, ease: 'easeOut' }}
                             >
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <div className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
-                                    Total Articles Analyzed
-                                  </div>
-                                  <div className="text-5xl font-black text-slate-900 dark:text-white mb-1">
-                                    {counts.total.toLocaleString()}
-                                  </div>
-                                  <div className="text-sm text-slate-600 dark:text-slate-400">
-                                    Complete dataset coverage
-                                  </div>
-                                </div>
-                                <div className="hidden md:flex items-center gap-8">
-                                  <div className="text-center">
-                                    <div className="text-2xl font-bold text-emerald-600">{counts.positive}</div>
-                                    <div className="text-xs text-slate-500">Positive</div>
-                                  </div>
-                                  <div className="text-center">
-                                    <div className="text-2xl font-bold text-red-600">{counts.negative}</div>
-                                    <div className="text-xs text-slate-500">Negative</div>
-                                  </div>
-                                  <div className="text-center">
-                                    <div className="text-2xl font-bold text-amber-600">{counts.neutral}</div>
-                                    <div className="text-xs text-slate-500">Neutral</div>
-                                  </div>
-                                </div>
-                              </div>
+                              <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{c.label}</div>
+                              <div className={`${c.hero ? 'text-4xl' : 'text-2xl'} font-bold mt-1 ${c.color}`}>{c.value}</div>
+                              <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">{c.sub}</div>
                             </motion.div>
-                          </div>
-
-                          {/* Sentiment Cards Row */}
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {/* Positive */}
-                            <motion.div 
-                              className="bg-white dark:bg-slate-800 border-l-4 border-emerald-500 rounded-xl p-5 cursor-pointer hover:shadow-lg transition-shadow"
-                              variants={kpiItemVariants}
-                              whileHover={{ x: 4 }}
-                              onClick={() => handleKpiClick('positive')}
-                            >
-                              <div className="flex items-start justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                                    Positive Sentiment
-                                  </span>
-                                </div>
-                                <div className={`text-xs font-semibold px-2 py-1 rounded-md ${
-                                  filter === 'Positive' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
-                                }`}>
-                                  {counts.total ? Math.round(counts.positive / counts.total * 100) : 0}%
-                                </div>
-                              </div>
-                              <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">
-                                {counts.positive.toLocaleString()}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full transition-all duration-500"
-                                    style={{ width: `${counts.total ? (counts.positive / counts.total * 100) : 0}%` }}
-                                  />
-                                </div>
-                              </div>
-                            </motion.div>
-
-                            {/* Negative */}
-                            <motion.div 
-                              className="bg-white dark:bg-slate-800 border-l-4 border-red-500 rounded-xl p-5 cursor-pointer hover:shadow-lg transition-shadow"
-                              variants={kpiItemVariants}
-                              whileHover={{ x: 4 }}
-                              onClick={() => handleKpiClick('negative')}
-                            >
-                              <div className="flex items-start justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full bg-red-500" />
-                                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                                    Negative Sentiment
-                                  </span>
-                                </div>
-                                <div className={`text-xs font-semibold px-2 py-1 rounded-md ${
-                                  filter === 'Negative' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
-                                }`}>
-                                  {counts.total ? Math.round(counts.negative / counts.total * 100) : 0}%
-                                </div>
-                              </div>
-                              <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">
-                                {counts.negative.toLocaleString()}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-gradient-to-r from-red-500 to-red-600 rounded-full transition-all duration-500"
-                                    style={{ width: `${counts.total ? (counts.negative / counts.total * 100) : 0}%` }}
-                                  />
-                                </div>
-                              </div>
-                            </motion.div>
-
-                            {/* Neutral */}
-                            <motion.div 
-                              className="bg-white dark:bg-slate-800 border-l-4 border-amber-500 rounded-xl p-5 cursor-pointer hover:shadow-lg transition-shadow"
-                              variants={kpiItemVariants}
-                              whileHover={{ x: 4 }}
-                              onClick={() => handleKpiClick('neutral')}
-                            >
-                              <div className="flex items-start justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full bg-amber-500" />
-                                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                                    Neutral Sentiment
-                                  </span>
-                                </div>
-                                <div className={`text-xs font-semibold px-2 py-1 rounded-md ${
-                                  filter === 'Neutral' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
-                                }`}>
-                                  {counts.total ? Math.round(counts.neutral / counts.total * 100) : 0}%
-                                </div>
-                              </div>
-                              <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">
-                                {counts.neutral.toLocaleString()}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-gradient-to-r from-amber-500 to-amber-600 rounded-full transition-all duration-500"
-                                    style={{ width: `${counts.total ? (counts.neutral / counts.total * 100) : 0}%` }}
-                                  />
-                                </div>
-                              </div>
-                            </motion.div>
-                          </div>
+                          ))}
                         </motion.div>
                       </Skeleton>
                     </div>
+
                     {/* Pie Chart */}
                     <Skeleton name="charts-grid" loading={isLoading}>
                       <motion.div 
@@ -878,14 +678,14 @@ const Dashboard = () => {
                         animate="visible"
                       >
                         <InlineErrorBoundary name="Pie Chart">
-                          <SentimentDonutChart distribution={chartDistribution} onSegmentClick={handlePieSegmentClick} activeFilter={filter} />
+                          <SentimentPieChart distribution={distribution} onSegmentClick={handlePieSegmentClick} />
                         </InlineErrorBoundary>
                       </motion.div>
                     </Skeleton>
 
                     {/* Articles */}
                     <div>
-                      <SectionHeader title="Recent Articles" badge={filteredArticles.length} />
+                      <SectionHeader title={t("recentArticles")} badge={filteredArticles.length} />
                       <div className="flex gap-2 overflow-x-auto pb-3 mb-4 scrollbar-hide -mx-1 px-1">
                         {FILTER_OPTIONS.map(opt => (
                           <button 
@@ -914,7 +714,7 @@ const Dashboard = () => {
                               key={article._id || article.url}
                               variants={articleVariants}
                             >
-                              <ArticleCardCompact 
+                              <ArticleCard 
                                 article={article} 
                                 onBookmark={toggleBookmark}
                                 isBookmarked={user?.bookmarks?.includes(article._id || article.id)}
@@ -975,32 +775,32 @@ const Dashboard = () => {
                           initial="hidden"
                           animate="visible"
                         >
-                          <SectionHeader title="Charts" />
+                          <SectionHeader title={t("charts")} />
                           <div className={`${CARD} p-4`}>
                             <Suspense fallback={<ChartFallback />}>
                               <InlineErrorBoundary name="Bar Chart">
-                                <SentimentHorizontalBar distribution={chartDistribution} />
+                                <SentimentBarChart distribution={distribution} />
                               </InlineErrorBoundary>
                             </Suspense>
                           </div>
                           <div className={`${CARD} p-4`}>
                             <Suspense fallback={<ChartFallback />}>
                               <InlineErrorBoundary name="Trend Chart">
-                                <SentimentAreaChart trendsData={trends} />
+                                <TrendLineChart trendsData={trends} />
                               </InlineErrorBoundary>
                             </Suspense>
                           </div>
                           <div className={`${CARD} p-4`}>
                             <Suspense fallback={<ChartFallback />}>
                               <InlineErrorBoundary name="Sentiment Map">
-                                <SentimentHeatmap data={regionalData} loading={isLoading} />
+                                <SentimentMap data={regionalData} loading={isLoading} />
                               </InlineErrorBoundary>
                             </Suspense>
                           </div>
                           <div className={`${CARD} p-4`}>
                             <Suspense fallback={<ChartFallback />}>
                               <InlineErrorBoundary name="Sources Chart">
-                                <TopSourcesHorizontal sourcesData={sources} />
+                                <TopSourcesChart sourcesData={sources} />
                               </InlineErrorBoundary>
                             </Suspense>
                           </div>
@@ -1022,7 +822,7 @@ const Dashboard = () => {
                     transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
                   >
                   <div className="space-y-5">
-                    <SectionHeader title="AI Insights" />
+                    <SectionHeader title={t("aiInsights")} />
                     {(digest || digestLoading) && (
                       <AiDigestCard digest={digest} loading={digestLoading} topic={currentQuery} />
                     )}
@@ -1055,161 +855,38 @@ const Dashboard = () => {
                       <AiDigestCard digest={digest} loading={digestLoading} topic={currentQuery} />
                     )}
                     
-                    {/* KPI Cards - PROPER DESIGN */}
+                    {/* KPI Row */}
                     <div>
-                      <SectionHeader title="Key Metrics" />
+                      <SectionHeader title={t("keyMetrics")} />
                       <Skeleton name="kpi-row" loading={isLoading}>
                         <motion.div 
-                          className="space-y-5"
+                          className="grid grid-cols-4 gap-4"
                           variants={containerVariants}
                           initial="hidden"
                           animate="visible"
                         >
-                          {/* Main Stats Row */}
-                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            {/* Total Articles */}
+                          {KPI.map(c => (
                             <motion.div 
-                              className="md:col-span-4 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-6 relative overflow-hidden"
+                              key={c.label} 
+                              className={`${CARD} p-5 ${
+                                c.hero ? 'bg-gradient-to-br from-blue-50 to-white dark:from-blue-500/5 dark:to-[#1a1a1a]' : ''
+                              }`}
                               variants={kpiItemVariants}
                               whileHover={{ y: -2 }}
+                              transition={{ duration: 0.15, ease: 'easeOut' }}
                             >
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <div className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
-                                    Total Articles Analyzed
-                                  </div>
-                                  <div className="text-5xl font-black text-slate-900 dark:text-white mb-1">
-                                    {counts.total.toLocaleString()}
-                                  </div>
-                                  <div className="text-sm text-slate-600 dark:text-slate-400">
-                                    Complete dataset coverage
-                                  </div>
-                                </div>
-                                <div className="hidden md:flex items-center gap-8">
-                                  <div className="text-center">
-                                    <div className="text-2xl font-bold text-emerald-600">{counts.positive}</div>
-                                    <div className="text-xs text-slate-500">Positive</div>
-                                  </div>
-                                  <div className="text-center">
-                                    <div className="text-2xl font-bold text-red-600">{counts.negative}</div>
-                                    <div className="text-xs text-slate-500">Negative</div>
-                                  </div>
-                                  <div className="text-center">
-                                    <div className="text-2xl font-bold text-amber-600">{counts.neutral}</div>
-                                    <div className="text-xs text-slate-500">Neutral</div>
-                                  </div>
-                                </div>
-                              </div>
+                              <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{c.label}</div>
+                              <div className={`text-3xl font-bold mt-1.5 ${c.color}`}>{c.value}</div>
+                              <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{c.sub}</div>
                             </motion.div>
-                          </div>
-
-                          {/* Sentiment Cards Row */}
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {/* Positive */}
-                            <motion.div 
-                              className="bg-white dark:bg-slate-800 border-l-4 border-emerald-500 rounded-xl p-5 cursor-pointer hover:shadow-lg transition-shadow"
-                              variants={kpiItemVariants}
-                              whileHover={{ x: 4 }}
-                              onClick={() => handleKpiClick('positive')}
-                            >
-                              <div className="flex items-start justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                                    Positive Sentiment
-                                  </span>
-                                </div>
-                                <div className={`text-xs font-semibold px-2 py-1 rounded-md ${
-                                  filter === 'Positive' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
-                                }`}>
-                                  {counts.total ? Math.round(counts.positive / counts.total * 100) : 0}%
-                                </div>
-                              </div>
-                              <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">
-                                {counts.positive.toLocaleString()}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full transition-all duration-500"
-                                    style={{ width: `${counts.total ? (counts.positive / counts.total * 100) : 0}%` }}
-                                  />
-                                </div>
-                              </div>
-                            </motion.div>
-
-                            {/* Negative */}
-                            <motion.div 
-                              className="bg-white dark:bg-slate-800 border-l-4 border-red-500 rounded-xl p-5 cursor-pointer hover:shadow-lg transition-shadow"
-                              variants={kpiItemVariants}
-                              whileHover={{ x: 4 }}
-                              onClick={() => handleKpiClick('negative')}
-                            >
-                              <div className="flex items-start justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full bg-red-500" />
-                                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                                    Negative Sentiment
-                                  </span>
-                                </div>
-                                <div className={`text-xs font-semibold px-2 py-1 rounded-md ${
-                                  filter === 'Negative' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
-                                }`}>
-                                  {counts.total ? Math.round(counts.negative / counts.total * 100) : 0}%
-                                </div>
-                              </div>
-                              <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">
-                                {counts.negative.toLocaleString()}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-gradient-to-r from-red-500 to-red-600 rounded-full transition-all duration-500"
-                                    style={{ width: `${counts.total ? (counts.negative / counts.total * 100) : 0}%` }}
-                                  />
-                                </div>
-                              </div>
-                            </motion.div>
-
-                            {/* Neutral */}
-                            <motion.div 
-                              className="bg-white dark:bg-slate-800 border-l-4 border-amber-500 rounded-xl p-5 cursor-pointer hover:shadow-lg transition-shadow"
-                              variants={kpiItemVariants}
-                              whileHover={{ x: 4 }}
-                              onClick={() => handleKpiClick('neutral')}
-                            >
-                              <div className="flex items-start justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full bg-amber-500" />
-                                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                                    Neutral Sentiment
-                                  </span>
-                                </div>
-                                <div className={`text-xs font-semibold px-2 py-1 rounded-md ${
-                                  filter === 'Neutral' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
-                                }`}>
-                                  {counts.total ? Math.round(counts.neutral / counts.total * 100) : 0}%
-                                </div>
-                              </div>
-                              <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">
-                                {counts.neutral.toLocaleString()}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-gradient-to-r from-amber-500 to-amber-600 rounded-full transition-all duration-500"
-                                    style={{ width: `${counts.total ? (counts.neutral / counts.total * 100) : 0}%` }}
-                                  />
-                                </div>
-                              </div>
-                            </motion.div>
-                          </div>
+                          ))}
                         </motion.div>
                       </Skeleton>
                     </div>
+
                     {/* Charts Grid */}
                     <div>
-                      <SectionHeader title="Charts" />
+                      <SectionHeader title={t("charts")} />
                       <Skeleton name="charts-grid" loading={isLoading}>
                         <motion.div 
                           className="grid grid-cols-2 gap-5"
@@ -1219,34 +896,34 @@ const Dashboard = () => {
                         >
                           <div className={`${CARD} p-5 min-h-[280px] flex flex-col`}>
                             <InlineErrorBoundary name="Pie Chart">
-                              <SentimentDonutChart distribution={chartDistribution} onSegmentClick={handlePieSegmentClick} activeFilter={filter} />
+                              <SentimentPieChart distribution={distribution} onSegmentClick={handlePieSegmentClick} />
                             </InlineErrorBoundary>
                           </div>
                           <div className={`${CARD} p-5 min-h-[280px] flex flex-col`}>
                             <Suspense fallback={<ChartFallback />}>
                               <InlineErrorBoundary name="Bar Chart">
-                                <SentimentHorizontalBar distribution={chartDistribution} />
+                                <SentimentBarChart distribution={distribution} />
                               </InlineErrorBoundary>
                             </Suspense>
                           </div>
                           <div className={`${CARD} p-5 min-h-[280px] flex flex-col`}>
                             <Suspense fallback={<ChartFallback />}>
                               <InlineErrorBoundary name="Sentiment Map">
-                                <SentimentHeatmap data={regionalData} loading={isLoading} />
+                                <SentimentMap data={regionalData} loading={isLoading} />
                               </InlineErrorBoundary>
                             </Suspense>
                           </div>
                           <div className={`${CARD} p-5 min-h-[280px] flex flex-col`}>
                             <Suspense fallback={<ChartFallback />}>
                               <InlineErrorBoundary name="Trend Chart">
-                                <SentimentAreaChart trendsData={trends} />
+                                <TrendLineChart trendsData={trends} />
                               </InlineErrorBoundary>
                             </Suspense>
                           </div>
                           <div className={`col-span-2 ${CARD} p-5`}>
                             <Suspense fallback={<ChartFallback />}>
                               <InlineErrorBoundary name="Sources Chart">
-                                <TopSourcesHorizontal sourcesData={sources} />
+                                <TopSourcesChart sourcesData={sources} />
                               </InlineErrorBoundary>
                             </Suspense>
                           </div>
@@ -1281,7 +958,7 @@ const Dashboard = () => {
 
                 {/* Articles Section */}
                 <div className="mt-10" id="analysis-results">
-                  <SectionHeader title="Recent Articles" badge={filteredArticles.length}>
+                  <SectionHeader title={t("recentArticles")} badge={filteredArticles.length}>
                     <div className="flex gap-1.5">
                       {FILTER_OPTIONS.map(opt => (
                         <button 
@@ -1306,18 +983,41 @@ const Dashboard = () => {
                     animate="visible"
                   >
                     <Skeleton name="article-card" loading={isLoading || historyLoading} count={3}>
-                      {filteredArticles.map((article) => (
+                      {filteredArticles.length > 20 ? (
+                        <VirtualList
+                          height={600}
+                          itemCount={filteredArticles.length}
+                          itemSize={140}
+                          width="100%"
+                          style={{ overflow: 'auto' }}
+                        >
+                          {({ index, style }) => {
+                            const article = filteredArticles[index];
+                            return (
+                              <div style={style} key={article._id || article.url}>
+                                <ArticleCard 
+                                  article={article} 
+                                  onBookmark={toggleBookmark}
+                                  isBookmarked={user?.bookmarks?.includes(article._id || article.id)}
+                                />
+                              </div>
+                            );
+                          }}
+                        </VirtualList>
+                      ) : (
+                        filteredArticles.map((article) => (
                           <motion.div
                             key={article._id || article.url}
                             variants={articleVariants}
                           >
-                            <ArticleCardCompact 
+                            <ArticleCard 
                               article={article} 
                               onBookmark={toggleBookmark}
                               isBookmarked={user?.bookmarks?.includes(article._id || article.id)}
                             />
                           </motion.div>
-                        ))}
+                        ))
+                      )}
                     </Skeleton>
                   </motion.div>
 
