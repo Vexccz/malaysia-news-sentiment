@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import api from '../services/api';
@@ -53,6 +54,7 @@ const Heatmap = () => {
   const [geoLoaded, setGeoLoaded] = useState(false);
   const { theme } = useTheme();
   const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const navigate = useNavigate();
 
   const mapContainer = useRef(null);
   const mapRef = useRef(null);
@@ -66,7 +68,8 @@ const Heatmap = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const res = await api.get(`/news/heatmap?days=${days}`);
+        const query = days === 0 ? '' : `?days=${days}`;
+        const res = await api.get(`/news/heatmap${query}`);
         setData(res.data);
         dataRef.current = res.data;
       } catch (err) {
@@ -287,16 +290,27 @@ const Heatmap = () => {
           <div className="editorial-rule mb-2" />
           <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed font-sans">Geographic sentiment distribution across Malaysian states.</p>
         </div>
-        <select
-          value={days}
-          onChange={e => setDays(Number(e.target.value))}
-          className="px-3 py-2 text-xs font-medium uppercase tracking-wider border border-paper-line dark:border-paper-dark-line bg-paper dark:bg-paper-dark text-ink dark:text-paper focus:outline-none focus:border-accent transition-colors font-sans"
-        >
-          <option value={1}>Last 24 hours</option>
-          <option value={7}>Last 7 days</option>
-          <option value={14}>Last 14 days</option>
-          <option value={30}>Last 30 days</option>
-        </select>
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mr-2">Range</span>
+          {[
+            { label: '7d', value: 7 },
+            { label: '30d', value: 30 },
+            { label: '90d', value: 90 },
+            { label: 'All', value: 0 },
+          ].map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => setDays(opt.value)}
+              className={`px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.15em] border transition-colors font-sans ${
+                days === opt.value
+                  ? 'border-ink dark:border-paper text-ink dark:text-paper bg-ink/5 dark:bg-paper/10'
+                  : 'border-ink/20 dark:border-paper/20 text-ink-muted dark:text-ink-faint hover:border-ink/50 dark:hover:border-paper/50'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Map */}
@@ -379,6 +393,14 @@ const Heatmap = () => {
                   <p className="text-xl font-bold font-display text-ink dark:text-paper capitalize">{sd.topTopic}</p>
                   <p className="text-[10px] text-ink-faint font-sans">Top Topic</p>
                 </div>
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={() => navigate(`/search?state=${encodeURIComponent(selectedState)}`)}
+                  className="px-4 py-2 text-[11px] font-medium uppercase tracking-[0.15em] border border-ink dark:border-paper text-ink dark:text-paper hover:bg-ink hover:text-paper dark:hover:bg-paper dark:hover:text-ink transition-colors font-sans"
+                >
+                  View Articles
+                </button>
               </div>
             </motion.div>
           );

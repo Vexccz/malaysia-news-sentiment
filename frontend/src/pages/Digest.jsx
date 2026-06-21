@@ -11,11 +11,59 @@ const Digest = () => {
   const [loading, setLoading] = useState(false);
   const [topicLoading, setTopicLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [schedules, setSchedules] = useState([]);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [showScheduleForm, setShowScheduleForm] = useState(false);
+  const [newSchedule, setNewSchedule] = useState({ frequency: 'daily', topics: '', delivery: 'email' });
 
   useEffect(() => {
     if (activeTab === 'daily' && !dailyData) fetchDaily();
     if (activeTab === 'weekly' && !weeklyData) fetchWeekly();
+    if (activeTab === 'schedule' && schedules.length === 0) fetchSchedules();
   }, [activeTab]);
+
+  const fetchSchedules = async () => {
+    setScheduleLoading(true);
+    try {
+      const { data } = await api.get('/digests/scheduled');
+      setSchedules(data);
+    } catch (err) {
+      console.error('Failed to fetch schedules:', err);
+    } finally {
+      setScheduleLoading(false);
+    }
+  };
+
+  const createSchedule = async (e) => {
+    e.preventDefault();
+    try {
+      const topics = newSchedule.topics.split(',').map(t => t.trim()).filter(Boolean);
+      await api.post('/digests/scheduled', { frequency: newSchedule.frequency, topics, enabled: true });
+      setShowScheduleForm(false);
+      setNewSchedule({ frequency: 'daily', topics: '', delivery: 'email' });
+      fetchSchedules();
+    } catch (err) {
+      console.error('Failed to create schedule:', err);
+    }
+  };
+
+  const toggleSchedule = async (id, currentEnabled) => {
+    try {
+      await api.put(`/digests/scheduled/${id}`, { enabled: !currentEnabled });
+      setSchedules(schedules.map(s => s._id === id ? { ...s, enabled: !currentEnabled } : s));
+    } catch (err) {
+      console.error('Failed to toggle schedule:', err);
+    }
+  };
+
+  const deleteSchedule = async (id) => {
+    try {
+      await api.delete(`/digests/scheduled/${id}`);
+      setSchedules(schedules.filter(s => s._id !== id));
+    } catch (err) {
+      console.error('Failed to delete schedule:', err);
+    }
+  };
 
   const fetchDaily = async () => {
     setLoading(true);
@@ -120,7 +168,7 @@ const Digest = () => {
 
       {/* Tabs - editorial style */}
       <div className="flex gap-6 border-b border-paper-line">
-        {['daily', 'weekly', 'topic'].map(tab => (
+        {['daily', 'weekly', 'topic', 'schedule'].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -309,6 +357,152 @@ const Digest = () => {
                 </div>
               </div>
             </motion.div>
+          )}
+        </motion.div>
+      )}
+
+      {/* Schedule Digests */}
+      {activeTab === 'schedule' && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-5"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xs text-ink-muted uppercase tracking-[0.2em]">Scheduled Digests</h2>
+              <p className="text-xs text-ink-muted mt-1">Receive automated digest summaries at your preferred frequency</p>
+            </div>
+            <button
+              onClick={() => setShowScheduleForm(!showScheduleForm)}
+              className="border border-ink dark:border-paper px-4 py-2 text-xs font-medium uppercase tracking-widest text-ink dark:text-paper hover:bg-ink hover:text-paper dark:hover:bg-paper dark:hover:text-ink transition-colors"
+            >
+              {showScheduleForm ? 'Cancel' : '+ New Schedule'}
+            </button>
+          </div>
+
+          {/* New Schedule Form */}
+          {showScheduleForm && (
+            <motion.form
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              onSubmit={createSchedule}
+              className="border border-ink/10 dark:border-paper/10 p-5 space-y-4"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] uppercase tracking-[0.2em] text-ink-muted block mb-2">Frequency</label>
+                  <select
+                    value={newSchedule.frequency}
+                    onChange={(e) => setNewSchedule({ ...newSchedule, frequency: e.target.value })}
+                    className="w-full px-3 py-2 text-sm bg-paper-card border-2 border-ink dark:border-paper text-ink dark:text-paper focus:outline-none"
+                  >
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase tracking-[0.2em] text-ink-muted block mb-2">Delivery</label>
+                  <select
+                    value={newSchedule.delivery}
+                    onChange={(e) => setNewSchedule({ ...newSchedule, delivery: e.target.value })}
+                    className="w-full px-3 py-2 text-sm bg-paper-card border-2 border-ink dark:border-paper text-ink dark:text-paper focus:outline-none"
+                  >
+                    <option value="email">Email</option>
+                    <option value="dashboard">Dashboard</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-[0.2em] text-ink-muted block mb-2">Topics (comma-separated)</label>
+                <input
+                  type="text"
+                  value={newSchedule.topics}
+                  onChange={(e) => setNewSchedule({ ...newSchedule, topics: e.target.value })}
+                  placeholder="e.g. economy, politics, technology"
+                  className="w-full px-3 py-2 text-sm bg-paper-card border-2 border-ink dark:border-paper text-ink dark:text-paper placeholder-ink-muted focus:outline-none"
+                />
+              </div>
+              <button
+                type="submit"
+                className="border border-ink dark:border-paper px-5 py-2 text-xs font-medium uppercase tracking-widest text-ink dark:text-paper hover:bg-ink hover:text-paper dark:hover:bg-paper dark:hover:text-ink transition-colors"
+              >
+                Create Schedule
+              </button>
+            </motion.form>
+          )}
+
+          {/* Schedules List */}
+          {scheduleLoading ? (
+            <div className="py-8 text-center">
+              <div className="w-5 h-5 border-2 border-paper-line border-t-ink dark:border-t-paper rounded-full animate-spin mx-auto" />
+              <p className="text-xs text-ink-muted mt-3">Loading schedules...</p>
+            </div>
+          ) : schedules.length > 0 ? (
+            <div className="space-y-3">
+              {schedules.map((schedule) => (
+                <motion.div
+                  key={schedule._id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className={`border p-4 flex items-center justify-between transition-colors ${
+                    schedule.enabled
+                      ? 'border-ink/10 dark:border-paper/10'
+                      : 'border-ink/5 dark:border-paper/5 opacity-60'
+                  }`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-1.5">
+                      <span className="text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                        {schedule.frequency}
+                      </span>
+                      {schedule.delivery && (
+                        <span className="text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                          via {schedule.delivery}
+                        </span>
+                      )}
+                    </div>
+                    {schedule.topics && schedule.topics.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {schedule.topics.map((topic, i) => (
+                          <span key={i} className="px-2 py-0.5 text-[11px] text-ink-muted border border-ink/10 dark:border-paper/10">
+                            {topic}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {!schedule.topics?.length && (
+                      <span className="text-xs text-ink-muted">All topics</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 ml-4">
+                    <button
+                      onClick={() => toggleSchedule(schedule._id, schedule.enabled)}
+                      className={`relative w-10 h-5 transition-colors ${
+                        schedule.enabled ? 'bg-ink dark:bg-paper' : 'bg-ink/20 dark:bg-paper/20'
+                      }`}
+                    >
+                      <div className={`absolute top-0.5 w-4 h-4 bg-paper dark:bg-ink transition-transform ${
+                        schedule.enabled ? 'translate-x-5' : 'translate-x-0.5'
+                      }`} />
+                    </button>
+                    <button
+                      onClick={() => deleteSchedule(schedule._id)}
+                      className="text-xs text-ink-muted hover:text-red-500 transition-colors uppercase tracking-widest"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-12 text-center border border-ink/10 dark:border-paper/10">
+              <p className="text-sm text-ink-muted">No scheduled digests yet</p>
+              <p className="text-xs text-ink-muted mt-1">Create a schedule to receive automated digest summaries</p>
+            </div>
           )}
         </motion.div>
       )}

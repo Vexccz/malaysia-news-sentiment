@@ -18,7 +18,7 @@ import AnalyzingOverlay from '../components/AnalyzingOverlay';
 import usePullToRefresh from '../hooks/usePullToRefresh';
 import useSwipeTabs from '../hooks/useSwipeTabs';
 import { hapticImpact } from '../utils/haptics';
-import { Search, Clock, ArrowLeft, Sparkles, FileDown, Printer, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Brain, Download, Settings2, Globe } from 'lucide-react';
+import { Search, Clock, ArrowLeft, Sparkles, FileDown, Printer, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Brain, Download, Settings2, Globe, GripVertical } from 'lucide-react';
 import DashboardCustomizer from '../components/DashboardCustomizer';
 import EmptyState from '../components/EmptyState';
 import DashboardSummary from '../components/DashboardSummary';
@@ -130,6 +130,16 @@ const TIME_OPTIONS = [
 // Consistent card style
 const CARD = 'border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card';
 
+// Widget layout defaults
+const DEFAULT_VISIBILITY = { kpi: true, charts: true, articles: true, ai: true, wordcloud: true, sources: true };
+const DEFAULT_WIDGET_ORDER = ['kpi', 'charts', 'ai', 'articles', 'wordcloud', 'sources'];
+const WIDGET_ID_MAP = {
+  'sentiment-overview': 'kpi',
+  'recent-articles': 'articles',
+  'source-stats': 'sources',
+  'ai-insights': 'ai',
+};
+
 /**
  * Trend badge – shows % change vs previous period.
  * `pct` is the raw percentage change (e.g. 12, -5, 0).
@@ -181,6 +191,26 @@ const Dashboard = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [showFabTooltip, setShowFabTooltip] = useState(false);
 
+  // Widget layout state (persisted to localStorage)
+  const [widgetVisibility, setWidgetVisibility] = useState(() => {
+    try {
+      const saved = localStorage.getItem('dashboard-widget-visibility');
+      return saved ? { ...DEFAULT_VISIBILITY, ...JSON.parse(saved) } : DEFAULT_VISIBILITY;
+    } catch { return DEFAULT_VISIBILITY; }
+  });
+  const [layoutOrder, setLayoutOrder] = useState(() => {
+    try {
+      const saved = localStorage.getItem('dashboard-layout-order');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const merged = [...new Set([...parsed, ...DEFAULT_WIDGET_ORDER])];
+        return merged.filter(k => DEFAULT_WIDGET_ORDER.includes(k));
+      }
+      return DEFAULT_WIDGET_ORDER;
+    } catch { return DEFAULT_WIDGET_ORDER; }
+  });
+  const [draggedWidget, setDraggedWidget] = useState(null);
+
   // Onboarding tour
   const { key: tourKey, startTour } = useOnboardingTour();
 
@@ -222,6 +252,14 @@ const Dashboard = () => {
       return () => clearTimeout(timer);
     }
   }, [isMobile]);
+
+  // Persist widget layout to localStorage
+  useEffect(() => {
+    localStorage.setItem('dashboard-widget-visibility', JSON.stringify(widgetVisibility));
+  }, [widgetVisibility]);
+  useEffect(() => {
+    localStorage.setItem('dashboard-layout-order', JSON.stringify(layoutOrder));
+  }, [layoutOrder]);
 
   // Dashboard Init Query (History Mode)
   const { 
@@ -536,6 +574,63 @@ const Dashboard = () => {
     }
   };
 
+  // Drag-and-drop handlers for widget reordering
+  const handleDragStart = useCallback((e, widgetKey) => {
+    setDraggedWidget(widgetKey);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', widgetKey);
+  }, []);
+
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const handleDrop = useCallback((e, targetKey) => {
+    e.preventDefault();
+    if (!draggedWidget || draggedWidget === targetKey) { setDraggedWidget(null); return; }
+    setLayoutOrder(prev => {
+      const newOrder = [...prev];
+      const fromIdx = newOrder.indexOf(draggedWidget);
+      const toIdx = newOrder.indexOf(targetKey);
+      if (fromIdx === -1 || toIdx === -1) return prev;
+      newOrder.splice(fromIdx, 1);
+      newOrder.splice(toIdx, 0, draggedWidget);
+      return newOrder;
+    });
+    setDraggedWidget(null);
+  }, [draggedWidget]);
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedWidget(null);
+  }, []);
+
+  // Handle customizer save — maps DashboardCustomizer layout to widget states
+  const handleCustomizerSave = useCallback((layout) => {
+    setDashboardLayout(layout);
+    const vis = { ...DEFAULT_VISIBILITY };
+    const order = [];
+    layout.forEach(item => {
+      const key = WIDGET_ID_MAP[item.widgetId];
+      if (key) {
+        vis[key] = item.visible;
+        order.push(key);
+      }
+    });
+    // Add widgets not present in the customizer (charts, wordcloud)
+    DEFAULT_WIDGET_ORDER.forEach(k => { if (!order.includes(k)) order.push(k); });
+    setWidgetVisibility(vis);
+    setLayoutOrder(order.filter(k => DEFAULT_WIDGET_ORDER.includes(k)));
+  }, []);
+
+  // Reset layout to defaults
+  const handleResetLayout = useCallback(() => {
+    setWidgetVisibility(DEFAULT_VISIBILITY);
+    setLayoutOrder(DEFAULT_WIDGET_ORDER);
+    localStorage.removeItem('dashboard-widget-visibility');
+    localStorage.removeItem('dashboard-layout-order');
+  }, []);
+
   const isLoading = initLoading || searchLoading;
 
   // Animation variants - subtle
@@ -572,9 +667,20 @@ const Dashboard = () => {
   };
 
   // Section header component
-  const SectionHeader = ({ title, badge, children }) => (
+  const SectionHeader = ({ title, badge, widgetKey, children }) => (
     <div className="flex items-center justify-between mb-4">
       <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-2">
+        {widgetKey && (
+          <span
+            draggable
+            onDragStart={(e) => handleDragStart(e, widgetKey)}
+            onDragEnd={handleDragEnd}
+            className="cursor-grab active:cursor-grabbing text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors"
+            title="Drag to reorder"
+          >
+            <GripVertical size={14} />
+          </span>
+        )}
         {title}
         {badge !== undefined && (
           <span className="text-[11px] font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded-full normal-case tracking-normal">{badge}</span>
@@ -1041,16 +1147,26 @@ const Dashboard = () => {
               /* Desktop Layout */
               <>
                 <div className="grid grid-cols-[1fr_300px] gap-8">
-                  <div className="space-y-8">
+                  <div className="flex flex-col gap-8">
                     {(digest || digestLoading) && !isHistoryView && (
                       <AiDigestCard digest={digest} loading={digestLoading} topic={currentQuery} />
                     )}
-                    
+
                     {/* KPI Cards - PROPER DESIGN */}
+                    {widgetVisibility.kpi && (
+                    <div
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, 'kpi')}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, 'kpi')}
+                      onDragEnd={handleDragEnd}
+                      style={{ order: layoutOrder.indexOf('kpi') }}
+                      className={`transition-opacity ${draggedWidget === 'kpi' ? 'opacity-40' : ''}`}
+                    >
                     <div>
-                      <SectionHeader title={t("keyMetrics")} />
+                      <SectionHeader title={t("keyMetrics")} widgetKey="kpi" />
                       <Skeleton name="kpi-row" loading={isLoading}>
-                        <motion.div 
+                        <motion.div
                           className="space-y-5"
                           variants={containerVariants}
                           initial="hidden"
@@ -1059,7 +1175,7 @@ const Dashboard = () => {
                           {/* Editorial Stats Grid */}
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border border-ink/10 dark:border-paper/10">
                             {/* Total Articles */}
-                            <motion.div 
+                            <motion.div
                               className="col-span-2 md:col-span-1 p-5 border-r border-b border-ink/10 dark:border-paper/10"
                               variants={kpiItemVariants}
                             >
@@ -1075,7 +1191,7 @@ const Dashboard = () => {
                             </motion.div>
 
                             {/* Positive */}
-                            <motion.div 
+                            <motion.div
                               className="p-5 border-r border-b border-ink/10 dark:border-paper/10 cursor-pointer hover:bg-ink/5 dark:hover:bg-paper/5 transition-colors"
                               variants={kpiItemVariants}
                               onClick={() => handleKpiClick('positive')}
@@ -1093,7 +1209,7 @@ const Dashboard = () => {
                             </motion.div>
 
                             {/* Negative */}
-                            <motion.div 
+                            <motion.div
                               className="p-5 border-r border-b border-ink/10 dark:border-paper/10 cursor-pointer hover:bg-ink/5 dark:hover:bg-paper/5 transition-colors md:border-r-0"
                               variants={kpiItemVariants}
                               onClick={() => handleKpiClick('negative')}
@@ -1111,7 +1227,7 @@ const Dashboard = () => {
                             </motion.div>
 
                             {/* Neutral */}
-                            <motion.div 
+                            <motion.div
                               className="col-span-2 md:col-span-1 p-5 cursor-pointer hover:bg-ink/5 dark:hover:bg-paper/5 transition-colors"
                               variants={kpiItemVariants}
                               onClick={() => handleKpiClick('neutral')}
@@ -1131,9 +1247,21 @@ const Dashboard = () => {
                         </motion.div>
                       </Skeleton>
                     </div>
+                    </div>
+                    )}
                     {/* Charts Grid */}
+                    {widgetVisibility.charts && (
+                    <div
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, 'charts')}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, 'charts')}
+                      onDragEnd={handleDragEnd}
+                      style={{ order: layoutOrder.indexOf('charts') }}
+                      className={`transition-opacity ${draggedWidget === 'charts' ? 'opacity-40' : ''}`}
+                    >
                     <div>
-                      <SectionHeader title={t("charts")} />
+                      <SectionHeader title={t("charts")} widgetKey="charts" />
                       <Skeleton name="charts-grid" loading={isLoading}>
                         <motion.div 
                           className="grid grid-cols-2 gap-5"
@@ -1177,16 +1305,32 @@ const Dashboard = () => {
                         </motion.div>
                       </Skeleton>
                     </div>
-                    
+                    </div>
+                    )}
+
                     {/* Forecast */}
-                    <InlineErrorBoundary name="AI Forecast">
-                      <ForecastCard forecast={forecast} loading={forecastLoading} topic={currentQuery} />
-                    </InlineErrorBoundary>
+                    {widgetVisibility.ai && (
+                    <div
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, 'ai')}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, 'ai')}
+                      onDragEnd={handleDragEnd}
+                      style={{ order: layoutOrder.indexOf('ai') }}
+                      className={`transition-opacity ${draggedWidget === 'ai' ? 'opacity-40' : ''}`}
+                    >
+                      <SectionHeader title={t("aiInsights")} widgetKey="ai" />
+                      <InlineErrorBoundary name="AI Forecast">
+                        <ForecastCard forecast={forecast} loading={forecastLoading} topic={currentQuery} />
+                      </InlineErrorBoundary>
+                    </div>
+                    )}
                   </div>
                   
                   {/* Sidebar */}
                   <aside className="space-y-5">
                     <div className="sticky top-6 space-y-5">
+                      {widgetVisibility.wordcloud && (
                       <Skeleton name="word-cloud" loading={isLoading}>
                         <div className={`${CARD} p-5`}>
                           <InlineErrorBoundary name="Word Cloud">
@@ -1194,25 +1338,29 @@ const Dashboard = () => {
                           </InlineErrorBoundary>
                         </div>
                       </Skeleton>
+                      )}
+                      {widgetVisibility.sources && (
                       <div className={`${CARD} p-5`}>
                         <InlineErrorBoundary name="Source Credibility">
                           <SourceCredibility />
                         </InlineErrorBoundary>
                       </div>
+                      )}
                     </div>
                   </aside>
                 </div>
 
                 {/* Articles Section */}
+                {widgetVisibility.articles && (
                 <div className="mt-10" id="analysis-results">
                   <SectionHeader title={t("recentArticles")} badge={filteredArticles.length}>
                     <div className="flex gap-1.5">
                       {FILTER_OPTIONS.map(opt => (
-                        <button 
-                          key={opt.key} 
+                        <button
+                          key={opt.key}
                           className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                            filter === opt.key 
-                              ? 'bg-blue-600 text-white shadow-sm' 
+                            filter === opt.key
+                              ? 'bg-blue-600 text-white shadow-sm'
                               : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
                           }`}
                           onClick={() => setFilter(opt.key)}
@@ -1269,6 +1417,7 @@ const Dashboard = () => {
                     </div>
                   )}
                 </div>
+                )}
               </>
             )}
           </>
@@ -1384,7 +1533,7 @@ const Dashboard = () => {
       <DashboardCustomizer
         isOpen={showCustomizer}
         onClose={() => setShowCustomizer(false)}
-        onSave={(layout) => setDashboardLayout(layout)}
+        onSave={handleCustomizerSave}
       />
     </div>
   );

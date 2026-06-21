@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import ArticleCard from '../components/ArticleCard';
 import ArticlePreviewModal from '../components/ArticlePreviewModal';
-import { getHistory, deleteArticle, getStats } from '../services/api';
+import { getHistory, deleteArticle, bulkDeleteArticles, getStats } from '../services/api';
 import { exportToCSV } from '../services/exportUtils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -22,6 +22,9 @@ const History = () => {
 
   const [searchInput, setSearchInput] = useState('');
   const debounceRef = useRef(null);
+
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = useState(new Set());
 
   const handleSearchChange = (value) => {
     setSearchInput(value);
@@ -67,6 +70,19 @@ const History = () => {
     }
   });
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (ids) => bulkDeleteArticles(ids),
+    onSuccess: (_, ids) => {
+      toast.success(`${ids.length} article${ids.length > 1 ? 's' : ''} deleted`);
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries(['history']);
+      queryClient.invalidateQueries(['stats']);
+    },
+    onError: () => {
+      toast.error('Failed to delete selected articles.');
+    }
+  });
+
   const articles = historyData?.articles || [];
   const totalPages = historyData?.pages || 1;
   const totalCount = historyData?.total || 0;
@@ -93,6 +109,44 @@ const History = () => {
     exportToCSV(articles, `history-export-${new Date().toISOString().split('T')[0]}.csv`);
     toast.success('Export started');
   };
+
+  // Bulk selection handlers
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === articles.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(articles.map(a => a._id || a.id)));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`Permanently delete ${selectedIds.size} selected article${selectedIds.size > 1 ? 's' : ''}?`)) return;
+    bulkDeleteMutation.mutate(Array.from(selectedIds));
+  };
+
+  const handleBulkExport = () => {
+    if (selectedIds.size === 0) return;
+    const selected = articles.filter(a => selectedIds.has(a._id || a.id));
+    if (selected.length === 0) return toast.error('No articles to export.');
+    exportToCSV(selected, `history-export-selected-${new Date().toISOString().split('T')[0]}.csv`);
+    toast.success(`Exported ${selected.length} article${selected.length > 1 ? 's' : ''}`);
+  };
+
+  const isAllSelected = articles.length > 0 && selectedIds.size === articles.length;
+  const isSomeSelected = selectedIds.size > 0;
 
   const KPI = stats ? [
     { label: 'Total Analyzed', value: stats.total, sub: 'in database' },
@@ -167,19 +221,24 @@ const History = () => {
 
           {/* Date Range */}
           <div className="flex items-center gap-2">
+            <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">
+              From
+            </label>
             <input
               type="date"
               value={params.from}
               onChange={(e) => handleParamChange('from', e.target.value)}
-              className="px-2.5 py-2 text-xs border border-paper-line dark:border-paper-dark-line bg-paper dark:bg-paper-dark text-ink dark:text-paper focus:outline-none focus:border-accent transition-colors font-sans"
+              className="px-2.5 py-2 text-xs border-2 border-ink dark:border-paper bg-paper dark:bg-paper-dark text-ink dark:text-paper focus:outline-none focus:border-accent transition-colors font-sans"
               title="From Date"
             />
-            <span className="text-xs text-ink-faint font-sans">to</span>
+            <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">
+              To
+            </label>
             <input
               type="date"
               value={params.to}
               onChange={(e) => handleParamChange('to', e.target.value)}
-              className="px-2.5 py-2 text-xs border border-paper-line dark:border-paper-dark-line bg-paper dark:bg-paper-dark text-ink dark:text-paper focus:outline-none focus:border-accent transition-colors font-sans"
+              className="px-2.5 py-2 text-xs border-2 border-ink dark:border-paper bg-paper dark:bg-paper-dark text-ink dark:text-paper focus:outline-none focus:border-accent transition-colors font-sans"
               title="To Date"
             />
           </div>
@@ -187,7 +246,7 @@ const History = () => {
           {/* Export */}
           <button
             onClick={handleExport}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-ink dark:text-paper border border-paper-line dark:border-paper-dark-line hover:bg-paper dark:hover:bg-paper-dark transition-colors font-sans"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-ink dark:text-paper border border-ink dark:border-paper hover:bg-paper dark:hover:bg-paper-dark transition-colors font-sans"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
@@ -196,6 +255,40 @@ const History = () => {
           </button>
         </div>
       </div>
+
+      {/* Bulk Action Bar */}
+      {isSomeSelected && (
+        <div className="border border-ink dark:border-paper bg-paper-card dark:bg-paper-dark-card px-4 py-3 mb-4 flex items-center gap-4">
+          <span className="text-xs font-semibold text-ink dark:text-paper font-sans uppercase tracking-wider">
+            {selectedIds.size} selected
+          </span>
+          <button
+            onClick={handleBulkDelete}
+            disabled={bulkDeleteMutation.isLoading}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-red-700 dark:text-red-400 border border-red-700 dark:border-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors font-sans disabled:opacity-50"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+            </svg>
+            Delete Selected
+          </button>
+          <button
+            onClick={handleBulkExport}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-ink dark:text-paper border border-ink dark:border-paper hover:bg-paper dark:hover:bg-paper-dark transition-colors font-sans"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Export Selected
+          </button>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="text-xs font-medium text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-colors font-sans ml-auto"
+          >
+            Clear selection
+          </button>
+        </div>
+      )}
 
       {/* Articles */}
       <div>
@@ -228,15 +321,51 @@ const History = () => {
           </div>
         ) : (
           <>
-            <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card divide-y divide-paper-line dark:divide-paper-dark-line">
-              {articles.map(article => (
-                <ArticleCard 
-                  key={article._id}
-                  article={article} 
-                  onPreview={handlePreview} 
-                  onDelete={handleDelete}
+            {/* Select All header */}
+            <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card px-5 py-2.5 flex items-center gap-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isAllSelected}
+                  onChange={toggleSelectAll}
+                  className="w-4 h-4 border-2 border-ink dark:border-paper bg-paper dark:bg-paper-dark checked:bg-ink dark:checked:bg-paper accent-ink dark:accent-paper cursor-pointer"
                 />
-              ))}
+                <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">
+                  Select All
+                </span>
+              </label>
+              <span className="text-[10px] text-ink-faint font-sans ml-auto">
+                {totalCount} item{totalCount !== 1 ? 's' : ''}
+              </span>
+            </div>
+
+            <div className="border border-t-0 border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card divide-y divide-paper-line dark:divide-paper-dark-line">
+              {articles.map(article => {
+                const articleId = article._id || article.id;
+                const isSelected = selectedIds.has(articleId);
+                return (
+                  <div key={articleId} className="flex items-start gap-0">
+                    {/* Checkbox column */}
+                    <div className="flex-shrink-0 flex items-start pt-4 pl-4">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(articleId)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-4 h-4 border-2 border-ink dark:border-paper bg-paper dark:bg-paper-dark checked:bg-ink dark:checked:bg-paper accent-ink dark:accent-paper cursor-pointer mt-1"
+                      />
+                    </div>
+                    {/* Article card wrapper */}
+                    <div className="flex-1 min-w-0">
+                      <ArticleCard 
+                        article={article} 
+                        onPreview={handlePreview} 
+                        onDelete={handleDelete}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Pagination — editorial style */}

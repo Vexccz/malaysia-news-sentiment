@@ -243,6 +243,14 @@ export const deleteArticle = async (id) => {
 };
 
 /**
+ * Bulk delete articles by IDs
+ */
+export const bulkDeleteArticles = async (ids) => {
+  const response = await api.delete('/history/bulk', { data: { ids } });
+  return response.data;
+};
+
+/**
  * Get sentiment breakdown by region (Malaysian States)
  * (#1 Heatmap)
  */
@@ -282,6 +290,46 @@ export const getTopViewed = async (params = {}) => {
  */
 export const toggleBookmark = async (id) => {
   const response = await api.post(`/news/${id}/bookmark`);
+  return response.data;
+};
+
+/**
+ * Get all bookmark folders
+ */
+export const getBookmarkFolders = async () => {
+  const response = await api.get('/bookmarks/folders');
+  return response.data;
+};
+
+/**
+ * Create a new bookmark folder
+ */
+export const createBookmarkFolder = async (name) => {
+  const response = await api.post('/bookmarks/folders', { name });
+  return response.data;
+};
+
+/**
+ * Rename a bookmark folder
+ */
+export const updateBookmarkFolder = async (id, name) => {
+  const response = await api.put(`/bookmarks/folders/${id}`, { name });
+  return response.data;
+};
+
+/**
+ * Delete a bookmark folder
+ */
+export const deleteBookmarkFolder = async (id) => {
+  const response = await api.delete(`/bookmarks/folders/${id}`);
+  return response.data;
+};
+
+/**
+ * Move a bookmark to a folder
+ */
+export const moveBookmarkToFolder = async (articleId, folderId) => {
+  const response = await api.put(`/bookmarks/${articleId}/folder`, { folderId });
   return response.data;
 };
 
