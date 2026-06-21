@@ -252,9 +252,17 @@ const ArticleDetail = () => {
         <div className="border-t border-ink/10 my-6" />
 
         <article
-          className="text-ink dark:text-paper text-base leading-relaxed mb-8 prose prose-sm max-w-none prose-img:rounded prose-a:text-[#4f46e5]"
+          className="text-ink dark:text-paper text-base leading-relaxed mb-8"
+          style={{ lineHeight: 1.8 }}
           dangerouslySetInnerHTML={{ __html: bodyText }}
         />
+        <style>{`
+          article p { margin-bottom: 1em; }
+          article figure { margin: 1.5em 0; }
+          article figure img { max-width: 100%; height: auto; }
+          article figcaption { font-size: 0.8em; color: #6b7280; margin-top: 0.5em; font-style: italic; }
+          article a { color: #4f46e5; text-decoration: underline; }
+        `}</style>
 
         {url && (
           <a
