@@ -3,10 +3,10 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 
 const SentimentHorizontalBar = ({ distribution = {} }) => {
   const data = [
-    { name: 'Positive', value: distribution.positive || 0, color: '#10b981', lightColor: '#d1fae5' },
-    { name: 'Negative', value: distribution.negative || 0, color: '#ef4444', lightColor: '#fee2e2' },
-    { name: 'Neutral', value: distribution.neutral || 0, color: '#f59e0b', lightColor: '#fef3c7' },
-  ].sort((a, b) => b.value - a.value); // Sort descending
+    { name: 'Positive', value: distribution.positive || 0, color: '#059669' },
+    { name: 'Negative', value: distribution.negative || 0, color: '#dc2626' },
+    { name: 'Neutral', value: distribution.neutral || 0, color: '#d97706' },
+  ].sort((a, b) => b.value - a.value);
 
   const maxValue = Math.max(...data.map(d => d.value));
 
@@ -16,14 +16,14 @@ const SentimentHorizontalBar = ({ distribution = {} }) => {
       const total = distribution.positive + distribution.negative + distribution.neutral;
       const percent = total > 0 ? ((item.value / total) * 100).toFixed(1) : 0;
       return (
-        <div className="bg-white dark:bg-gray-800 px-4 py-3 rounded-xl shadow-2xl border-2" style={{ borderColor: item.payload.color }}>
-          <p className="text-sm font-bold" style={{ color: item.payload.color }}>
+        <div className="bg-paper dark:bg-ink border border-ink/15 dark:border-paper/15 px-3 py-2">
+          <p className="text-[10px] uppercase tracking-[0.15em] font-semibold mb-1" style={{ color: item.payload.color }}>
             {item.payload.name}
           </p>
-          <p className="text-2xl font-black text-gray-900 dark:text-white mt-1">
+          <p className="font-['Playfair_Display'] text-lg font-bold text-ink dark:text-paper">
             {item.value}
           </p>
-          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-[10px] text-ink/40 dark:text-paper/40 mt-0.5">
             {percent}% of total
           </p>
         </div>
@@ -35,45 +35,44 @@ const SentimentHorizontalBar = ({ distribution = {} }) => {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+        <h3 className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">
           Sentiment Distribution
         </h3>
-        <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-full">
-          Horizontal Comparison
+        <span className="text-[10px] uppercase tracking-[0.15em] text-ink/30 dark:text-paper/30 border border-ink/10 dark:border-paper/10 px-2 py-0.5 font-sans">
+          Horizontal
         </span>
       </div>
       
-      <ResponsiveContainer width="100%" height={280}>
-        <BarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 80, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.3} />
-          <XAxis type="number" stroke="#9ca3af" style={{ fontSize: '12px' }} />
+      <ResponsiveContainer width="100%" height={260}>
+        <BarChart data={data} layout="vertical" margin={{ top: 5, right: 20, left: 80, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="1 3" stroke="currentColor" opacity={0.08} />
+          <XAxis 
+            type="number" 
+            stroke="currentColor" 
+            opacity={0.3}
+            style={{ fontSize: '10px', fontFamily: "'Inter', sans-serif" }}
+            axisLine={{ stroke: 'currentColor', opacity: 0.15 }}
+          />
           <YAxis 
             type="category" 
             dataKey="name" 
-            stroke="#9ca3af" 
-            style={{ fontSize: '13px', fontWeight: '600' }}
+            stroke="currentColor" 
+            opacity={0.4}
+            style={{ fontSize: '10px', fontFamily: "'Inter', sans-serif", textTransform: 'uppercase', letterSpacing: '0.1em' }}
             width={75}
+            axisLine={{ stroke: 'currentColor', opacity: 0.15 }}
           />
-          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(156, 163, 175, 0.1)' }} />
-          <defs>
-            {data.map((entry, index) => (
-              <linearGradient key={`gradient-${index}`} id={`colorGradient${index}`} x1="0" y1="0" x2="1" y2="0">
-                <stop offset="5%" stopColor={entry.color} stopOpacity={0.9}/>
-                <stop offset="95%" stopColor={entry.color} stopOpacity={0.6}/>
-              </linearGradient>
-            ))}
-          </defs>
+          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0, 0, 0, 0.03)' }} />
           <Bar 
             dataKey="value" 
-            radius={[0, 8, 8, 0]}
-            maxBarSize={50}
+            radius={[0, 0, 0, 0]}
+            maxBarSize={40}
           >
             {data.map((entry, index) => (
               <Cell 
                 key={`cell-${index}`} 
-                fill={`url(#colorGradient${index})`}
-                stroke={entry.color}
-                strokeWidth={2}
+                fill={entry.color}
+                opacity={0.7}
               />
             ))}
           </Bar>

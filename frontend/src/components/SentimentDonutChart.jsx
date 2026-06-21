@@ -3,9 +3,9 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recha
 
 const SentimentDonutChart = ({ distribution = {}, onSegmentClick, activeFilter }) => {
   const data = [
-    { name: 'Positive', value: distribution.positive || 0, color: '#10b981' },
-    { name: 'Negative', value: distribution.negative || 0, color: '#ef4444' },
-    { name: 'Neutral', value: distribution.neutral || 0, color: '#f59e0b' },
+    { name: 'Positive', value: distribution.positive || 0, color: '#059669' },
+    { name: 'Negative', value: distribution.negative || 0, color: '#dc2626' },
+    { name: 'Neutral', value: distribution.neutral || 0, color: '#d97706' },
   ].filter(item => item.value > 0);
 
   const total = data.reduce((sum, item) => sum + item.value, 0);
@@ -15,11 +15,11 @@ const SentimentDonutChart = ({ distribution = {}, onSegmentClick, activeFilter }
       const item = payload[0];
       const percent = total > 0 ? ((item.value / total) * 100).toFixed(1) : 0;
       return (
-        <div className="bg-white dark:bg-gray-800 px-3 py-2 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
-          <p className="text-sm font-semibold" style={{ color: item.payload.color }}>
+        <div className="bg-paper dark:bg-ink border border-ink/15 dark:border-paper/15 px-3 py-2">
+          <p className="text-[10px] uppercase tracking-[0.15em] font-semibold mb-1" style={{ color: item.payload.color }}>
             {item.name}
           </p>
-          <p className="text-xs text-gray-600 dark:text-gray-400">
+          <p className="text-xs text-ink/60 dark:text-paper/60">
             {item.value} articles ({percent}%)
           </p>
         </div>
@@ -31,14 +31,14 @@ const SentimentDonutChart = ({ distribution = {}, onSegmentClick, activeFilter }
   const renderLegend = (props) => {
     const { payload } = props;
     return (
-      <div className="flex justify-center gap-4 mt-4">
+      <div className="flex justify-center gap-5 mt-4">
         {payload.map((entry, index) => (
           <div key={`legend-${index}`} className="flex items-center gap-2">
             <div 
-              className="w-3 h-3 rounded-full" 
+              className="w-2.5 h-2.5" 
               style={{ backgroundColor: entry.color }}
             />
-            <span className="text-xs text-gray-600 dark:text-gray-400">
+            <span className="text-[10px] uppercase tracking-[0.15em] text-ink-muted dark:text-ink-faint font-sans">
               {entry.value}
             </span>
           </div>
@@ -59,16 +59,18 @@ const SentimentDonutChart = ({ distribution = {}, onSegmentClick, activeFilter }
         <tspan
           x="50%"
           dy="-0.5em"
-          className="text-3xl font-bold fill-gray-900 dark:fill-white"
+          className="fill-ink dark:fill-paper"
+          style={{ fontFamily: "'Playfair Display', serif", fontSize: '2rem', fontWeight: 700 }}
         >
           {total}
         </tspan>
         <tspan
           x="50%"
-          dy="1.5em"
-          className="text-xs fill-gray-500 dark:fill-gray-400"
+          dy="1.8em"
+          className="fill-ink/40 dark:fill-paper/40"
+          style={{ fontFamily: "'Inter', sans-serif", fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.15em' }}
         >
-          Total Articles
+          Total
         </tspan>
       </text>
     );
@@ -76,7 +78,7 @@ const SentimentDonutChart = ({ distribution = {}, onSegmentClick, activeFilter }
 
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64 text-gray-400 dark:text-gray-600">
+      <div className="flex items-center justify-center h-64 text-ink/30 dark:text-paper/30">
         <p className="text-sm">No data available</p>
       </div>
     );
@@ -84,32 +86,26 @@ const SentimentDonutChart = ({ distribution = {}, onSegmentClick, activeFilter }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-          Share of Voice
-        </h3>
-      </div>
-      
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height={260}>
         <PieChart>
           <Pie
             data={data}
             cx="50%"
             cy="50%"
-            innerRadius="60%"
-            outerRadius="80%"
-            paddingAngle={2}
+            innerRadius="58%"
+            outerRadius="78%"
+            paddingAngle={1}
             dataKey="value"
             onClick={(data) => onSegmentClick && onSegmentClick(data.name)}
             cursor="pointer"
-            strokeWidth={4}
-            stroke="white"
+            strokeWidth={1}
+            stroke="var(--color-paper, #ffffff)"
           >
             {data.map((entry, index) => (
               <Cell 
                 key={`cell-${index}`} 
                 fill={entry.color}
-                opacity={activeFilter && activeFilter !== 'all' && activeFilter !== entry.name ? 0.3 : 0.95}
+                opacity={activeFilter && activeFilter !== 'all' && activeFilter !== entry.name ? 0.25 : 1}
                 className="transition-opacity duration-200"
               />
             ))}
