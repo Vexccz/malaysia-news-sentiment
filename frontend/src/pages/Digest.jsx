@@ -82,8 +82,8 @@ const Digest = () => {
       className="max-w-4xl mx-auto space-y-6"
     >
       {/* Header - editorial style */}
-      <div className="editorial-rule pb-4">
-        <div className="flex items-end justify-between">
+      <div className="editorial-rule pb-4 mb-2">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
           <div>
             <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">
               News Digest
