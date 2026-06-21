@@ -2,16 +2,24 @@ const PDFDocument = require('pdfkit');
 const Article = require('../models/Article');
 const { getClient } = require('../services/openaiService');
 
-const C = {
+var C = {
   black: '#111111', dark: '#333333', mid: '#666666', light: '#999999',
   border: '#DDDDDD', bg: '#F5F5F5',
   pos: '#16a34a', neg: '#dc2626', neu: '#ca8a04',
   accent: '#1e3a5f',
 };
 
-const pct = (n, d) => d ? Math.round((n / d) * 100) : 0;
+var pct = function(n, d) { return d ? Math.round((n / d) * 100) : 0; };
 function sentimentColor(s) { return s === 'Positive' ? C.pos : s === 'Negative' ? C.neg : C.neu; }
 function truncate(str, len) { if (!str) return ''; return str.length > len ? str.slice(0, len).trimEnd() + '...' : str; }
+
+// Track page count manually
+var _pageNum = 0;
+
+function newPage(doc) {
+  doc.addPage();
+  _pageNum++;
+}
 
 function drawSectionHeader(doc, title) {
   doc.fillColor(C.black).fontSize(14).font('Helvetica-Bold').text(title);
@@ -21,25 +29,7 @@ function drawSectionHeader(doc, title) {
 
 function checkPage(doc, needed) {
   needed = needed || 80;
-  if (doc.y + needed > 760) { doc.addPage(); }
-}
-
-// Footer on every page via event
-function addFooter(doc, totalPages) {
-  doc.on('pageAdded', function() {
-    // We'll draw footer at the end, but use this to track pages
-  });
-}
-
-function drawFooters(doc) {
-  var count = doc.bufferedPageRange().count;
-  for (var i = 0; i < count; i++) {
-    doc.switchToPage(i);
-    doc.save();
-    doc.fontSize(7).font('Helvetica').fillColor(C.light);
-    doc.text('Malaysia News Sentiment Analysis  |  Page ' + (i + 1) + ' of ' + count + '  |  Generated ' + new Date().toLocaleDateString('en-MY'), 50, 790, { align: 'center', width: 495 });
-    doc.restore();
-  }
+  if (doc.y + needed > 750) { newPage(doc); }
 }
 
 var generatePDFReport = async function(req, res) {
@@ -48,7 +38,6 @@ var generatePDFReport = async function(req, res) {
     var dateFrom = req.body.dateFrom;
     var dateTo = req.body.dateTo;
 
-    // Build query matching topic OR title OR categories
     var escapeRegex = function(str) { return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); };
     var orConditions = [];
     if (topic && topic !== 'all') {
@@ -74,7 +63,6 @@ var generatePDFReport = async function(req, res) {
       total = articles.length;
     }
 
-    // Stats
     var posCount = 0, negCount = 0, neuCount = 0;
     articles.forEach(function(a) {
       if (a.sentiment === 'Positive') posCount++;
@@ -82,7 +70,6 @@ var generatePDFReport = async function(req, res) {
       else neuCount++;
     });
 
-    // Source breakdown
     var sourceMap = {};
     articles.forEach(function(a) {
       var s = a.source || 'Unknown';
@@ -95,10 +82,9 @@ var generatePDFReport = async function(req, res) {
     });
     var sources = Object.keys(sourceMap).map(function(name) {
       var d = sourceMap[name];
-      return { name: name, count: d.count, pos: d.pos, neg: d.neg, neu: d.neu, avgConf: d.totalConf / d.count };
+      return { name: name, count: d.count, pos: d.pos, neg: d.neg, neu: d.neu };
     }).sort(function(a, b) { return b.count - a.count; });
 
-    // State breakdown
     var stateMap = {};
     articles.forEach(function(a) {
       var st = a.stateLocation || 'General';
@@ -110,7 +96,6 @@ var generatePDFReport = async function(req, res) {
     });
     var states = Object.keys(stateMap).map(function(name) { return [name, stateMap[name]]; }).sort(function(a, b) { return b[1].count - a[1].count; });
 
-    // Temporal breakdown
     var dateMap = {};
     articles.forEach(function(a) {
       var d = new Date(a.publishedAt).toISOString().slice(0, 10);
@@ -122,18 +107,15 @@ var generatePDFReport = async function(req, res) {
     });
     var dates = Object.keys(dateMap).sort().map(function(d) { return [d, dateMap[d]]; });
 
-    // Confidence stats
     var confidences = articles.map(function(a) { return a.confidence || 0; }).filter(function(c) { return c > 0; });
     var avgConfidence = confidences.length ? confidences.reduce(function(a, b) { return a + b; }, 0) / confidences.length : 0;
     var highConf = confidences.filter(function(c) { return c >= 0.8; }).length;
     var medConf = confidences.filter(function(c) { return c >= 0.5 && c < 0.8; }).length;
     var lowConf = confidences.filter(function(c) { return c < 0.5; }).length;
 
-    // Categories
     var catMap = {};
     articles.forEach(function(a) { (a.categories || []).forEach(function(c) { catMap[c] = (catMap[c] || 0) + 1; }); });
     var categories = Object.keys(catMap).map(function(k) { return [k, catMap[k]]; }).sort(function(a, b) { return b[1] - a[1]; });
-
     var alerts = articles.filter(function(a) { return a.isAlert; });
 
     // AI Summary
@@ -141,27 +123,27 @@ var generatePDFReport = async function(req, res) {
     try {
       var client = getClient();
       if (client) {
-        var topSources = sources.slice(0, 5).map(function(s) { return s.name + ' (' + s.count + ')'; }).join(', ');
         var completion = await client.chat.completions.create({
           model: 'gpt-4o-mini',
-          messages: [{ role: 'user', content: 'Write a professional 4-5 sentence executive summary for a Malaysian news sentiment analysis report. Topic: ' + (topic || 'All') + '. Total: ' + total + ' articles. Sentiment: ' + posCount + ' positive (' + pct(posCount, total) + '%), ' + negCount + ' negative (' + pct(negCount, total) + '%), ' + neuCount + ' neutral. Sources: ' + topSources + '. States: ' + states.length + '. Confidence: ' + (avgConfidence * 100).toFixed(1) + '%. Alerts: ' + alerts.length + '. Be concise, factual, professional. No bullets.' }],
+          messages: [{ role: 'user', content: 'Write 4-5 sentence executive summary for Malaysian news sentiment report. Topic: ' + (topic || 'All') + '. ' + total + ' articles. ' + posCount + ' pos (' + pct(posCount, total) + '%), ' + negCount + ' neg (' + pct(negCount, total) + '%), ' + neuCount + ' neutral. ' + sources.length + ' sources, ' + states.length + ' regions. Confidence: ' + (avgConfidence * 100).toFixed(1) + '%. Professional, concise, no bullets.' }],
           max_tokens: 300,
         });
         executiveSummary = completion.choices[0] && completion.choices[0].message ? completion.choices[0].message.content : '';
       }
-    } catch (e) { /* fallback */ }
+    } catch (e) {}
     if (!executiveSummary) {
       var dominant = posCount >= negCount && posCount >= neuCount ? 'positive' : negCount >= posCount && negCount >= neuCount ? 'negative' : 'neutral';
-      executiveSummary = 'This report analyses ' + total + ' Malaysian news articles' + (topic ? ' related to "' + topic + '"' : '') + '. The overall sentiment leans ' + dominant + ', with ' + pct(posCount, total) + '% positive, ' + pct(negCount, total) + '% negative, and ' + pct(neuCount, total) + '% neutral. Coverage spans ' + sources.length + ' sources across ' + states.length + ' regions. Average confidence: ' + (avgConfidence * 100).toFixed(1) + '%. ' + alerts.length + ' articles flagged as alerts.';
+      executiveSummary = 'This report analyses ' + total + ' Malaysian news articles' + (topic ? ' related to "' + topic + '"' : '') + '. Sentiment leans ' + dominant + ': ' + pct(posCount, total) + '% positive, ' + pct(negCount, total) + '% negative, ' + pct(neuCount, total) + '% neutral. ' + sources.length + ' sources across ' + states.length + ' regions. Avg confidence: ' + (avgConfidence * 100).toFixed(1) + '%. ' + alerts.length + ' alerts flagged.';
     }
 
     // BUILD PDF
-    var doc = new PDFDocument({ margin: 50, size: 'A4', bufferPages: true });
+    _pageNum = 1;
+    var doc = new PDFDocument({ margin: 50, size: 'A4' });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="sentiment-report-' + (topic || 'all') + '-' + Date.now() + '.pdf"');
     doc.pipe(res);
 
-    // COVER
+    // COVER PAGE (page 1)
     doc.moveDown(6);
     doc.fillColor(C.accent).fontSize(32).font('Helvetica-Bold').text('Malaysia News', { align: 'center' });
     doc.fillColor(C.accent).fontSize(32).font('Helvetica-Bold').text('Sentiment Analysis', { align: 'center' });
@@ -176,8 +158,8 @@ var generatePDFReport = async function(req, res) {
       doc.moveDown(0.3);
     });
 
-    // EXECUTIVE SUMMARY
-    doc.addPage();
+    // EXECUTIVE SUMMARY (page 2)
+    newPage(doc);
     drawSectionHeader(doc, '1. Executive Summary');
     doc.fillColor(C.dark).fontSize(10).font('Helvetica').text(executiveSummary, { lineGap: 4 });
     doc.moveDown(1.5);
@@ -209,20 +191,20 @@ var generatePDFReport = async function(req, res) {
     checkPage(doc, 100);
     drawSectionHeader(doc, '3. Sentiment Distribution');
     var barMaxW = 400, barH = 18;
-    [{ label: 'Positive', count: posCount, color: C.pos }, { label: 'Negative', count: negCount, color: C.neg }, { label: 'Neutral', count: neuCount, color: C.neu }].forEach(function(s) {
-      var w = total ? (s.count / total) * barMaxW : 0;
-      doc.fillColor(C.dark).fontSize(9).font('Helvetica-Bold').text(s.label, 50, doc.y);
-      doc.fillColor(C.light).fontSize(9).font('Helvetica').text(s.count + ' articles (' + pct(s.count, total) + '%)');
+    [{ l: 'Positive', c: posCount, col: C.pos }, { l: 'Negative', c: negCount, col: C.neg }, { l: 'Neutral', c: neuCount, col: C.neu }].forEach(function(s) {
+      var w = total ? (s.c / total) * barMaxW : 0;
+      doc.fillColor(C.dark).fontSize(9).font('Helvetica-Bold').text(s.l, 50, doc.y);
+      doc.fillColor(C.light).fontSize(9).font('Helvetica').text(s.c + ' articles (' + pct(s.c, total) + '%)');
       var barY = doc.y + 2;
       doc.roundedRect(70, barY, barMaxW, barH, 2).fill('#E5E7EB');
-      if (w > 0) doc.roundedRect(70, barY, Math.max(w, 4), barH, 2).fill(s.color);
+      if (w > 0) doc.roundedRect(70, barY, Math.max(w, 4), barH, 2).fill(s.col);
       doc.y = barY + barH + 10;
     });
 
-    // SOURCE TABLE
-    doc.addPage();
+    // SOURCE TABLE (page 3)
+    newPage(doc);
     drawSectionHeader(doc, '4. Source Analysis');
-    doc.fillColor(C.mid).fontSize(9).font('Helvetica').text(sources.length + ' unique sources identified.');
+    doc.fillColor(C.mid).fontSize(9).font('Helvetica').text(sources.length + ' unique sources.');
     doc.moveDown(0.8);
     if (sources.length > 0) {
       var srcCols = [50, 220, 300, 370, 440];
@@ -247,8 +229,7 @@ var generatePDFReport = async function(req, res) {
     checkPage(doc, 120);
     doc.moveDown(1);
     drawSectionHeader(doc, '5. Geographic Coverage');
-    doc.fillColor(C.mid).fontSize(9).font('Helvetica').text(states.length + ' states/regions.');
-    doc.moveDown(0.8);
+    doc.moveDown(0.5);
     if (states.length > 0) {
       var stCols = [50, 180, 260, 340, 420];
       doc.fillColor(C.accent).fontSize(8).font('Helvetica-Bold');
@@ -273,12 +254,12 @@ var generatePDFReport = async function(req, res) {
     if (dates.length > 1) {
       checkPage(doc, 120);
       doc.moveDown(1);
-      drawSectionHeader(doc, '6. Temporal Analysis');
-      doc.fillColor(C.mid).fontSize(9).font('Helvetica').text(dates.length + ' days: ' + dates[0][0] + ' to ' + dates[dates.length - 1][0] + '.');
-      doc.moveDown(0.8);
+      drawSectionHeader(doc, '6. Temporal Trend');
+      doc.fillColor(C.mid).fontSize(9).font('Helvetica').text(dates.length + ' days: ' + dates[0][0] + ' to ' + dates[dates.length - 1][0]);
+      doc.moveDown(0.6);
       var dtCols = [50, 160, 240, 320, 400];
       doc.fillColor(C.accent).fontSize(8).font('Helvetica-Bold');
-      ['Date', 'Articles', 'Positive', 'Negative', 'Neutral'].forEach(function(h, i) { doc.text(h, dtCols[i], doc.y, { width: 75 }); });
+      ['Date', 'Total', 'Positive', 'Negative', 'Neutral'].forEach(function(h, i) { doc.text(h, dtCols[i], doc.y, { width: 75 }); });
       doc.moveDown(0.3);
       doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor(C.border).lineWidth(0.5).stroke();
       doc.moveDown(0.3);
@@ -298,15 +279,15 @@ var generatePDFReport = async function(req, res) {
     // CONFIDENCE
     checkPage(doc, 100);
     doc.moveDown(1);
-    drawSectionHeader(doc, '7. Classification Confidence');
-    doc.fillColor(C.dark).fontSize(9).font('Helvetica').text('Confidence score (0-1) reflects classifier certainty. Higher = more decisive.', { lineGap: 3 });
-    doc.moveDown(0.6);
-    [{ label: 'High (0.8-1.0)', count: highConf, color: C.pos }, { label: 'Medium (0.5-0.8)', count: medConf, color: C.neu }, { label: 'Low (0.0-0.5)', count: lowConf, color: C.neg }].forEach(function(s) {
-      var w = total ? (s.count / total) * barMaxW : 0;
-      doc.fillColor(C.dark).fontSize(8).font('Helvetica').text(s.label + ': ' + s.count + ' (' + pct(s.count, total) + '%)', 50, doc.y);
+    drawSectionHeader(doc, '7. Confidence Analysis');
+    doc.fillColor(C.dark).fontSize(9).font('Helvetica').text('Classifier certainty (0-1). Higher = more decisive.');
+    doc.moveDown(0.5);
+    [{ l: 'High (0.8-1.0)', c: highConf, col: C.pos }, { l: 'Medium (0.5-0.8)', c: medConf, col: C.neu }, { l: 'Low (0.0-0.5)', c: lowConf, col: C.neg }].forEach(function(s) {
+      var w = total ? (s.c / total) * barMaxW : 0;
+      doc.fillColor(C.dark).fontSize(8).font('Helvetica').text(s.l + ': ' + s.c + ' (' + pct(s.c, total) + '%)', 50, doc.y);
       var barY = doc.y + 2;
       doc.roundedRect(70, barY, barMaxW, 12, 2).fill('#E5E7EB');
-      if (w > 0) doc.roundedRect(70, barY, Math.max(w, 3), 12, 2).fill(s.color);
+      if (w > 0) doc.roundedRect(70, barY, Math.max(w, 3), 12, 2).fill(s.col);
       doc.y = barY + 18;
     });
 
@@ -314,36 +295,28 @@ var generatePDFReport = async function(req, res) {
     if (categories.length > 0) {
       checkPage(doc, 100);
       doc.moveDown(1);
-      drawSectionHeader(doc, '8. Topic Categories');
-      doc.fillColor(C.mid).fontSize(9).font('Helvetica').text(categories.length + ' categories found.');
-      doc.moveDown(0.5);
+      drawSectionHeader(doc, '8. Categories');
       categories.slice(0, 10).forEach(function(entry) {
         checkPage(doc, 16);
-        var cat = entry[0], count = entry[1];
-        doc.fillColor(C.black).fontSize(9).font('Helvetica').text(cat + '  (' + count + ' articles)', 60, doc.y, { width: 350 });
-        var w = total ? (count / total) * 150 : 0;
-        var barY = doc.y + 1;
-        doc.roundedRect(420, barY, 120, 8, 1).fill('#E5E7EB');
-        if (w > 0) doc.roundedRect(420, barY, Math.max(w, 2), 8, 1).fill(C.accent);
-        doc.y = barY + 14;
+        doc.fillColor(C.black).fontSize(9).font('Helvetica').text(entry[0] + '  (' + entry[1] + ')', 60, doc.y);
+        doc.moveDown(0.4);
       });
     }
 
-    // ARTICLES
-    doc.addPage();
-    drawSectionHeader(doc, '9. Article Listing');
-    doc.fillColor(C.mid).fontSize(9).font('Helvetica').text(Math.min(articles.length, 50) + ' of ' + total + ' articles.');
-    doc.moveDown(0.8);
+    // ARTICLES (new page)
+    newPage(doc);
+    drawSectionHeader(doc, '9. Articles');
+    doc.fillColor(C.mid).fontSize(9).font('Helvetica').text(Math.min(articles.length, 50) + ' of ' + total + '.');
+    doc.moveDown(0.6);
     articles.slice(0, 50).forEach(function(article, i) {
-      checkPage(doc, 50);
+      checkPage(doc, 45);
       var sentCol = sentimentColor(article.sentiment);
       doc.fillColor(C.black).fontSize(9).font('Helvetica-Bold').text(truncate(article.title, 110), { lineGap: 2 });
-      var metaY = doc.y + 1;
       doc.fillColor(C.light).fontSize(7).font('Helvetica')
-        .text((article.source || 'Unknown') + '  |  ' + new Date(article.publishedAt).toLocaleDateString('en-MY') + '  |  ', 50, metaY, { continued: true, width: 495 });
-      doc.fillColor(sentCol).font('Helvetica-Bold').text(article.sentiment + ' (' + ((article.confidence || 0) * 100).toFixed(0) + '%)', { continued: false });
+        .text((article.source || 'Unknown') + '  |  ' + new Date(article.publishedAt).toLocaleDateString('en-MY') + '  |  ', 50, doc.y + 1, { continued: true, width: 495 });
+      doc.fillColor(sentCol).font('Helvetica-Bold').text(article.sentiment + ' (' + ((article.confidence || 0) * 100).toFixed(0) + '%)');
       if (article.description) {
-        doc.fillColor(C.mid).fontSize(7).font('Helvetica').text(truncate(article.description, 150), { lineGap: 1 });
+        doc.fillColor(C.mid).fontSize(7).font('Helvetica').text(truncate(article.description, 150));
       }
       doc.moveDown(0.3);
       if (i < Math.min(articles.length, 50) - 1) {
@@ -352,32 +325,19 @@ var generatePDFReport = async function(req, res) {
       }
     });
 
-    // METHODOLOGY
-    doc.addPage();
+    // METHODOLOGY (new page)
+    newPage(doc);
     drawSectionHeader(doc, '10. Methodology');
-    doc.fillColor(C.dark).fontSize(9.5).font('Helvetica').text('This report uses a hybrid sentiment analysis pipeline for Malaysian news. Articles from FMT, Astro Awani, Malaysiakini, The Star, and Bernama are processed through a multi-stage classification system.', { lineGap: 4 });
-    doc.moveDown(0.8);
+    doc.fillColor(C.dark).fontSize(9.5).font('Helvetica').text('Hybrid sentiment pipeline for Malaysian news. Articles from FMT, Astro Awani, Malaysiakini, The Star, Bernama processed through multi-stage classification.', { lineGap: 4 });
+    doc.moveDown(0.6);
     doc.fillColor(C.black).fontSize(10).font('Helvetica-Bold').text('Data Collection');
-    doc.fillColor(C.dark).fontSize(9).font('Helvetica').text('Articles sourced via RSS feeds with metadata: publication date, source, geographic classification, topic categorisation.', { lineGap: 3 });
-    doc.moveDown(0.5);
+    doc.fillColor(C.dark).fontSize(9).font('Helvetica').text('RSS feeds with metadata: date, source, geographic classification, topic categorisation.', { lineGap: 3 });
+    doc.moveDown(0.4);
     doc.fillColor(C.black).fontSize(10).font('Helvetica-Bold').text('Sentiment Classification');
-    doc.fillColor(C.dark).fontSize(9).font('Helvetica').text('Dual-model: Mesolitica NanoT5 (local, Bahasa Melayu) + GPT-4o-mini (cross-validation). Three-tier: Positive, Negative, Neutral. Confidence 0-1. Disagreements resolved by confidence weighting.', { lineGap: 3 });
-    doc.moveDown(0.5);
-    doc.fillColor(C.black).fontSize(10).font('Helvetica-Bold').text('Geographic & Topic Classification');
-    doc.fillColor(C.dark).fontSize(9).font('Helvetica').text('NER for Malaysian states. Keyword extraction for topic categories (Politics, Economy, Crime, Education, Technology).', { lineGap: 3 });
-    doc.moveDown(0.5);
+    doc.fillColor(C.dark).fontSize(9).font('Helvetica').text('Dual-model: Mesolitica NanoT5 (Bahasa Melayu) + GPT-4o-mini. Three-tier: Positive, Negative, Neutral. Confidence 0-1.', { lineGap: 3 });
+    doc.moveDown(0.4);
     doc.fillColor(C.black).fontSize(10).font('Helvetica-Bold').text('Limitations');
-    doc.fillColor(C.dark).fontSize(9).font('Helvetica').text('Accuracy affected by sarcasm, idioms, mixed-language content. Geographic based on content mentions, not publication location. Confidence reflects model certainty, not factual accuracy.', { lineGap: 3 });
-
-    // FOOTERS - draw on each existing page
-    var pageRange = doc.bufferedPageRange();
-    for (var i = 0; i < pageRange.count; i++) {
-      doc.switchToPage(i);
-      doc.save();
-      doc.fontSize(7).font('Helvetica').fillColor(C.light);
-      doc.text('Malaysia News Sentiment Analysis  |  Page ' + (i + 1) + ' of ' + pageRange.count + '  |  ' + new Date().toLocaleDateString('en-MY'), 50, 790, { align: 'center', width: 495 });
-      doc.restore();
-    }
+    doc.fillColor(C.dark).fontSize(9).font('Helvetica').text('Sarcasm, idioms, mixed-language may affect accuracy. Geographic based on content mentions. Confidence = model certainty, not factual accuracy.', { lineGap: 3 });
 
     doc.end();
   } catch (err) {
