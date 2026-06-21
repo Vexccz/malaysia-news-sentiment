@@ -315,8 +315,9 @@ export default function EntityGraphPage() {
     }
 
     graph.on('node:click', (evt) => {
-      const nodeId = evt.target?.id;
-      if (nodeId) handleNodeClick(nodeId);
+      const nodeId = evt.item?._cfg?.id;
+      const node = data.nodes.find(n => n.id === nodeId);
+      if (node) handleNodeClick(node.label);
     });
 
     // Layout completion handling
