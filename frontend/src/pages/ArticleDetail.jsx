@@ -331,10 +331,33 @@ const ArticleDetail = () => {
         {relatedArticles.length > 0 && (
           <div>
             <p className="text-ink/50 uppercase tracking-widest text-xs mb-4 font-semibold">Related Stories</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {relatedArticles.map((a) => (
-                <ArticleCard key={a._id || a.id} article={a} />
-              ))}
+            <div className="space-y-3">
+              {relatedArticles.map((a) => {
+                const aid = a._id || a.id;
+                const src = deriveSourceLabel(a.source, a.url);
+                const sent = a.sentiment?.label || a.sentiment || 'Neutral';
+                const sentColor = sent === 'Positive' ? 'text-green-600' : sent === 'Negative' ? 'text-red-600' : 'text-ink/40';
+                return (
+                  <Link
+                    key={aid}
+                    to={'/articles/' + aid}
+                    className="flex items-start gap-4 p-4 border border-ink/8 hover:border-ink/20 transition-colors no-underline group"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] uppercase tracking-widest text-ink/40 mb-1">{src}</p>
+                      <h4 className="text-sm font-semibold text-ink group-hover:text-[#4f46e5] leading-snug line-clamp-2 mb-1">
+                        {a.title}
+                      </h4>
+                      {a.description && (
+                        <p className="text-xs text-ink/50 leading-relaxed line-clamp-1">{a.description}</p>
+                      )}
+                    </div>
+                    <span className={`text-[10px] uppercase tracking-widest font-semibold whitespace-nowrap ${sentColor}`}>
+                      {sent}
+                    </span>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         )}
