@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../services/api';
 import SentimentBadge from '../components/SentimentBadge';
-import ArticleCard from '../components/ArticleCard';
 import { useFreshness } from '../context/FreshnessContext';
 
 const formatDate = (dateStr) => {
@@ -13,107 +12,54 @@ const formatDate = (dateStr) => {
 };
 
 const deriveSourceLabel = (source, url) => {
-  if (source && source !== 'Unknown' && source !== 'Source' && source !== 'Media Source') {
-    return source;
-  }
+  if (source && source !== 'Unknown' && source !== 'Source' && source !== 'Media Source') return source;
   if (!url) return 'News Source';
   try {
     const host = new URL(url).hostname.replace(/^www\./, '');
     const label = host.split('.')[0] || host;
-    return label.split(/[-_]/).map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
-  } catch {
-    return 'News Source';
-  }
+    return label.split(/[-_]/).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+  } catch { return 'News Source'; }
 };
 
 const getFaviconUrl = (url) => {
   if (!url) return null;
-  try {
-    const domain = new URL(url).hostname;
-    return `https://www.google.com/s2/favicons?domain=${domain}&sz=16`;
-  } catch {
-    return null;
-  }
+  try { return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=32`; } catch { return null; }
 };
 
 const CREDIBILITY_LABELS = {
-  high: { label: 'High Credibility', color: '#059669' },
-  medium: { label: 'Medium Credibility', color: '#d97706' },
-  low: { label: 'Low Credibility', color: '#dc2626' },
-  unknown: { label: 'Unrated Source', color: '#6b7280' },
+  high:   { label: 'High',   color: '#059669' },
+  medium: { label: 'Medium', color: '#d97706' },
+  low:    { label: 'Low',    color: '#dc2626' },
+  unknown:{ label: 'N/A',    color: '#6b7280' },
 };
 
 const getCredibilityLevel = (score) => {
+  if (!score && score !== 0) return 'unknown';
   if (score >= 70) return 'high';
   if (score >= 40) return 'medium';
-  if (score > 0) return 'low';
-  return 'unknown';
+  return 'low';
 };
 
-const ArticleSkeleton = () => (
-  <div className="max-w-3xl mx-auto animate-pulse">
-    <div className="h-4 w-32 bg-ink/10 mb-6" />
-    <div className="h-3 w-48 bg-ink/10 mb-4" />
-    <div className="h-10 w-full bg-ink/10 mb-2" />
-    <div className="h-10 w-3/4 bg-ink/10 mb-6" />
-    <div className="border-t border-ink/10 my-6" />
-    <div className="space-y-3">
-      <div className="h-4 w-full bg-ink/10" />
-      <div className="h-4 w-full bg-ink/10" />
-      <div className="h-4 w-5/6 bg-ink/10" />
-      <div className="h-4 w-full bg-ink/10" />
-      <div className="h-4 w-2/3 bg-ink/10" />
-    </div>
-    <div className="border-t border-ink/10 my-8" />
-    <div className="h-5 w-40 bg-ink/10 mb-4" />
-    <div className="h-3 w-full bg-ink/10 mb-2" />
-    <div className="h-3 w-full bg-ink/10 mb-2" />
-    <div className="h-3 w-1/2 bg-ink/10" />
-  </div>
-);
-
 const SentimentBreakdown = ({ sentiment, confidence, feedback }) => {
-  const posVotes = feedback?.Positive || 0;
-  const negVotes = feedback?.Negative || 0;
-  const neuVotes = feedback?.Neutral || 0;
-  const totalVotes = posVotes + negVotes + neuVotes;
-
-  let positive, negative, neutral;
-
-  if (totalVotes > 0) {
-    positive = Math.round((posVotes / totalVotes) * 100);
-    negative = Math.round((negVotes / totalVotes) * 100);
-    neutral = 100 - positive - negative;
-  } else {
-    const conf = Math.round((confidence || 0.5) * 100);
-    if (sentiment === 'Positive') {
-      positive = conf;
-      negative = Math.round((100 - conf) * 0.3);
-      neutral = 100 - positive - negative;
-    } else if (sentiment === 'Negative') {
-      negative = conf;
-      positive = Math.round((100 - conf) * 0.3);
-      neutral = 100 - positive - negative;
-    } else {
-      neutral = conf;
-      positive = Math.round((100 - conf) * 0.5);
-      negative = 100 - neutral - positive;
-    }
-  }
+  const label = sentiment?.label || sentiment || 'Neutral';
+  const score = confidence || sentiment?.score || 0;
+  const pct = Math.round(score * 100);
+  const isPos = label === 'Positive';
+  const isNeg = label === 'Negative';
+  const color = isPos ? '#059669' : isNeg ? '#dc2626' : '#6b7280';
 
   return (
     <div>
-      <p className="text-ink/50 uppercase tracking-widest text-xs mb-3 font-semibold">Sentiment Breakdown</p>
-      <div className="flex h-3 w-full overflow-hidden" style={{ borderRadius: 0 }}>
-        <div style={{ width: `${positive}%`, background: '#059669' }} title={`Positive: ${positive}%`} />
-        <div style={{ width: `${neutral}%`, background: '#6b7280' }} title={`Neutral: ${neutral}%`} />
-        <div style={{ width: `${negative}%`, background: '#dc2626' }} title={`Negative: ${negative}%`} />
+      <div className="flex items-center gap-3 mb-2">
+        <span className="text-lg font-bold" style={{ color }}>{label}</span>
+        <span className="text-sm text-ink/40">{pct}% confidence</span>
       </div>
-      <div className="flex justify-between mt-2 text-xs text-ink/60">
-        <span><span className="inline-block w-2 h-2 mr-1" style={{ background: '#059669' }} />Positive {positive}%</span>
-        <span><span className="inline-block w-2 h-2 mr-1" style={{ background: '#6b7280' }} />Neutral {neutral}%</span>
-        <span><span className="inline-block w-2 h-2 mr-1" style={{ background: '#dc2626' }} />Negative {negative}%</span>
+      <div className="w-full h-2 bg-ink/5 overflow-hidden">
+        <div className="h-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: color }} />
       </div>
+      {feedback && (
+        <p className="text-xs text-ink/50 mt-2 italic">{feedback}</p>
+      )}
     </div>
   );
 };
@@ -121,7 +67,6 @@ const SentimentBreakdown = ({ sentiment, confidence, feedback }) => {
 const ArticleDetail = () => {
   const { id } = useParams();
   const { updateFreshness } = useFreshness();
-
   const [article, setArticle] = useState(null);
   const [relatedArticles, setRelatedArticles] = useState([]);
   const [credibility, setCredibility] = useState(null);
@@ -159,7 +104,7 @@ const ArticleDetail = () => {
       }
     } catch (err) {
       console.error('[ArticleDetail] fetch error:', err);
-      setError(err.response?.data?.error || err.friendlyMessage || 'Article not found');
+      setError(err.response?.data?.error || 'Article not found');
     } finally {
       setLoading(false);
     }
@@ -172,25 +117,25 @@ const ArticleDetail = () => {
 
   if (loading) {
     return (
-      <div className="bg-paper dark:bg-paper-dark min-h-screen p-4 lg:p-8">
-        <ArticleSkeleton />
+      <div className="bg-paper min-h-screen">
+        <div className="max-w-3xl mx-auto px-4 py-8 lg:px-0 animate-pulse">
+          <div className="h-4 w-24 bg-ink/5 mb-8" />
+          <div className="h-3 w-48 bg-ink/5 mb-4" />
+          <div className="h-8 w-3/4 bg-ink/5 mb-6" />
+          <div className="border-t border-ink/10 mb-8" />
+          {[...Array(6)].map((_, i) => <div key={i} className="h-4 w-full bg-ink/5 mb-3" />)}
+        </div>
       </div>
     );
   }
 
   if (error || !article) {
     return (
-      <div className="bg-paper dark:bg-paper-dark min-h-screen p-4 lg:p-8">
-        <div className="max-w-3xl mx-auto text-center py-20">
-          <p className="text-ink/50 uppercase tracking-widest text-xs mb-4">Error</p>
-          <h1 className="font-['Playfair_Display'] text-3xl font-bold text-ink dark:text-paper mb-4">
-            Article Not Found
-          </h1>
-          <p className="text-ink/60 mb-8">{error || 'The requested article could not be loaded.'}</p>
-          <Link
-            to="/dashboard"
-            className="inline-block px-6 py-2 border border-ink/20 text-ink dark:text-paper text-sm uppercase tracking-widest no-underline hover:bg-ink hover:text-paper transition-colors"
-          >
+      <div className="bg-paper min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-ink/30 text-sm uppercase tracking-widest mb-2">Error</p>
+          <p className="text-ink font-semibold mb-4">{error || 'Article not found'}</p>
+          <Link to="/dashboard" className="text-xs uppercase tracking-widest text-ink/50 hover:text-ink no-underline">
             Back to Dashboard
           </Link>
         </div>
@@ -199,7 +144,7 @@ const ArticleDetail = () => {
   }
 
   const {
-    title, description, content, source, url, urlToImage,
+    title, description, content, source, url,
     publishedAt, sentiment, confidence, reason, categories,
     topic, viewCount, bookmarksCount, feedback, impactScore,
   } = article;
@@ -211,147 +156,134 @@ const ArticleDetail = () => {
   const bodyText = content || description || '';
 
   return (
-    <div className="bg-paper dark:bg-paper-dark min-h-screen">
-      <div className="max-w-3xl mx-auto p-4 lg:p-8">
+    <div className="bg-paper min-h-screen">
+      <div className="max-w-3xl mx-auto px-4 py-8 lg:px-0">
+
+        {/* Back */}
         <Link
           to="/dashboard"
-          className="inline-flex items-center gap-2 text-ink/50 hover:text-ink dark:hover:text-paper text-xs uppercase tracking-widest no-underline transition-colors mb-6"
+          className="inline-flex items-center gap-2 text-ink/40 hover:text-ink text-[11px] uppercase tracking-widest no-underline transition-colors mb-8"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M19 12H5" /><polyline points="12 19 5 12 12 5" />
           </svg>
           Back to Dashboard
         </Link>
 
-        <div className="flex flex-wrap items-center gap-3 mb-4">
-          {faviconUrl && (
-            <img src={faviconUrl} alt="" width="16" height="16" style={{ borderRadius: 2 }} loading="lazy" />
-          )}
-          <span className="text-ink/50 uppercase tracking-widest text-xs font-semibold">{sourceLabel}</span>
-          <span className="text-ink/30">|</span>
-          <span className="text-ink/50 text-xs">{formatDate(publishedAt)}</span>
+        {/* Meta row */}
+        <div className="flex flex-wrap items-center gap-3 mb-5">
+          {faviconUrl && <img src={faviconUrl} alt="" width="14" height="14" style={{ borderRadius: 2 }} loading="lazy" />}
+          <span className="text-[11px] uppercase tracking-widest text-ink/50 font-semibold">{sourceLabel}</span>
+          <span className="text-ink/20">|</span>
+          <span className="text-[11px] text-ink/40">{formatDate(publishedAt)}</span>
+          <span className="text-ink/20">|</span>
           <SentimentBadge sentiment={sentiment} />
         </div>
 
-        <h1 className="font-['Playfair_Display'] text-3xl lg:text-4xl font-bold text-ink dark:text-paper leading-tight mb-6">
+        {/* Title */}
+        <h1 className="font-['Playfair_Display'] text-2xl sm:text-3xl lg:text-[2.5rem] font-bold text-ink leading-tight mb-6">
           {title}
         </h1>
 
-        <div className="border-t border-ink/10 my-6" />
+        <div className="border-t border-ink/10 mb-8" />
 
+        {/* Body */}
         <article
-          className="text-ink dark:text-paper text-base leading-relaxed mb-8"
-          style={{ lineHeight: 1.8 }}
+          className="text-ink text-[15px] leading-[1.85] mb-10"
           dangerouslySetInnerHTML={{ __html: bodyText }}
         />
         <style>{`
-          article p { margin-bottom: 1em; }
+          article p { margin-bottom: 1.1em; }
           article figure { margin: 1.5em 0; }
           article figure img { max-width: 100%; max-height: 400px; object-fit: contain; height: auto; background: #f3f4f6; }
           article figcaption { font-size: 0.8em; color: #6b7280; margin-top: 0.5em; font-style: italic; }
           article a { color: #4f46e5; text-decoration: underline; }
         `}</style>
 
+        {/* Read original */}
         {url && (
           <a
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-block px-5 py-2 border border-ink/20 text-ink dark:text-paper text-xs uppercase tracking-widest no-underline hover:bg-ink hover:text-paper transition-colors mb-8"
+            className="inline-flex items-center gap-2 px-4 py-2 border border-ink/15 text-ink text-[11px] uppercase tracking-widest no-underline hover:bg-ink hover:text-paper transition-colors mb-10"
           >
-            Read Original Article
+            Read Original
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
           </a>
         )}
 
-        <div className="border-t border-ink/10 my-8" />
+        <div className="border-t border-ink/10 mb-8" />
 
-        <div className="mb-8">
-          <SentimentBreakdown sentiment={sentiment} confidence={confidence} feedback={feedback} />
-        </div>
-
-        {reason && (
-          <div className="mb-8">
-            <p className="text-ink/50 uppercase tracking-widest text-xs mb-2 font-semibold">AI Analysis</p>
-            <blockquote className="border-l-2 border-ink/20 pl-4 text-ink/70 italic text-sm">
-              &ldquo;{reason}&rdquo;
-            </blockquote>
+        {/* Analysis grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+          <div className="border border-ink/8 p-5">
+            <p className="text-[10px] uppercase tracking-widest text-ink/40 font-semibold mb-3">Sentiment</p>
+            <SentimentBreakdown sentiment={sentiment} confidence={confidence} feedback={feedback} />
           </div>
-        )}
 
-        {credibility && (
-          <div className="mb-8">
-            <p className="text-ink/50 uppercase tracking-widest text-xs mb-3 font-semibold">Source Credibility</p>
-            <div className="flex items-center gap-4">
-              <div
-                className="px-3 py-1 text-xs font-bold uppercase tracking-wider"
-                style={{ border: `1px solid ${credMeta.color}`, color: credMeta.color }}
-              >
-                {credMeta.label}
+          {reason && (
+            <div className="border border-ink/8 p-5">
+              <p className="text-[10px] uppercase tracking-widest text-ink/40 font-semibold mb-3">AI Assessment</p>
+              <p className="text-sm text-ink/70 leading-relaxed italic">&ldquo;{reason}&rdquo;</p>
+            </div>
+          )}
+
+          {credibility && (
+            <div className="border border-ink/8 p-5">
+              <p className="text-[10px] uppercase tracking-widest text-ink/40 font-semibold mb-3">Source Credibility</p>
+              <div className="flex items-center gap-3">
+                <div className="px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider" style={{ border: `1px solid ${credMeta.color}`, color: credMeta.color }}>
+                  {credMeta.label}
+                </div>
+                <span className="text-ink/60 text-sm">{credibility.credibilityScore || '--'}/100</span>
+                {credibility.bias && credibility.bias !== 'unknown' && (
+                  <span className="text-ink/30 text-[11px] uppercase tracking-wider">{credibility.bias}</span>
+                )}
               </div>
-              <span className="text-ink/60 text-sm">
-                Score: {credibility.credibilityScore || '--'}/100
-              </span>
-              {credibility.bias && credibility.bias !== 'unknown' && (
-                <span className="text-ink/40 text-xs uppercase tracking-wider">
-                  Bias: {credibility.bias}
-                </span>
+            </div>
+          )}
+
+          <div className="border border-ink/8 p-5">
+            <p className="text-[10px] uppercase tracking-widest text-ink/40 font-semibold mb-3">Details</p>
+            <div className="space-y-2 text-sm">
+              {topic && <div className="flex justify-between"><span className="text-ink/40">Topic</span><span className="text-ink/70">{topic}</span></div>}
+              {impactScore > 0 && <div className="flex justify-between"><span className="text-ink/40">Impact</span><span className="text-ink/70">{impactScore}/100</span></div>}
+              {viewCount > 0 && <div className="flex justify-between"><span className="text-ink/40">Views</span><span className="text-ink/70">{viewCount}</span></div>}
+              {categories?.length > 0 && (
+                <div className="flex justify-between items-start">
+                  <span className="text-ink/40">Tags</span>
+                  <div className="flex flex-wrap gap-1 justify-end">
+                    {categories.map((cat, i) => (
+                      <span key={i} className="px-1.5 py-0.5 text-[10px] border border-ink/10 text-ink/50 uppercase tracking-wider">{cat}</span>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
           </div>
-        )}
-
-        {categories && categories.length > 0 && (
-          <div className="mb-8">
-            <p className="text-ink/50 uppercase tracking-widest text-xs mb-3 font-semibold">Categories</p>
-            <div className="flex flex-wrap gap-2">
-              {categories.map((cat, i) => (
-                <span
-                  key={i}
-                  className="px-2 py-0.5 text-xs border border-ink/15 text-ink/60 uppercase tracking-wider"
-                >
-                  {cat}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="flex gap-6 text-xs text-ink/40 mb-8">
-          {viewCount > 0 && <span>{viewCount} views</span>}
-          {bookmarksCount > 0 && <span>{bookmarksCount} bookmarks</span>}
-          {impactScore > 0 && <span>Impact: {impactScore}/100</span>}
-          {topic && <span>Topic: {topic}</span>}
         </div>
 
-        <div className="border-t border-ink/10 my-8" />
-
+        {/* Related */}
         {relatedArticles.length > 0 && (
-          <div>
-            <p className="text-ink/50 uppercase tracking-widest text-xs mb-4 font-semibold">Related Stories</p>
-            <div className="space-y-3">
+          <div className="mb-8">
+            <div className="border-t border-ink/10 mb-6" />
+            <p className="text-[10px] uppercase tracking-widest text-ink/40 font-semibold mb-4">Related Stories</p>
+            <div className="divide-y divide-ink/8">
               {relatedArticles.map((a) => {
                 const aid = a._id || a.id;
                 const src = deriveSourceLabel(a.source, a.url);
                 const sent = a.sentiment?.label || a.sentiment || 'Neutral';
                 const sentColor = sent === 'Positive' ? 'text-green-600' : sent === 'Negative' ? 'text-red-600' : 'text-ink/40';
                 return (
-                  <Link
-                    key={aid}
-                    to={'/articles/' + aid}
-                    className="flex items-start gap-4 p-4 border border-ink/8 hover:border-ink/20 transition-colors no-underline group"
-                  >
+                  <Link key={aid} to={'/articles/' + aid} className="flex items-start gap-4 py-4 no-underline group">
                     <div className="flex-1 min-w-0">
-                      <p className="text-[11px] uppercase tracking-widest text-ink/40 mb-1">{src}</p>
-                      <h4 className="text-sm font-semibold text-ink group-hover:text-[#4f46e5] leading-snug line-clamp-2 mb-1">
-                        {a.title}
-                      </h4>
-                      {a.description && (
-                        <p className="text-xs text-ink/50 leading-relaxed line-clamp-1">{a.description}</p>
-                      )}
+                      <p className="text-[10px] uppercase tracking-widest text-ink/40 mb-1">{src}</p>
+                      <h4 className="text-sm font-semibold text-ink group-hover:text-[#4f46e5] leading-snug line-clamp-2">{a.title}</h4>
                     </div>
-                    <span className={`text-[10px] uppercase tracking-widest font-semibold whitespace-nowrap ${sentColor}`}>
-                      {sent}
-                    </span>
+                    <span className={`text-[10px] uppercase tracking-widest font-semibold whitespace-nowrap ${sentColor}`}>{sent}</span>
                   </Link>
                 );
               })}
@@ -359,17 +291,16 @@ const ArticleDetail = () => {
           </div>
         )}
 
-        <div className="border-t border-ink/10 mt-8 pt-8">
-          <Link
-            to="/dashboard"
-            className="inline-flex items-center gap-2 text-ink/50 hover:text-ink dark:hover:text-paper text-xs uppercase tracking-widest no-underline transition-colors"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {/* Footer */}
+        <div className="border-t border-ink/10 pt-6">
+          <Link to="/dashboard" className="inline-flex items-center gap-2 text-ink/40 hover:text-ink text-[11px] uppercase tracking-widest no-underline transition-colors">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 12H5" /><polyline points="12 19 5 12 12 5" />
             </svg>
             Back to Dashboard
           </Link>
         </div>
+
       </div>
     </div>
   );
