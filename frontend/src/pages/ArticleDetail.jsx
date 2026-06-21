@@ -203,7 +203,7 @@ const ArticleDetail = () => {
         <style>{`
           article p { margin-bottom: 1.1em; }
           article figure { margin: 1.5em 0; text-align: left; }
-          article figure img { max-width: 70%; max-height: 400px; object-fit: cover; object-position: center top; height: auto; display: block; }
+          article figure img { max-width: 50%; max-height: 400px; object-fit: contain; object-position: center top; height: auto; display: block; background: #f5f5f5; }
           article figcaption { font-size: 0.8em; color: #6b7280; margin-top: 0.5em; font-style: italic; }
           article a { color: #4f46e5; text-decoration: underline; }
         `}</style>
