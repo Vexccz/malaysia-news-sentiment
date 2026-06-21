@@ -198,7 +198,7 @@ export default function EntityGraphPage() {
             strokeOpacity: isHighlighted ? 1 : 0.3,
             shadowColor: isHighlighted ? (SENTIMENT_GLOW[n.sentiment] || SENTIMENT_GLOW.Neutral) : 'transparent',
             shadowBlur: isHighlighted ? 12 : 0,
-            labelText: mobileGraphMode ? '' : (n.label.length > 18 ? n.label.slice(0, 16) + '…' : n.label),
+            labelText: n.label.length > 18 ? n.label.slice(0, 16) + '…' : n.label,
             labelFill: isDark ? '#f1f5f9' : '#0f172a',
             labelFontSize: mobileGraphMode ? 10 : 12,
             labelFontWeight: 600,
@@ -266,7 +266,7 @@ export default function EntityGraphPage() {
         {
           key: 'drag-element',
           type: 'drag-element',
-          enable: true,
+          enable: !mobileGraphMode,
           enableTransient: false,
         },
         {
