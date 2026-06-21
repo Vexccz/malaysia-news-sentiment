@@ -623,7 +623,7 @@ const getHeatmapData = async (req, res) => {
 
     const articles = await Article.find({
       publishedAt: { $gte: since }
-    }).select('title content sentiment topic source').lean();
+    }).select('title content sentiment topic categories source').lean();
 
     const stateData = {};
     for (const state of Object.keys(STATE_KEYWORDS)) {
@@ -649,11 +649,15 @@ const getHeatmapData = async (req, res) => {
         ? data.sentiments.reduce((a, b) => a + b, 0) / count
         : 0;
 
-      // Find top topic
+      // Find top topic (prefer categories over search query)
       const topicCounts = {};
       data.articles.forEach(a => {
-        const t = a.topic || 'general';
-        topicCounts[t] = (topicCounts[t] || 0) + 1;
+        const cats = a.categories && a.categories.length > 0
+          ? a.categories
+          : [a.topic || 'General'];
+        cats.forEach(c => {
+          topicCounts[c] = (topicCounts[c] || 0) + 1;
+        });
       });
       const topTopic = Object.entries(topicCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
 
