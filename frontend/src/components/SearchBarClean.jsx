@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLanguage } from '../context/LanguageContext';
 
 const QUICK_TOPICS = [
   'Malaysia economy',
@@ -12,6 +13,7 @@ const QUICK_TOPICS = [
 const SearchBarClean = ({ onSearch, loading = false }) => {
   const [query, setQuery] = useState('');
   const [limit, setLimit] = useState(10);
+  const { t } = useLanguage();
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -43,7 +45,7 @@ const SearchBarClean = ({ onSearch, loading = false }) => {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search Malaysian news articles..."
+                placeholder={t('searchNews')}
                 disabled={loading}
                 className="w-full pl-10 pr-4 py-2.5 border border-paper-line dark:border-paper-dark-line bg-paper dark:bg-paper-dark text-ink dark:text-paper placeholder:text-ink-faint text-sm font-sans focus:outline-none focus:border-accent transition-colors disabled:opacity-50"
               />
@@ -55,11 +57,11 @@ const SearchBarClean = ({ onSearch, loading = false }) => {
               disabled={loading}
               className="px-3 py-2.5 border border-paper-line dark:border-paper-dark-line bg-paper dark:bg-paper-dark text-ink dark:text-paper text-xs font-sans focus:outline-none focus:border-accent transition-colors disabled:opacity-50"
             >
-              <option value={5}>5 articles</option>
-              <option value={10}>10 articles</option>
-              <option value={20}>20 articles</option>
-              <option value={30}>30 articles</option>
-              <option value={50}>50 articles</option>
+              <option value={5}>5 {t('articles')}</option>
+              <option value={10}>10 {t('articles')}</option>
+              <option value={20}>20 {t('articles')}</option>
+              <option value={30}>30 {t('articles')}</option>
+              <option value={50}>50 {t('articles')}</option>
             </select>
 
             <button
@@ -67,7 +69,7 @@ const SearchBarClean = ({ onSearch, loading = false }) => {
               disabled={loading || !query.trim()}
               className="px-6 py-2.5 bg-ink dark:bg-paper text-paper dark:text-ink text-xs font-semibold uppercase tracking-wider hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-sans"
             >
-              {loading ? 'Analyzing' : 'Analyze'}
+              {loading ? t('analyzing') : t('analyzeBtn')}
             </button>
           </div>
 
@@ -75,30 +77,28 @@ const SearchBarClean = ({ onSearch, loading = false }) => {
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] font-semibold text-ink-faint uppercase tracking-widest font-sans">
-                Quick
+                {t('quickKeywords')}
               </span>
               {QUICK_TOPICS.map((topic, i) => (
                 <React.Fragment key={topic}>
-                  {i > 0 && <span className="text-ink-faint hidden sm:inline">·</span>}
+                  {i > 0 && <span className="text-ink-faint text-[10px]">&middot;</span>}
                   <button
                     type="button"
                     onClick={() => handleQuickSearch(topic)}
-                    disabled={loading}
-                    className="text-[11px] font-medium text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-colors font-sans disabled:opacity-50"
+                    className="text-xs text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-colors font-sans"
                   >
                     {topic}
                   </button>
                 </React.Fragment>
               ))}
             </div>
-
             <button
               type="button"
               onClick={handleLatestNews}
               disabled={loading}
-              className="text-[11px] font-semibold uppercase tracking-wider text-ink dark:text-paper border border-paper-line dark:border-paper-dark-line px-3 py-1.5 hover:bg-paper dark:hover:bg-paper-dark transition-colors font-sans disabled:opacity-50"
+              className="text-[10px] font-semibold text-accent uppercase tracking-widest hover:opacity-80 transition-opacity font-sans"
             >
-              Latest News
+              {t('latestNews')}
             </button>
           </div>
         </form>

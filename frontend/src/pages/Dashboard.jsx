@@ -572,21 +572,12 @@ const Dashboard = () => {
       >
         <div>
           <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">
-            {user?.name ? `Welcome back, ${user.name.split(' ')[0]}` : 'Dashboard'}
+            {user?.name ? `${t('welcomeBack')}, ${user.name.split(' ')[0]}` : t('dashboard')}
           </h1>
           <p className="text-sm text-ink-muted dark:text-ink-faint font-sans">
             Malaysia News Sentiment Analysis
           </p>
         </div>
-        
-        {/* Language Toggle */}
-        <button
-          onClick={() => setLang(lang === 'en' ? 'ms' : 'en')}
-          className="text-xs font-medium uppercase tracking-wider text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-colors font-sans"
-        >
-          <Globe size={14} />
-          <span>{lang === 'en' ? 'BM' : 'ENG'}</span>
-        </button>
       </motion.div>
 
       <SearchBarClean onSearch={handleSearch} loading={searchLoading} />
