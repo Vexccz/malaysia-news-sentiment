@@ -578,6 +578,13 @@ const Dashboard = () => {
             Malaysia News Sentiment Analysis
           </p>
         </div>
+        <button
+          onClick={() => setLang(lang === 'en' ? 'ms' : 'en')}
+          className="text-xs font-medium uppercase tracking-wider text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-colors font-sans"
+        >
+          <Globe size={14} />
+          <span>{lang === 'en' ? 'BM' : 'ENG'}</span>
+        </button>
       </motion.div>
 
       <SearchBarClean onSearch={handleSearch} loading={searchLoading} />
