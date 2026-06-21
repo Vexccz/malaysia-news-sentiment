@@ -86,7 +86,7 @@ export default function EntityGraphPage() {
   // Cleanup timeline animation on unmount
   useEffect(() => {
     return () => {
-      if (timelineRef.current) { clearTimeout(timelineRef.current); cancelAnimationFrame(timelineRef.current); }
+      if (timelineRef.current) cancelAnimationFrame(timelineRef.current);
     };
   }, []);
 
@@ -770,13 +770,17 @@ export default function EntityGraphPage() {
             onClick={() => {
               setIsAnimating(true);
               let v = 5;
-              const step = () => {
-                v += 1;
-                if (v > 100) { setTimelineValue(100); setIsAnimating(false); return; }
-                setTimelineValue(v);
-                timelineRef.current = setTimeout(step, 120);
+              let last = performance.now();
+              const step = (now) => {
+                if (now - last >= 120) {
+                  v += 1;
+                  last = now;
+                  if (v > 100) { setTimelineValue(100); setIsAnimating(false); return; }
+                  setTimelineValue(v);
+                }
+                timelineRef.current = requestAnimationFrame(step);
               };
-              timelineRef.current = setTimeout(step, 120);
+              timelineRef.current = requestAnimationFrame(step);
             }}
             disabled={isAnimating}
             className="px-2.5 py-1 rounded-md text-[10px] font-semibold bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 hover:bg-cyan-100 dark:hover:bg-cyan-500/20 transition-colors disabled:opacity-50"
@@ -784,7 +788,7 @@ export default function EntityGraphPage() {
             {isAnimating ? '...' : '▶ Animate'}
           </button>
           <button
-            onClick={() => { if (timelineRef.current) { clearTimeout(timelineRef.current); cancelAnimationFrame(timelineRef.current); } setTimelineValue(100); setIsAnimating(false); }}
+            onClick={() => { if (timelineRef.current) cancelAnimationFrame(timelineRef.current); setTimelineValue(100); setIsAnimating(false); }}
             className="px-2 py-1 rounded-md text-[10px] font-semibold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
           >
             Reset
