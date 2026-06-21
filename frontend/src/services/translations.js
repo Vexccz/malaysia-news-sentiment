@@ -1,8 +1,9 @@
 1|export const translations = {
 2|  en: {
-3|    // Nav
-4|    dashboard: 'Dashboard',
-5|    history: 'History',
+// Nav
+sections: 'SECTIONS',
+dashboard: 'Dashboard',
+history: 'History',
 6|    settings: 'Settings',
 7|    logout: 'Logout',
 8|    // Header
@@ -15,7 +16,7 @@
 15|    positive: 'Positive',
 16|    negative: 'Negative',
 17|    neutral: 'Neutral',
-18|    alerts: 'Crisis Alerts',
+18|    alerts: 'Alerts',
 19|    ofTotal: 'of total',
 20|    // Charts
 21|    shareOfVoice: 'Share of Voice',
@@ -40,9 +41,9 @@
 40|    // Map
 41|    stateSentiment: 'Regional Sentiment (Malaysia)',
 42|    // New Nav
-43|    admin: 'Admin Dashboard',
-44|    bookmarks: 'Reading List',
-45|    trending: 'Trending Now',
+43|    admin: 'Admin',
+44|    bookmarks: 'Bookmarks',
+45|    trending: 'Trending',
 46|    storyThreads: 'Story Threads',
 47|    // Sidebar sections
 48|    analyticsSection: 'Analytics',
@@ -58,7 +59,7 @@
 58|    alertsPage: 'Alerts',
 59|    credibility: 'Credibility',
 60|    compare: 'Compare',
-    sources: 'Source Credibility',
+    sources: 'Sources',
 61|    categories: 'Categories',
 62|    reports: 'Reports',
 63|    apiDocs: 'API Docs',
@@ -101,9 +102,10 @@
 100|    emptySubtitle: 'Analyze historical sentiment data and predict future trends for any news topic in Malaysia.',
 101|  },
 102|  ms: {
-103|    // Nav
-104|    dashboard: 'Papan Pemuka',
-105|    history: 'Sejarah',
+// Nav
+sections: 'SEKSYEN',
+dashboard: 'Papan Pemuka',
+history: 'Sejarah',
 106|    settings: 'Tetapan',
 107|    logout: 'Log Keluar',
 108|    // Header
@@ -116,7 +118,7 @@
 115|    positive: 'Positif',
 116|    negative: 'Negatif',
 117|    neutral: 'Neutral',
-118|    alerts: 'Amaran Krisis',
+118|    alerts: 'Amaran',
 119|    ofTotal: 'daripada jumlah',
 120|    // Charts
 121|    shareOfVoice: 'Bahagian Liputan',
@@ -141,9 +143,9 @@
 140|    // Map
 141|    stateSentiment: 'Sentimen Wilayah (Malaysia)',
 142|    // New Nav
-143|    admin: 'Papan Induk Admin',
+143|    admin: 'Admin',
 144|    bookmarks: 'Senarai Bacaan',
-145|    trending: 'Trending Terkini',
+145|    trending: 'Trending',
 146|    storyThreads: 'Thread Berita',
 147|    // Sidebar sections
 148|    analyticsSection: 'Analitik',
@@ -159,7 +161,7 @@
 158|    alertsPage: 'Amaran',
 159|    credibility: 'Kredibiliti',
 160|    compare: 'Banding',
-    sources: 'Kredibiliti Sumber',
+    sources: 'Sumber',
 161|    categories: 'Kategori',
 162|    reports: 'Laporan',
 163|    apiDocs: 'Dokumentasi API',
