@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 
 const SENTIMENTS = ['Positive', 'Negative', 'Neutral'];
@@ -19,6 +20,7 @@ const SkeletonCard = () => (
 );
 
 const AdvancedSearch = () => {
+  const [searchParams] = useSearchParams();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -64,6 +66,14 @@ const AdvancedSearch = () => {
       setLoading(false);
     }
   }, [query, filters]);
+
+  // Read state param from heatmap navigation
+  useEffect(() => {
+    const stateParam = searchParams.get('state');
+    if (stateParam) {
+      setQuery(stateParam);
+    }
+  }, [searchParams]);
 
   // Debounced search on query/filter change
   useEffect(() => {
