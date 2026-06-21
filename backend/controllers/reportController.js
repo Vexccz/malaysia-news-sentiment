@@ -10,10 +10,17 @@ const generatePDFReport = async (req, res) => {
   try {
     const { topic, dateFrom, dateTo } = req.body;
 
-    // Build query
+    // Build query — search in topic, title, content, and categories
     const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const query = {};
-    if (topic && topic !== 'all') query.topic = new RegExp(escapeRegex(topic), 'i');
+    if (topic && topic !== 'all') {
+      const topicRegex = new RegExp(escapeRegex(topic), 'i');
+      query.$or = [
+        { topic: topicRegex },
+        { title: topicRegex },
+        { categories: topicRegex },
+      ];
+    }
     if (dateFrom || dateTo) {
       query.publishedAt = {};
       if (dateFrom) query.publishedAt.$gte = new Date(dateFrom);
