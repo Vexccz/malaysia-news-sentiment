@@ -375,7 +375,7 @@ var generatePDFReport = async function(req, res) {
     addPage(doc);
     drawHeader(doc, 'Sentiment Analysis Report \u2014 ' + (topic || 'All Topics'));
     sectionTitle(doc, '2.0', 'Executive Summary');
-    bodyText(doc, executiveSummary || abstract);
+    bodyText(doc, abstract);
 
     // Key findings as numbered list
     doc.moveDown(0.5);
@@ -515,7 +515,7 @@ var generatePDFReport = async function(req, res) {
     bodyText(doc, 'The following tables present the complete article corpus organised by sentiment category. Each entry includes the article headline, source, publication date, sentiment classification, and confidence score.');
 
     // Positive articles
-    if (positive.length > 0) {
+    if (posN > 0) {
       checkPage(doc, 60);
       subsectionTitle(doc, '5.1', 'Positive Articles (' + posN + ')');
       var posRows = articles.filter(function(a) { return a.sentiment === 'Positive'; }).slice(0, 20).map(function(a) {
