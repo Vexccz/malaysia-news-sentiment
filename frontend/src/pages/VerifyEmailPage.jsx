@@ -43,7 +43,7 @@ const VerifyEmailPage = () => {
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-              className="w-12 h-12 border-3 border-[#e5e5e5] dark:border-[#333] border-t-[#2563eb] rounded-full mx-auto mb-5"
+              className="w-12 h-12 border-[3px] border-[#e5e5e5] dark:border-[#333] border-t-[#2563eb] rounded-full mx-auto mb-5"
             />
             <h2 className="text-xl font-bold dark:text-white mb-2">Verifying...</h2>
             <p className="text-sm text-[#888]">Please wait while we verify your email.</p>

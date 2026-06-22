@@ -844,7 +844,7 @@ export default function EntityGraphPage() {
           <div ref={graphRef} className="flex-1 relative z-[1]" style={{ minHeight: isMobile ? 350 : 550 }}>
             {(loading || graphRendering) && (
               <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 gap-3">
-                <div className="w-10 h-10 border-3 border-blue-100 dark:border-blue-500/20 border-t-blue-600 rounded-full animate-spin" />
+                <div className="w-10 h-10 border-[3px] border-blue-100 dark:border-blue-500/20 border-t-blue-600 rounded-full animate-spin" />
                 <span className="text-sm">{loading ? 'Loading entity data...' : 'Rendering graph layout...'}</span>
               </div>
             )}
@@ -861,7 +861,7 @@ export default function EntityGraphPage() {
         {/* Loading state for list view */}
         {isMobile && viewMode === 'list' && loading && (
           <div className="flex flex-col items-center justify-center h-full min-h-[300px] w-full text-gray-500 dark:text-gray-400 gap-3">
-            <div className="w-10 h-10 border-3 border-blue-100 dark:border-blue-500/20 border-t-blue-600 rounded-full animate-spin" />
+            <div className="w-10 h-10 border-[3px] border-blue-100 dark:border-blue-500/20 border-t-blue-600 rounded-full animate-spin" />
             <span className="text-sm">Loading entities...</span>
           </div>
         )}
