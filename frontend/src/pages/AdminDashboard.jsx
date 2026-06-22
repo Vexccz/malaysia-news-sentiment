@@ -723,7 +723,7 @@ const AdminDashboard = () => {
           <motion.div key="insights" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
             <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
               <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
-                <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">AI Strategic Insights</h3>
+                <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">Strategic Insights</h3>
               </div>
               {insightsLoading ? (
                 <div className="py-10 text-center">
