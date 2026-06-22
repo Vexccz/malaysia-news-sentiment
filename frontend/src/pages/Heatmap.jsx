@@ -62,6 +62,7 @@ const Heatmap = () => {
   const hoveredIdRef = useRef(null);
   const dataRef = useRef([]);
   const geojsonRef = useRef(null);
+  const hoverThrottleRef = useRef(0);
 
   // Fetch sentiment data
   useEffect(() => {
@@ -193,18 +194,23 @@ const Heatmap = () => {
         },
       });
 
-      // Hover
+      // Hover — throttled to avoid stutter
       map.on('mousemove', 'state-fills', (e) => {
         if (e.features.length === 0) return;
         map.getCanvas().style.cursor = 'pointer';
 
-        if (hoveredIdRef.current !== null) {
-          map.setFilter('state-fills-hover', ['==', ['id'], '']);
+        const feat = e.features[0];
+        const now = performance.now();
+        
+        // Update hover filter immediately (cheap operation)
+        if (hoveredIdRef.current !== feat.id) {
+          hoveredIdRef.current = feat.id;
+          map.setFilter('state-fills-hover', ['==', ['id'], feat.id]);
         }
 
-        const feat = e.features[0];
-        hoveredIdRef.current = feat.id;
-        map.setFilter('state-fills-hover', ['==', ['id'], feat.id]);
+        // Throttle popup update (expensive DOM operation)
+        if (now - hoverThrottleRef.current < 50) return;
+        hoverThrottleRef.current = now;
 
         const name = feat.properties._normalizedName;
         const sd = dataRef.current.find(d => d.state === name) || { avgSentiment: null, articleCount: 0, topTopic: 'N/A' };
