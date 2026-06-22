@@ -6,7 +6,7 @@
 const mongoose = require('mongoose');
 const Article  = require('../models/Article');
 const User     = require('../models/User');
-const { getClient } = require('../services/openaiService');
+const { getClient, performAiRequest } = require('../services/openaiService');
 
 const isDbConnected = () => mongoose.connection.readyState === 1;
 
@@ -102,15 +102,14 @@ const getAdminDashboardStats = async (req, res) => {
 // ── GET /api/news/admin/insights ──────────────────────────────
 const getAdminInsights = async (req, res) => {
   try {
-    // Security #6: Graceful fallback if OpenAI is not configured
+    // Security #6: Graceful fallback if no AI key configured
     if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY.includes('your_')) {
       return res.json({
-        risk:        'OpenAI not configured — add OPENAI_API_KEY to .env.',
+        risk:        'AI not configured — add OPENAI_API_KEY to .env.',
         opportunity: 'Configure AI key for strategic insights.',
       });
     }
 
-    const openai  = getClient();
     const recent  = await Article.find().sort({ createdAt: -1 }).limit(10)
       .select('title sentiment topic').lean();
 
@@ -118,21 +117,18 @@ const getAdminInsights = async (req, res) => {
       recent.map(a => `[${a.sentiment}] ${a.title}`).join(' | ')
     }. Return exactly 2 strategic points. Point 1: One Specific Crisis/Risk. Point 2: One Positive Opportunity. Keep each point under 20 words. No numbers.`;
 
-    const completion = await openai.chat.completions.create({
-      model:      'gpt-4o-mini',
-      messages:   [{ role: 'user', content: prompt }],
-      max_tokens: 150,
-    });
+    // Use performAiRequest which handles both Ollama and OpenAI formats
+    const model = process.env.OPENAI_MODEL || 'llama3.2';
+    const result = await performAiRequest(prompt, model, 0.3, 150);
 
-    const lines = completion.choices[0].message.content
-      .split('\n')
-      .filter(l => l.trim().length > 5);
+    const lines = result.split('\n').filter(l => l.trim().length > 5);
 
     res.json({
-      risk:        lines[0]?.replace('Point 1:', '').trim() || 'No critical risks.',
-      opportunity: lines[1]?.replace('Point 2:', '').trim() || 'Stable market conditions.',
+      risk:        lines[0]?.replace(/^(Point 1:|Risk:|\d+\.)/i, '').trim() || 'No critical risks.',
+      opportunity: lines[1]?.replace(/^(Point 2:|Opportunity:|\d+\.)/i, '').trim() || 'Stable market conditions.',
     });
   } catch (err) {
+    console.error('[AdminInsights] Error:', err.message);
     res.status(500).json({ error: err.message });
   }
 };
