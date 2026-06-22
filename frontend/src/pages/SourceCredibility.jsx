@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import api from '../services/api';
@@ -31,10 +31,18 @@ const SourceCredibility = () => {
   const [sortOrder, setSortOrder] = useState('desc');
   const [biasFilter, setBiasFilter] = useState('all');
   const [selectedSource, setSelectedSource] = useState(null);
+  const detailRef = useRef(null);
 
   useEffect(() => {
     fetchSources();
   }, [sortBy, sortOrder, biasFilter]);
+
+  // Auto-scroll to detail panel when source selected
+  useEffect(() => {
+    if (selectedSource && detailRef.current) {
+      detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [selectedSource]);
 
   const fetchSources = async () => {
     setLoading(true);
@@ -208,6 +216,7 @@ const SourceCredibility = () => {
           <AnimatePresence>
             {selectedSource && (
               <motion.div
+                ref={detailRef}
                 key={selectedSource._id}
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
