@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import SearchBarClean from '../components/SearchBarClean';
 import ArticleCardCompact from '../components/ArticleCardCompact';
+import { StaggerList, StaggerItem } from '../components/StaggerList';
 import SentimentDonutChart from '../components/SentimentDonutChart';
 import SentimentHorizontalBar from '../components/SentimentHorizontalBar';
 import SentimentAreaChart from '../components/SentimentAreaChart';
@@ -1023,27 +1024,21 @@ const Dashboard = () => {
                         ))}
                       </div>
 
-                      <motion.div 
-                        className="space-y-3"
-                        variants={containerVariants}
-                        initial="hidden"
-                        animate="visible"
-                      >
+                      <StaggerList className="space-y-3">
                         <Skeleton name="article-card" loading={isLoading || historyLoading} count={3}>
                           {filteredArticles.slice(0, 5).map((article) => (
-                            <motion.div
+                            <StaggerItem
                               key={article._id || article.url}
-                              variants={articleVariants}
                             >
                               <ArticleCardCompact 
                                 article={article} 
                                 onBookmark={toggleBookmark}
                                 isBookmarked={user?.bookmarks?.includes(article._id || article.id)}
                               />
-                            </motion.div>
+                            </StaggerItem>
                           ))}
                         </Skeleton>
-                      </motion.div>
+                      </StaggerList>
 
                       {isHistoryView && stats.total > LIMIT && (
                         <div className="flex items-center justify-center gap-4 mt-6">
@@ -1395,27 +1390,21 @@ const Dashboard = () => {
                     </div>
                   </SectionHeader>
 
-                  <motion.div 
-                    className="space-y-3"
-                    variants={containerVariants}
-                    initial="hidden"
-                    animate="visible"
-                  >
+                  <StaggerList className="space-y-3">
                     <Skeleton name="article-card" loading={isLoading || historyLoading} count={3}>
                       {filteredArticles.map((article) => (
-                          <motion.div
+                          <StaggerItem
                             key={article._id || article.url}
-                            variants={articleVariants}
                           >
                             <ArticleCardCompact 
                               article={article} 
                               onBookmark={toggleBookmark}
                               isBookmarked={user?.bookmarks?.includes(article._id || article.id)}
                             />
-                          </motion.div>
+                          </StaggerItem>
                         ))}
                     </Skeleton>
-                  </motion.div>
+                  </StaggerList>
 
                   {/* Pagination - Centered */}
                   {isHistoryView && stats.total > LIMIT && (

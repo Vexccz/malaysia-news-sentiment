@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { StaggerList, StaggerItem } from '../components/StaggerList';
 import { X } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../services/api';
@@ -378,18 +379,15 @@ const AdvancedSearch = () => {
 
           {/* Results grid */}
           {!loading && results?.articles?.length > 0 && (
-            <div className="grid gap-3">
+            <StaggerList className="grid gap-3">
               {results.articles.map((article, i) => (
-                <motion.a
-                  key={article._id || i}
-                  href={article.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.03 }}
-                  className="block bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-5 hover:border-accent/30 transition-all no-underline"
-                >
+                <StaggerItem key={article._id || i}>
+                  <a
+                    href={article.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-5 hover:border-accent/30 transition-all no-underline"
+                  >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 mb-1.5">
@@ -414,9 +412,10 @@ const AdvancedSearch = () => {
                       {article.sentiment}
                     </span>
                   </div>
-                </motion.a>
+                  </a>
+                </StaggerItem>
               ))}
-            </div>
+            </StaggerList>
           )}
 
           {/* Empty state */}

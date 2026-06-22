@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { StaggerList, StaggerItem } from '../components/StaggerList';
 import ArticleCard from '../components/ArticleCard';
 import ArticlePreviewModal from '../components/ArticlePreviewModal';
 import {
@@ -127,16 +128,6 @@ const Bookmarks = () => {
     } catch (err) {
       toast.error(err?.friendlyMessage || 'Failed to move article');
     }
-  };
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.05 } },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 10 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.25 } },
   };
 
   if (loading) {
@@ -342,16 +333,11 @@ const Bookmarks = () => {
           </p>
         </motion.div>
       ) : (
-        <motion.div
-          className="grid gap-3 md:grid-cols-2"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
+        <StaggerList className="grid gap-3 md:grid-cols-2">
           {articles.map((art) => {
             const artId = art._id || art.id;
             return (
-              <motion.div key={artId} variants={itemVariants} className="relative">
+              <StaggerItem key={artId} className="relative">
                 <ArticleCard
                   article={art}
                   onPreview={handlePreview}
@@ -409,10 +395,10 @@ const Bookmarks = () => {
                     )}
                   </AnimatePresence>
                 </div>
-              </motion.div>
+              </StaggerItem>
             );
           })}
-        </motion.div>
+        </StaggerList>
       )}
 
       <ArticlePreviewModal

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { StaggerList, StaggerItem } from '../components/StaggerList';
 import toast from 'react-hot-toast';
 import ArticleCard from '../components/ArticleCard';
 import ArticlePreviewModal from '../components/ArticlePreviewModal';
@@ -341,12 +342,12 @@ const History = () => {
               </span>
             </div>
 
-            <div className="border border-t-0 border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card divide-y divide-paper-line dark:divide-paper-dark-line">
-              {articles.map(article => {
+            <StaggerList className="border border-t-0 border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card divide-y divide-paper-line dark:divide-paper-dark-line">
+              {articles.map((article, i) => {
                 const articleId = article._id || article.id;
                 const isSelected = selectedIds.has(articleId);
                 return (
-                  <div key={articleId} className="flex items-start gap-0">
+                  <StaggerItem key={articleId} className="flex items-start gap-0 border-b border-paper-line dark:border-paper-dark-line last:border-b-0">
                     {/* Checkbox column */}
                     <div className="flex-shrink-0 flex items-start pt-4 pl-4">
                       <input
@@ -365,10 +366,10 @@ const History = () => {
                         onDelete={handleDelete}
                       />
                     </div>
-                  </div>
+                  </StaggerItem>
                 );
               })}
-            </div>
+            </StaggerList>
 
             {/* Pagination — editorial style */}
             {totalPages > 1 && (
