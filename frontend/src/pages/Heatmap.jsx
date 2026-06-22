@@ -60,9 +60,9 @@ const Heatmap = () => {
   const mapRef = useRef(null);
   const popupRef = useRef(null);
   const hoveredIdRef = useRef(null);
+  const hoveredNameRef = useRef(null);
   const dataRef = useRef([]);
   const geojsonRef = useRef(null);
-  const hoverThrottleRef = useRef(0);
 
   // Fetch sentiment data
   useEffect(() => {
@@ -194,40 +194,42 @@ const Heatmap = () => {
         },
       });
 
-      // Hover — throttled to avoid stutter
+      // Hover — only rebuild popup DOM when state changes
       map.on('mousemove', 'state-fills', (e) => {
         if (e.features.length === 0) return;
         map.getCanvas().style.cursor = 'pointer';
 
         const feat = e.features[0];
-        const now = performance.now();
-        
-        // Update hover filter immediately (cheap operation)
+        const name = feat.properties._normalizedName;
+
+        // Update hover highlight only when state changes
         if (hoveredIdRef.current !== feat.id) {
           hoveredIdRef.current = feat.id;
           map.setFilter('state-fills-hover', ['==', ['id'], feat.id]);
         }
 
-        // Throttle popup update (expensive DOM operation)
-        if (now - hoverThrottleRef.current < 50) return;
-        hoverThrottleRef.current = now;
+        // Only rebuild popup HTML when entering a NEW state
+        if (hoveredNameRef.current !== name) {
+          hoveredNameRef.current = name;
+          const sd = dataRef.current.find(d => d.state === name) || { avgSentiment: null, articleCount: 0, topTopic: 'N/A' };
+          const sentLabel = getSentimentLabel(sd.avgSentiment);
+          const sentVal = sd.avgSentiment !== null ? (sd.avgSentiment > 0 ? '+' : '') + sd.avgSentiment.toFixed(2) : 'N/A';
 
-        const name = feat.properties._normalizedName;
-        const sd = dataRef.current.find(d => d.state === name) || { avgSentiment: null, articleCount: 0, topTopic: 'N/A' };
-        const sentLabel = getSentimentLabel(sd.avgSentiment);
-        const sentVal = sd.avgSentiment !== null ? (sd.avgSentiment > 0 ? '+' : '') + sd.avgSentiment.toFixed(2) : 'N/A';
-
-        popupRef.current
-          .setLngLat(e.lngLat)
-          .setHTML(`
-            <div style="font-family:system-ui;min-width:140px">
-              <div style="font-weight:700;font-size:13px;margin-bottom:4px">${name}</div>
-              <div style="font-size:11px;color:#888;margin-bottom:2px">Sentiment: <span style="color:${getSentimentColor(sd.avgSentiment)};font-weight:600">${sentVal} (${sentLabel})</span></div>
-              <div style="font-size:11px;color:#888;margin-bottom:2px">Articles: <strong>${sd.articleCount}</strong></div>
-              <div style="font-size:11px;color:#888">Top: <strong>${sd.topTopic}</strong></div>
-            </div>
-          `)
-          .addTo(map);
+          popupRef.current
+            .setLngLat(e.lngLat)
+            .setHTML(`
+              <div style="font-family:system-ui;min-width:140px">
+                <div style="font-weight:700;font-size:13px;margin-bottom:4px">${name}</div>
+                <div style="font-size:11px;color:#888;margin-bottom:2px">Sentiment: <span style="color:${getSentimentColor(sd.avgSentiment)};font-weight:600">${sentVal} (${sentLabel})</span></div>
+                <div style="font-size:11px;color:#888;margin-bottom:2px">Articles: <strong>${sd.articleCount}</strong></div>
+                <div style="font-size:11px;color:#888">Top: <strong>${sd.topTopic}</strong></div>
+              </div>
+            `)
+            .addTo(map);
+        } else {
+          // Same state — just move position (cheap)
+          popupRef.current.setLngLat(e.lngLat);
+        }
       });
 
       map.on('mouseleave', 'state-fills', () => {
@@ -441,7 +443,6 @@ const Heatmap = () => {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.03 }}
-                    whileHover={{ x: 3 }}
                     className="border-b border-b border-paper-line dark:border-paper-dark-line hover:bg-paper/50 dark:hover:bg-paper-dark/50 cursor-pointer transition-colors"
                     onClick={() => setSelectedState(d.state)}
                   >
