@@ -149,12 +149,32 @@ h3 { font-weight: 600; }
   color: #F5F3EE;
 }
 
+/* Dark mode toast */
+.dark [data-sonner-toast],
+.dark [role="status"] {
+  background: #1a1a1a !important;
+  color: #F5F3EE !important;
+  borderLeft-color: #F5F3EE !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+}
+
+.dark [data-sonner-toast] [data-icon],
+.dark [role="status"] [data-icon] {
+  color: #F5F3EE !important;
+}
+
 /* Gradient mesh float animation */
 @keyframes float {
   0%, 100% { transform: translate(0, 0) scale(1); }
   25% { transform: translate(30px, -30px) scale(1.05); }
   50% { transform: translate(-20px, 20px) scale(0.95); }
   75% { transform: translate(15px, 10px) scale(1.02); }
+}
+
+/* Skeleton shimmer animation */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 /* Animated grid movement */

@@ -565,24 +565,32 @@ const App = () => (
                       style: {
                         background: '#fff',
                         color: '#111',
-                        border: '2px solid #111',
-                        fontFamily: "'Playfair Display', Georgia, serif",
-                        fontSize: '13px',
+                        border: 'none',
+                        borderLeft: '3px solid #111',
+                        fontFamily: "'Inter', -apple-system, sans-serif",
+                        fontSize: '12px',
                         borderRadius: '0',
-                        boxShadow: 'none',
-                        padding: '10px 16px',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                        padding: '12px 16px',
                         letterSpacing: '0.01em',
+                        maxWidth: '360px',
                       },
                       success: {
                         iconTheme: {
                           primary: '#111',
                           secondary: '#fff',
                         },
+                        style: {
+                          borderLeftColor: '#111',
+                        },
                       },
                       error: {
                         iconTheme: {
                           primary: '#111',
                           secondary: '#fff',
+                        },
+                        style: {
+                          borderLeftColor: '#dc2626',
                         },
                       },
                     }}
