@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import api from '../services/api';
+import { TableSkeleton } from '../components/Skeletons';
 
 const biasColors = {
   left: 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400',
@@ -69,8 +70,12 @@ const SourceCredibility = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-2 border-ink dark:border-paper border-t-transparent rounded-full" />
+      <div className="max-w-5xl mx-auto space-y-6">
+        <div className="space-y-2">
+          <div className="h-8 w-48 bg-ink/5 dark:bg-paper/5 animate-pulse" />
+          <div className="h-4 w-64 bg-ink/5 dark:bg-paper/5 animate-pulse" />
+        </div>
+        <TableSkeleton rows={6} cols={5} />
       </div>
     );
   }
