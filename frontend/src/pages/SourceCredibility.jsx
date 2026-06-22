@@ -257,6 +257,7 @@ const SourceCredibility = () => {
               </tbody>
             </table>
           </div>
+        </div>
       )}
     </motion.div>
   );
