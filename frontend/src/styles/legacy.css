@@ -1262,10 +1262,10 @@ body::before {
   border: 2.5px solid var(--border);
   border-top-color: var(--brand);
   border-radius: 50%;
-  animation: spin 0.75s linear infinite;
+  animation: legacy-spin 0.75s linear infinite;
 }
 
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes legacy-spin { to { transform: rotate(360deg); } }
 
 .loading-label { font-size: 14px; font-weight: 500; color: var(--text-secondary); }
 .loading-sub   { font-size: 12px; color: var(--text-muted); margin-top: -8px; }
@@ -1702,8 +1702,8 @@ body::before {
 .auth-link-btn-sm { font-size: 12px; color: var(--brand); background: none; border: none; cursor: pointer; font-family: inherit; font-weight: 500; }
 .auth-link-btn-inline { font-size: 12px; color: var(--brand); background: none; border: none; cursor: pointer; font-family: inherit; font-weight: 600; padding: 0; text-decoration: underline; }
 
-.auth-spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.75s linear infinite; display: inline-block; }
-.auth-spinner-lg { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--brand); border-radius: 50%; animation: spin 0.75s linear infinite; margin: 0 auto; display: block; }
+.auth-spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: legacy-spin 0.75s linear infinite; display: inline-block; }
+.auth-spinner-lg { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--brand); border-radius: 50%; animation: legacy-spin 0.75s linear infinite; margin: 0 auto; display: block; }
 
 /* ── Settings Page ─────────────────────────────────────── */
 .settings-page { display: flex; flex-direction: column; gap: 24px; max-width: 760px; }
@@ -2178,7 +2178,7 @@ body::before {
 .entity-graph-legend { display: flex; gap: 12px; font-size: 11px; color: var(--text-muted); }
 .entity-graph-svg { width: 100%; border-radius: 0 0 var(--r-md) var(--r-md); }
 .entity-graph-loading, .entity-graph-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 60px 20px; color: var(--text-muted); font-size: 13px; }
-.entity-graph-spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--brand); border-radius: 50%; animation: spin 0.8s linear infinite; }
+.entity-graph-spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--brand); border-radius: 50%; animation: legacy-spin 0.8s linear infinite; }
 .entity-graph-info { position: absolute; bottom: 16px; left: 16px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px 14px; display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-secondary); box-shadow: var(--shadow-md); }
 .entity-info-cat { background: var(--brand-bg); color: var(--brand); padding: 2px 8px; border-radius: 4px; font-size: 10px; text-transform: capitalize; }
 .entity-info-breakdown { display: flex; gap: 8px; font-weight: 600; font-size: 11px; }
@@ -2199,14 +2199,14 @@ body::before {
 .export-ppt-generate-btn { width: 100%; padding: 12px; background: var(--brand-grad); color: white; border: none; border-radius: var(--r-sm); font-size: 14px; font-weight: 600; cursor: pointer; transition: all var(--t-micro); }
 .export-ppt-generate-btn:hover { box-shadow: var(--shadow-glow); transform: translateY(-1px); }
 .export-ppt-progress { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 30px 0; }
-.export-ppt-spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--brand); border-radius: 50%; animation: spin 0.8s linear infinite; }
+.export-ppt-spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--brand); border-radius: 50%; animation: legacy-spin 0.8s linear infinite; }
 .export-ppt-progress p { font-size: 13px; color: var(--text-secondary); }
 
 /* ── Analyzing Overlay ─────────────────────────── */
 .analyzing-overlay { position: fixed; inset: 0; z-index: 999; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(8px); animation: fadeIn 0.3s ease; }
 .analyzing-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 40px 48px; text-align: center; max-width: 420px; width: 90%; box-shadow: var(--shadow-lg); }
 .analyzing-icon { display: flex; justify-content: center; margin-bottom: 20px; }
-.analyzing-spinner { width: 44px; height: 44px; border: 3px solid var(--brand-bg); border-top-color: var(--brand); border-radius: 50%; animation: spin 0.8s linear infinite; }
+.analyzing-spinner { width: 44px; height: 44px; border: 3px solid var(--brand-bg); border-top-color: var(--brand); border-radius: 50%; animation: legacy-spin 0.8s linear infinite; }
 .analyzing-title { font-size: 18px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; }
 .analyzing-count { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
 .analyzing-progress-track { width: 100%; height: 6px; background: var(--border); border-radius: var(--r-full); overflow: hidden; margin-bottom: 8px; }
@@ -2877,7 +2877,7 @@ body::before {
 /* Pull-to-refresh */
 .pull-to-refresh-indicator { display: flex; align-items: center; justify-content: center; overflow: hidden; transition: height 0.15s ease; }
 .ptr-spinner { color: var(--brand); transition: transform 0.1s linear; }
-.ptr-spinner.spinning { animation: spin 0.75s linear infinite; }
+.ptr-spinner.spinning { animation: legacy-spin 0.75s linear infinite; }
 
 /* Offline banner */
 .offline-banner { position: fixed; top: 0; left: 0; right: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 16px; background: var(--neg); color: #fff; font-size: 12px; font-weight: 600; font-family: inherit; text-align: center; }
@@ -2891,7 +2891,7 @@ body::before {
 
 /* Chart lazy loading fallback */
 .chart-lazy-fallback { display: flex; align-items: center; justify-content: center; min-height: 200px; border-radius: var(--r-sm); background: var(--brand-bg); }
-.chart-lazy-spinner { width: 24px; height: 24px; border: 2.5px solid var(--brand-bg); border-top-color: var(--brand); border-radius: 50%; animation: spin 0.75s linear infinite; }
+.chart-lazy-spinner { width: 24px; height: 24px; border: 2.5px solid var(--brand-bg); border-top-color: var(--brand); border-radius: 50%; animation: legacy-spin 0.75s linear infinite; }
 
 /* Share button */
 .art-share-btn:hover, .art-share-btn:active { color: var(--brand) !important; }

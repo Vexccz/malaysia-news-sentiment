@@ -77,7 +77,7 @@ const SearchBar = ({ onSearch, loading }) => {
               </div>
               <button id="search-btn" type="submit" className="btn-primary mobile-search-btn" disabled={loading || !query.trim()}>
                 {loading ? (
-                  <div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.75s linear infinite' }} />
+                  <div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'legacy-spin 0.75s linear infinite' }} />
                 ) : (
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <polygon points="5 3 19 12 5 21 5 3"/>
@@ -143,7 +143,7 @@ const SearchBar = ({ onSearch, loading }) => {
               </button>
               <button id="search-btn" type="submit" className="btn-primary" disabled={loading || !query.trim()}>
                 {loading ? (
-                  <><div style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.75s linear infinite', flexShrink: 0 }} />{t('analyzing')}</>
+                  <><div style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'legacy-spin 0.75s linear infinite', flexShrink: 0 }} />{t('analyzing')}</>
                 ) : (
                   <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>{t('analyzeBtn')}</>
                 )}
