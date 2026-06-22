@@ -54,7 +54,7 @@ const SentimentBarChart = ({ distribution }) => {
           <XAxis dataKey="name" tick={{ fill: 'var(--text-400)', fontSize: 12, fontFamily: 'Inter' }} axisLine={false} tickLine={false} />
           <YAxis tick={{ fill: 'var(--text-400)', fontSize: 11, fontFamily: 'Inter' }} axisLine={false} tickLine={false} allowDecimals={false} />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--bg)', opacity: 0.5 }} />
-          <Bar dataKey="value" radius={[8, 8, 0, 0]} isAnimationActive={true} animationDuration={1400} animationEasing="ease-out" animationBegin={300} barSize={50}>
+          <Bar dataKey="value" radius={[8, 8, 0, 0]} isAnimationActive={true} animationDuration={1500} animationEasing="ease-out" barSize={50}>
             {data.map(d => <Cell key={d.name} fill={`url(#bar${d.name.substring(0,3)})`} />)}
           </Bar>
         </BarChart>

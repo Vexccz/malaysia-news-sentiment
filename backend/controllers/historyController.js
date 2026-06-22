@@ -63,7 +63,7 @@ const shouldHideFromGenericMalaysiaFeed = (article, hasExplicitFilters) => {
  */
 const getHistory = async (req, res) => {
   if (!isDbConnected()) {
-    return res.json({ total: 0, pages: 0, page: 1, articles: [], warning: 'Database not connected.' });
+    return res.json({ total: 0, pages: 0, page: 1, articles$or: [], warning: 'Database not connected.' });
   }
   try {
     const {
@@ -107,7 +107,7 @@ const getHistory = async (req, res) => {
       const s = escapeRegex(sanitize(search, 100));
       filter.$and = filter.$and || [];
       filter.$and.push({
-        $or: [
+        $or$or: [
           { title: { $regex: s, $options: 'i' } },
           { description: { $regex: s, $options: 'i' } },
         ],
@@ -251,8 +251,7 @@ const getStats = async (req, res) => {
       calculatedTotal += count;
     });
 
-    const finalTotal = Math.max(calculatedTotal, user?.analysisCount || 0);
-    res.json(JSON.parse(JSON.stringify({ total: finalTotal, sentiments: sentimentMap, alerts })));
+    res.json(JSON.parse(JSON.stringify({ total: calculatedTotal, sentiments: sentimentMap, alerts })));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -279,10 +278,11 @@ const deleteArticle = async (req, res) => {
 const dashboardInit = async (req, res) => {
   if (!isDbConnected()) {
     return res.json({
-      history: { articles: [], total: 0 },
+      history: { articles$or: [], total: 0 },
       stats: { total: 0, sentiments: {}, alerts: 0 },
-      trends: [],
-      keywords: [],
+      trends$or: [],
+      keywords$or: [],
+      periodComparison: { total: 0, positive: 0, negative: 0, neutral: 0 },
     });
   }
   try {
@@ -316,6 +316,75 @@ const dashboardInit = async (req, res) => {
       ]),
       Article.find(match).select('title description').limit(200).lean(),
     ]);
+
+    // ── Period-over-period comparison for KPI trends ──────────────────────
+    // Determine current vs previous period boundaries.
+    // If no timeframe is set (all time), compare last 7 days vs 7 days before.
+    const now = new Date();
+    const MS = 24 * 60 * 60 * 1000;
+    let curStart, prevStart, prevEnd;
+    if (timeframe === '24h') {
+      curStart  = new Date(now.getTime() - 1 * MS);
+      prevStart = new Date(now.getTime() - 2 * MS);
+      prevEnd   = curStart;
+    } else if (timeframe === '7d') {
+      curStart  = new Date(now.getTime() - 7 * MS);
+      prevStart = new Date(now.getTime() - 14 * MS);
+      prevEnd   = curStart;
+    } else if (timeframe === '30d') {
+      curStart  = new Date(now.getTime() - 30 * MS);
+      prevStart = new Date(now.getTime() - 60 * MS);
+      prevEnd   = curStart;
+    } else {
+      // All time – compare last 7 days vs 7 days before that
+      curStart  = new Date(now.getTime() - 7 * MS);
+      prevStart = new Date(now.getTime() - 14 * MS);
+      prevEnd   = curStart;
+    }
+
+    const baseMatch = {};
+    if (isValidObjectId(userId)) {
+      baseMatch.userId = new mongoose.Types.ObjectId(userId);
+    } else {
+      baseMatch.$or = [{ userId: null }, { userId: { $exists: false } }];
+    }
+
+    const [curPeriodAgg, prevPeriodAgg] = await Promise.all([
+      Article.aggregate([
+        { $match: { ...baseMatch, createdAt: { $gte: curStart } } },
+        { $group: { _id: '$sentiment', count: { $sum: 1 } } },
+      ]),
+      Article.aggregate([
+        { $match: { ...baseMatch, createdAt: { $gte: prevStart, $lt: prevEnd } } },
+        { $group: { _id: '$sentiment', count: { $sum: 1 } } },
+      ]),
+    ]);
+
+    const curPeriod  = { total: 0, Positive: 0, Negative: 0, Neutral: 0 };
+    const prevPeriod = { total: 0, Positive: 0, Negative: 0, Neutral: 0 };
+    curPeriodAgg.forEach(({ _id, count }) => {
+      const key = _id || 'Neutral';
+      curPeriod[key] = (curPeriod[key] || 0) + count;
+      curPeriod.total += count;
+    });
+    prevPeriodAgg.forEach(({ _id, count }) => {
+      const key = _id || 'Neutral';
+      prevPeriod[key] = (prevPeriod[key] || 0) + count;
+      prevPeriod.total += count;
+    });
+
+    const pctChange = (cur, prev) => {
+      if (!prev) return cur > 0 ? 100 : 0;
+      return Math.round(((cur - prev) / prev) * 100);
+    };
+
+    const periodComparison = {
+      total:    pctChange(curPeriod.total,    prevPeriod.total),
+      positive: pctChange(curPeriod.Positive, prevPeriod.Positive),
+      negative: pctChange(curPeriod.Negative, prevPeriod.Negative),
+      neutral:  pctChange(curPeriod.Neutral,  prevPeriod.Neutral),
+    };
+    // ── end comparison ───────────────────────────────────────────────────
 
     const sentimentMap = { Positive: 0, Negative: 0, Neutral: 0 };
     let total = 0;
@@ -352,6 +421,7 @@ const dashboardInit = async (req, res) => {
       stats:   { total: total, sentiments: sentimentMap, alerts: alertCount },
       trends:  Object.values(grouped),
       keywords,
+      periodComparison,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -374,11 +444,11 @@ const cleanupUnclassified = async (req, res) => {
   if (!isDbConnected()) return res.status(503).json({ error: 'DB not connected' });
   try {
     const result = await Article.deleteMany({
-      $or: [
+      $or$or: [
         { sentiment: { $exists: false } },
         { sentiment: null },
         { sentiment: '' },
-        { sentiment: { $nin: ['Positive', 'Negative', 'Neutral'] } },
+        { sentiment: { $nin$or: ['Positive', 'Negative', 'Neutral'] } },
       ]
     });
     const remaining = await Article.countDocuments({});
@@ -388,4 +458,45 @@ const cleanupUnclassified = async (req, res) => {
   }
 };
 
-module.exports = { getHistory, getTrends, getStats, deleteArticle, dashboardInit, getPublicStats, cleanupUnclassified };
+
+/**
+ * GET /api/history/:id
+ * Returns a single article by ID with related articles
+ */
+const getArticleById = async (req, res) => {
+  if (!isDbConnected()) {
+    return res.status(503).json({ error: 'Database not connected.' });
+  }
+  try {
+    const { id } = req.params;
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ error: 'Invalid article ID.' });
+    }
+
+    const article = await Article.findById(id).lean();
+    if (!article) {
+      return res.status(404).json({ error: 'Article not found.' });
+    }
+
+    // Find related articles (same source or overlapping categories)
+    const relatedFilter = {
+      _id: { $ne: article._id },
+      $or: [
+        { source: article.source },
+        ...(article.categories?.length ? [{ categories: { $in: article.categories } }] : []),
+      ],
+    };
+    const related = await Article.find(relatedFilter)
+      .sort({ publishedAt: -1 })
+      .limit(5)
+      .select('title source sentiment publishedAt url urlToImage categories confidence')
+      .lean();
+
+    res.json({ article, related });
+  } catch (err) {
+    console.error('[getArticleById] error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch article.' });
+  }
+};
+
+module.exports = { getHistory, getTrends, getStats, deleteArticle, dashboardInit, getPublicStats, cleanupUnclassified, getArticleById };

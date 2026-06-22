@@ -243,6 +243,14 @@ export const deleteArticle = async (id) => {
 };
 
 /**
+ * Bulk delete articles by IDs
+ */
+export const bulkDeleteArticles = async (ids) => {
+  const response = await api.delete('/history/bulk', { data: { ids } });
+  return response.data;
+};
+
+/**
  * Get sentiment breakdown by region (Malaysian States)
  * (#1 Heatmap)
  */
@@ -286,8 +294,81 @@ export const toggleBookmark = async (id) => {
 };
 
 /**
+ * Get all bookmark folders
+ */
+export const getBookmarkFolders = async () => {
+  const response = await api.get('/bookmarks/folders');
+  return response.data;
+};
+
+/**
+ * Create a new bookmark folder
+ */
+export const createBookmarkFolder = async (name) => {
+  const response = await api.post('/bookmarks/folders', { name });
+  return response.data;
+};
+
+/**
+ * Rename a bookmark folder
+ */
+export const updateBookmarkFolder = async (id, name) => {
+  const response = await api.put(`/bookmarks/folders/${id}`, { name });
+  return response.data;
+};
+
+/**
+ * Delete a bookmark folder
+ */
+export const deleteBookmarkFolder = async (id) => {
+  const response = await api.delete(`/bookmarks/folders/${id}`);
+  return response.data;
+};
+
+/**
+ * Move a bookmark to a folder
+ */
+export const moveBookmarkToFolder = async (articleId, folderId) => {
+  const response = await api.put(`/bookmarks/${articleId}/folder`, { folderId });
+  return response.data;
+};
+
+/**
  * Get admin system overview stats (#4)
  */
+
+/**
+ * Get all users (admin)
+ */
+export const getAdminUsers = async (params = {}) => {
+  const response = await api.get('/admin/users', { params });
+  return response.data;
+};
+
+/**
+ * Update user role (admin)
+ */
+export const updateUserRole = async (userId, role) => {
+  const response = await api.put(`/admin/users/${userId}/role`, { role });
+  return response.data;
+};
+
+/**
+ * Delete user (admin)
+ */
+export const deleteUser = async (userId) => {
+  const response = await api.delete(`/admin/users/${userId}`);
+  return response.data;
+};
+
+/**
+ * Update user status (admin)
+ */
+export const updateUserStatus = async (userId, active) => {
+  const response = await api.put(`/admin/users/${userId}/status`, { active });
+  return response.data;
+};
+
 export const getAdminStats = async () => {
   const response = await api.get('/news/admin/stats');
   return response.data;

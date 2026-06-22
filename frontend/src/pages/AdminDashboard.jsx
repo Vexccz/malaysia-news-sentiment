@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getAdminStats } from '../services/api';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { getAdminStats, getAdminUsers, updateUserRole, deleteUser, updateUserStatus } from '../services/api';
 import toast from 'react-hot-toast';
 import ScrollToTop from '../components/ScrollToTop';
 import { useSocket } from '../context/SocketContext';
-import { Shield, RefreshCw, FileText, Activity, Users, Eye, TrendingUp, AlertTriangle, Clock, Cpu, Zap, Search } from 'lucide-react';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
@@ -15,7 +15,18 @@ const AdminDashboard = () => {
   const [metrics, setMetrics] = useState(null);
   const [metricsLoading, setMetricsLoading] = useState(false);
   const socket = useSocket();
-  const [userSearch, setUserSearch] = useState('');
+
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userSortField, setUserSortField] = useState('createdAt');
+  const [userSortOrder, setUserSortOrder] = useState('desc');
+  const [userRoleFilter, setUserRoleFilter] = useState('all');
+  const [adminUsers, setAdminUsers] = useState([]);
+  const [adminUsersLoading, setAdminUsersLoading] = useState(false);
+  const [adminUsersPage, setAdminUsersPage] = useState(1);
+  const [adminUsersTotal, setAdminUsersTotal] = useState(0);
+  const [adminUsersTotalPages, setAdminUsersTotalPages] = useState(0);
+  const [deleteConfirmUserId, setDeleteConfirmUserId] = useState(null);
+  const [processingUserId, setProcessingUserId] = useState(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -29,6 +40,83 @@ const AdminDashboard = () => {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const loadAdminUsers = useCallback(async () => {
+    setAdminUsersLoading(true);
+    try {
+      const params = {
+        page: adminUsersPage,
+        limit: 10,
+        sortBy: userSortField,
+        sortOrder: userSortOrder,
+      };
+      if (userSearchQuery.trim()) params.search = userSearchQuery.trim();
+      if (userRoleFilter !== 'all') params.role = userRoleFilter;
+      const data = await getAdminUsers(params);
+      setAdminUsers(data.users || []);
+      setAdminUsersTotal(data.total || 0);
+      setAdminUsersTotalPages(data.totalPages || 0);
+    } catch {
+      toast.error('Failed to load users');
+    } finally {
+      setAdminUsersLoading(false);
+    }
+  }, [adminUsersPage, userSortField, userSortOrder, userSearchQuery, userRoleFilter]);
+
+  useEffect(() => {
+    if (activeTab === 'users') loadAdminUsers();
+  }, [activeTab, loadAdminUsers]);
+
+  const handleSort = (field) => {
+    if (userSortField === field) setUserSortOrder(userSortOrder === 'asc' ? 'desc' : 'asc');
+    else { setUserSortField(field); setUserSortOrder('asc'); }
+    setAdminUsersPage(1);
+  };
+
+  const handleRoleChange = async (userId, newRole) => {
+    setProcessingUserId(userId);
+    try {
+      await updateUserRole(userId, newRole);
+      toast.success(`Role updated to ${newRole}`);
+      loadAdminUsers();
+    } catch {
+      toast.error('Failed to update role');
+    } finally {
+      setProcessingUserId(null);
+    }
+  };
+
+  const handleToggleStatus = async (userId, currentActive) => {
+    setProcessingUserId(userId);
+    try {
+      await updateUserStatus(userId, !currentActive);
+      toast.success(`User ${currentActive ? 'disabled' : 'enabled'}`);
+      loadAdminUsers();
+    } catch {
+      toast.error('Failed to update status');
+    } finally {
+      setProcessingUserId(null);
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    setProcessingUserId(userId);
+    try {
+      await deleteUser(userId);
+      toast.success('User deleted');
+      setDeleteConfirmUserId(null);
+      loadAdminUsers();
+    } catch {
+      toast.error('Failed to delete user');
+    } finally {
+      setProcessingUserId(null);
+    }
+  };
+
+  const SortIcon = ({ field }) => {
+    if (userSortField !== field) return <span className="text-[10px] opacity-30">↕</span>;
+    return <span className="text-[10px]">{userSortOrder === 'asc' ? '↑' : '↓'}</span>;
+  };
 
   const loadMetrics = async () => {
     setMetricsLoading(true);
@@ -54,24 +142,17 @@ const AdminDashboard = () => {
     finally { setInsightsLoading(false); }
   };
 
-  // Real-time updates
   useEffect(() => {
     if (!socket) return;
     socket.on('user_activity', (data) => {
       setStats(prev => {
         if (!prev) return prev;
-        const updatedUsers = prev.recentUsers.map(u =>
-          u._id === data.userId ? { ...u, analysisCount: data.analysisCount } : u
-        );
+        const updatedUsers = prev.recentUsers.map(u => u._id === data.userId ? { ...u, analysisCount: data.analysisCount } : u);
         return { ...prev, recentUsers: updatedUsers };
       });
-      toast.success(`${data.userName} completed analysis`, { icon: '⚡', duration: 3000 });
     });
     socket.on('system_stats_updated', (data) => {
-      setStats(prev => prev ? {
-        ...prev,
-        overview: { ...prev.overview, totalArticles: prev.overview.totalArticles + (data.count || 0), totalUnique: prev.overview.totalUnique + (data.count || 0) }
-      } : prev);
+      setStats(prev => prev ? { ...prev, overview: { ...prev.overview, totalArticles: prev.overview.totalArticles + (data.count || 0), totalUnique: prev.overview.totalUnique + (data.count || 0) } } : prev);
     });
     return () => { socket.off('user_activity'); socket.off('system_stats_updated'); };
   }, [socket]);
@@ -79,8 +160,8 @@ const AdminDashboard = () => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-        <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">Loading Admin Dashboard...</p>
+        <div className="w-6 h-6 border-2 border-ink border-t-transparent rounded-full animate-spin" />
+        <p className="mt-4 text-xs text-ink-faint font-sans uppercase tracking-wider">Loading</p>
       </div>
     );
   }
@@ -88,8 +169,8 @@ const AdminDashboard = () => {
   if (!stats) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Dashboard Unavailable</h2>
-        <button onClick={() => window.location.reload()} className="mt-4 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors">
+        <h2 className="text-base font-semibold text-ink dark:text-paper font-display">Dashboard Unavailable</h2>
+        <button onClick={() => window.location.reload()} className="mt-4 px-5 py-2.5 bg-ink text-paper text-xs font-semibold uppercase tracking-wider hover:bg-accent transition-colors font-sans">
           Retry
         </button>
       </div>
@@ -105,145 +186,151 @@ const AdminDashboard = () => {
   return (
     <div className="relative">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-start justify-between mb-6"
-      >
+      <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Shield size={24} className="text-blue-600" />
-            Admin Dashboard
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">System overview and analytics management</p>
+          <div className="flex items-baseline gap-3 mb-1">
+            <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">
+              Admin Dashboard
+            </h1>
+          </div>
+          <div className="editorial-rule mb-2" />
+          <p className="text-sm text-ink-muted dark:text-ink-faint font-sans">System overview and analytics management</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-full">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide">All Systems Online</span>
-          </div>
-          <button onClick={loadData} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 rounded-lg transition-colors">
-            <RefreshCw size={12} /> Refresh
+          <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-green-700 dark:text-green-400 font-sans">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-600" />
+            All Systems Online
+          </span>
+          <button onClick={loadData} className="text-xs font-medium uppercase tracking-wider text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-colors font-sans">
+            Refresh
           </button>
         </div>
-      </motion.div>
+      </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-xl p-1 w-fit mb-6">
-        {TABS.map(tab => (
-          <button
-            key={tab}
-            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all capitalize ${
-              activeTab === tab
-                ? 'bg-blue-50 dark:bg-blue-500/15 text-blue-600'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-            }`}
-            onClick={() => { setActiveTab(tab); if (tab === 'insights' && !insights) loadInsights(); if (tab === 'api') loadMetrics(); }}
-          >
-            {tab === 'api' ? 'API Metrics' : tab}
-          </button>
+      {/* Tabs — editorial style */}
+      <div className="flex items-center gap-0 mb-6 flex-wrap">
+        {TABS.map((tab, i) => (
+          <React.Fragment key={tab}>
+            {i > 0 && <span className="text-ink-faint mx-1.5">|</span>}
+            <button
+              className={`text-xs font-medium uppercase tracking-wider transition-colors font-sans px-1 capitalize ${
+                activeTab === tab ? 'text-ink dark:text-paper font-bold' : 'text-ink-faint hover:text-ink-muted'
+              }`}
+              onClick={() => { setActiveTab(tab); if (tab === 'insights' && !insights) loadInsights(); if (tab === 'api') loadMetrics(); }}
+            >
+              {tab === 'api' ? 'API Metrics' : tab}
+            </button>
+          </React.Fragment>
         ))}
       </div>
 
       <AnimatePresence mode="wait">
         {activeTab === 'overview' && (
-          <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <motion.div key="overview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+            {/* Stats — newspaper stat bar */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-paper-line dark:divide-paper-dark-line border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card mb-6">
               {[
-                { label: 'Total Articles', value: stats.overview.totalUnique.toLocaleString(), sub: 'In database', icon: <FileText size={18} />, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-500/10' },
-                { label: 'Analyses Run', value: stats.overview.totalArticles.toLocaleString(), sub: 'Total processed', icon: <Activity size={18} />, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
-                { label: 'Registered Users', value: stats.overview.totalUsers, sub: 'Active accounts', icon: <Users size={18} />, color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-500/10' },
-                { label: 'Total Views', value: (stats.overview.totalViews || 0).toLocaleString(), sub: 'Article views', icon: <Eye size={18} />, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-500/10' },
+                { label: 'Total Articles', value: stats.overview.totalUnique.toLocaleString(), sub: 'In database' },
+                { label: 'Analyses Run', value: stats.overview.totalArticles.toLocaleString(), sub: 'Total processed' },
+                { label: 'Registered Users', value: stats.overview.totalUsers, sub: 'Active accounts' },
+                { label: 'Total Views', value: (stats.overview.totalViews || 0).toLocaleString(), sub: 'Article views' },
               ].map(card => (
-                <div key={card.label} className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-5 hover:shadow-md transition-shadow">
-                  <div className={`w-9 h-9 rounded-xl ${card.bg} ${card.color} flex items-center justify-center mb-3`}>
-                    {card.icon}
-                  </div>
-                  <div className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{card.label}</div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{card.value}</div>
-                  <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{card.sub}</div>
+                <div key={card.label} className="px-4 py-3">
+                  <div className="text-[10px] font-semibold uppercase tracking-widest text-ink-muted dark:text-ink-faint mb-1 font-sans">{card.label}</div>
+                  <div className="text-xl font-bold text-ink dark:text-paper font-display">{card.value}</div>
+                  <div className="text-[10px] text-ink-faint font-sans mt-0.5">{card.sub}</div>
                 </div>
               ))}
             </div>
 
             {/* Sentiment + Sources */}
-            <div className="grid md:grid-cols-2 gap-4 mb-6">
-              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-5">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
-                  Sentiment Distribution
-                  <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 uppercase">Live</span>
-                </h3>
-                <div className="space-y-3">
+            <div className="grid md:grid-cols-2 gap-0 mb-6">
+              {/* Sentiment */}
+              <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
+                <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+                  <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">Sentiment Distribution</h3>
+                </div>
+                <div className="px-5 py-4 space-y-3">
                   {[
-                    { label: 'Positive', color: '#10b981', count: sentimentData.Positive },
-                    { label: 'Neutral', color: '#f59e0b', count: sentimentData.Neutral },
-                    { label: 'Negative', color: '#ef4444', count: sentimentData.Negative },
+                    { label: 'Positive', color: '#16a34a', count: sentimentData.Positive },
+                    { label: 'Neutral', color: '#ca8a04', count: sentimentData.Neutral },
+                    { label: 'Negative', color: '#dc2626', count: sentimentData.Negative },
                   ].map(s => (
                     <div key={s.label} className="flex items-center gap-3">
-                      <span className="text-[11px] text-gray-500 dark:text-gray-400 w-16 font-medium">{s.label}</span>
-                      <div className="flex-1 h-2 rounded-full bg-gray-100 dark:bg-white/5 overflow-hidden">
-                        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${(s.count / totalSentiment * 100)}%`, background: s.color }} />
+                      <span className="text-[11px] text-ink-muted dark:text-ink-faint w-16 font-medium font-sans">{s.label}</span>
+                      <div className="flex-1 h-1.5 bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                        <div className="h-full transition-all duration-700" style={{ width: `${(s.count / totalSentiment * 100)}%`, background: s.color }} />
                       </div>
-                      <span className="text-[11px] font-bold text-gray-900 dark:text-white w-8 text-right">{Math.round(s.count / totalSentiment * 100)}%</span>
+                      <span className="text-[11px] font-bold text-ink dark:text-paper w-8 text-right font-sans">{Math.round(s.count / totalSentiment * 100)}%</span>
                     </div>
                   ))}
                 </div>
-                <div className="grid grid-cols-3 gap-2 mt-4">
+                <div className="grid grid-cols-3 divide-x divide-paper-line dark:divide-paper-dark-line border-t border-paper-line dark:border-paper-dark-line">
                   {[
-                    { label: 'Positive', count: sentimentData.Positive, color: '#10b981' },
-                    { label: 'Neutral', count: sentimentData.Neutral, color: '#f59e0b' },
-                    { label: 'Negative', count: sentimentData.Negative, color: '#ef4444' },
+                    { label: 'Positive', count: sentimentData.Positive },
+                    { label: 'Neutral', count: sentimentData.Neutral },
+                    { label: 'Negative', count: sentimentData.Negative },
                   ].map(s => (
-                    <div key={s.label} className="text-center p-2.5 rounded-xl" style={{ background: `${s.color}08`, border: `1px solid ${s.color}20` }}>
-                      <div className="text-lg font-bold" style={{ color: s.color }}>{s.count}</div>
-                      <div className="text-[9px] font-semibold text-gray-500 uppercase">{s.label}</div>
+                    <div key={s.label} className="text-center px-3 py-3">
+                      <div className="text-lg font-bold text-ink dark:text-paper font-display">{s.count}</div>
+                      <div className="text-[9px] font-semibold text-ink-faint uppercase tracking-wider font-sans">{s.label}</div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-5">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Top Sources</h3>
-                <div className="space-y-1">
+              {/* Top Sources */}
+              <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card border-l-0 md:border-l-0">
+                <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+                  <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">Top Sources</h3>
+                </div>
+                <div className="divide-y divide-paper-line dark:divide-paper-dark-line">
                   {stats.topSources?.length > 0 ? stats.topSources.map((s, i) => (
-                    <div key={i} className="flex items-center justify-between py-2.5 border-b border-[#eee] dark:border-[#2a2a2a] last:border-0">
+                    <div key={i} className="flex items-center justify-between px-5 py-3">
                       <div className="flex items-center gap-2.5">
-                        <span className="text-[11px] font-bold text-gray-400 w-5">#{i + 1}</span>
-                        <span className="text-xs font-semibold text-gray-900 dark:text-white">{s.source || 'Unknown'}</span>
+                        <span className="text-[11px] font-bold text-ink-faint w-5 font-sans">#{i + 1}</span>
+                        <span className="text-xs font-semibold text-ink dark:text-paper font-sans">{s.source || 'Unknown'}</span>
                       </div>
-                      <span className="text-[11px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-500/10 px-2.5 py-0.5 rounded-full">{s.count} articles</span>
+                      <span className="text-[11px] font-bold text-ink-muted dark:text-ink-faint font-sans">{s.count}</span>
                     </div>
-                  )) : <p className="text-xs text-gray-500">No source data available</p>}
+                  )) : <p className="px-5 py-4 text-xs text-ink-faint font-sans">No source data available</p>}
                 </div>
               </div>
             </div>
 
             {/* Topics + Recent Articles */}
-            <div className="grid md:grid-cols-2 gap-4 mb-6">
-              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-5">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Popular Topics</h3>
-                <div className="flex flex-wrap gap-2">
-                  {stats.popularTopics?.length > 0 ? stats.popularTopics.map((t, i) => (
-                    <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-lg text-[11px] font-semibold text-blue-600">
-                      {t.topic || 'General'}
-                      <span className="font-bold">{t.count}</span>
-                    </span>
-                  )) : <p className="text-xs text-gray-500">No topic data</p>}
+            <div className="grid md:grid-cols-2 gap-0 mb-6">
+              {/* Topics */}
+              <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
+                <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+                  <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">Popular Topics</h3>
+                </div>
+                <div className="px-5 py-4">
+                  <div className="flex flex-wrap gap-x-3 gap-y-1">
+                    {stats.popularTopics?.length > 0 ? stats.popularTopics.map((t, i) => (
+                      <span key={i} className="text-xs text-ink-muted dark:text-ink-faint font-sans">
+                        {t.topic || 'General'} <span className="font-bold text-ink dark:text-paper">{t.count}</span>
+                        {i < stats.popularTopics.length - 1 && <span className="text-ink-faint ml-3">·</span>}
+                      </span>
+                    )) : <p className="text-xs text-ink-faint font-sans">No topic data</p>}
+                  </div>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-5">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Recent Articles</h3>
-                <div className="space-y-2">
+              {/* Recent Articles */}
+              <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card border-l-0 md:border-l-0">
+                <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+                  <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">Recent Articles</h3>
+                </div>
+                <div className="divide-y divide-paper-line dark:divide-paper-dark-line">
                   {stats.recentArticles?.slice(0, 5).map((a, i) => (
-                    <div key={i} className="py-2 border-b border-[#eee] dark:border-[#2a2a2a] last:border-0">
-                      <div className="text-xs font-medium text-gray-900 dark:text-white leading-snug">
+                    <div key={i} className="px-5 py-3">
+                      <div className="text-xs font-medium text-ink dark:text-paper leading-snug line-clamp-2 font-sans">
                         {a.title?.slice(0, 70)}{a.title?.length > 70 ? '...' : ''}
                       </div>
-                      <div className="flex gap-2 mt-1 text-[10px]">
-                        <span className="font-bold" style={{ color: a.sentiment === 'Positive' ? '#10b981' : a.sentiment === 'Negative' ? '#ef4444' : '#6366f1' }}>{a.sentiment}</span>
-                        <span className="text-gray-400">{a.source}</span>
+                      <div className="flex gap-2 mt-1 text-[10px] font-sans">
+                        <span className="font-bold" style={{ color: a.sentiment === 'Positive' ? '#16a34a' : a.sentiment === 'Negative' ? '#dc2626' : '#ca8a04' }}>{a.sentiment}</span>
+                        <span className="text-ink-faint">{a.source}</span>
                       </div>
                     </div>
                   ))}
@@ -252,103 +339,293 @@ const AdminDashboard = () => {
             </div>
 
             {/* Activity Timeline */}
-            {stats.activityTimeline?.length > 0 && (
-              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-5 mb-6">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Activity by Hour</h3>
-                <div className="flex items-end gap-1 h-28 px-2">
-                  {Array.from({ length: 24 }, (_, h) => {
-                    const entry = stats.activityTimeline.find(a => a._id === h);
-                    const count = entry?.count || 0;
-                    const maxCount = Math.max(...stats.activityTimeline.map(a => a.count), 1);
-                    const heightPct = Math.max(4, (count / maxCount) * 100);
-                    return (
-                      <div key={h} title={`${String(h).padStart(2,'0')}:00 - ${count} activities`} className="flex-1 flex flex-col items-center justify-end h-full gap-1">
-                        <div className="w-full rounded-sm transition-all duration-500" style={{ height: `${heightPct}%`, background: count > 0 ? '#2563eb' : undefined, opacity: count > 0 ? 0.7 : 0.2, backgroundColor: count === 0 ? '#e5e7eb' : undefined }} />
-                        {h % 6 === 0 && <span className="text-[9px] text-gray-400 font-medium">{String(h).padStart(2,'0')}</span>}
-                      </div>
-                    );
-                  })}
+            {stats.activityTimeline?.length > 0 && (() => {
+              const chartData = Array.from({ length: 24 }, (_, h) => {
+                const entry = stats.activityTimeline.find(a => a._id === h);
+                return {
+                  hour: `${String(h).padStart(2, '0')}:00`,
+                  activities: entry?.count || 0,
+                };
+              });
+              return (
+                <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card mb-6">
+                  <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+                    <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">Activity by Hour</h3>
+                    <p className="text-[11px] text-ink-faint mt-0.5 font-sans">Article analyses and user interactions over 24 hours</p>
+                  </div>
+                  <div className="px-4 py-4">
+                    <div className="h-[200px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="2 4" stroke="#E8E4DB" opacity={0.5} vertical={false} />
+                          <XAxis
+                            dataKey="hour"
+                            tick={{ fontSize: 9, fill: '#A8A59E', fontFamily: 'Inter' }}
+                            tickFormatter={(val) => val.replace(':00', '')}
+                            axisLine={{ stroke: '#E8E4DB' }}
+                            tickLine={false}
+                            interval={2}
+                          />
+                          <YAxis
+                            tick={{ fontSize: 9, fill: '#A8A59E', fontFamily: 'Inter' }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              background: '#FFFFFF',
+                              border: '1px solid #E8E4DB',
+                              borderRadius: '0',
+                              fontSize: '11px',
+                              fontFamily: 'Inter',
+                              boxShadow: 'none',
+                            }}
+                            formatter={(value) => [`${value} activities`, 'Count']}
+                            labelFormatter={(val) => val}
+                          />
+                          <Bar
+                            dataKey="activities"
+                            fill="#1A1A1A"
+                            opacity={0.5}
+                            radius={[1, 1, 0, 0]}
+                            isAnimationActive={true}
+                            animationDuration={1500}
+                            animationEasing="ease-out"
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </motion.div>
         )}
 
         {activeTab === 'users' && (
-          <motion.div key="users" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-            <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-5">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
-                Registered Users
-                <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-500/10 text-amber-600 uppercase">{stats.overview.totalUsers} total</span>
-              </h3>
+          <motion.div key="users" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+            <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
+              <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">User Management</h3>
+                  <span className="text-[10px] font-bold text-ink-faint font-sans">{adminUsersTotal} Total · Page {adminUsersPage} of {adminUsersTotalPages || 1}</span>
+                </div>
+              </div>
+
+              {/* Filters */}
+              <div className="px-5 py-3 border-b border-paper-line dark:border-paper-dark-line flex flex-col md:flex-row gap-3">
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    placeholder="Search by name or email..."
+                    value={userSearchQuery}
+                    onChange={(e) => { setUserSearchQuery(e.target.value); setAdminUsersPage(1); }}
+                    className="w-full px-3 py-2 text-xs border-2 border-ink dark:border-paper bg-paper dark:bg-paper-dark text-ink dark:text-paper placeholder:text-ink-faint focus:outline-none focus:border-accent transition-colors font-sans"
+                  />
+                </div>
+                <div className="flex gap-0">
+                  {['all', 'admin', 'user'].map((role, i) => (
+                    <React.Fragment key={role}>
+                      {i > 0 && <span className="text-ink-faint mx-1.5">|</span>}
+                      <button
+                        onClick={() => { setUserRoleFilter(role); setAdminUsersPage(1); }}
+                        className={`text-[11px] font-medium uppercase tracking-wider transition-colors font-sans px-1 ${
+                          userRoleFilter === role ? 'text-ink dark:text-paper font-bold' : 'text-ink-faint hover:text-ink-muted'
+                        }`}
+                      >
+                        {role === 'all' ? 'All Roles' : role}
+                      </button>
+                    </React.Fragment>
+                  ))}
+                </div>
+                {(userSearchQuery || userRoleFilter !== 'all') && (
+                  <button onClick={() => { setUserSearchQuery(''); setUserRoleFilter('all'); setAdminUsersPage(1); }} className="text-[11px] font-bold text-red-700 dark:text-red-400 uppercase tracking-wider font-sans">
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              {/* Table */}
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-[#eee] dark:border-[#2a2a2a]">
-                      <th className="text-left py-2 px-3 text-[10px] font-bold text-gray-500 uppercase tracking-wide">User</th>
-                      <th className="text-left py-2 px-3 text-[10px] font-bold text-gray-500 uppercase tracking-wide">Role</th>
-                      <th className="text-left py-2 px-3 text-[10px] font-bold text-gray-500 uppercase tracking-wide">Analyses</th>
-                      <th className="text-left py-2 px-3 text-[10px] font-bold text-gray-500 uppercase tracking-wide">Joined</th>
+                    <tr className="border-b border-paper-line dark:border-paper-dark-line">
+                      {[
+                        { label: 'User', field: 'name' },
+                        { label: 'Email', field: 'email' },
+                        { label: 'Role', field: 'role' },
+                        { label: 'Analyses', field: 'analysisCount' },
+                        { label: 'Status', field: 'isActive' },
+                        { label: 'Joined', field: 'createdAt' },
+                      ].map(col => (
+                        <th key={col.field} onClick={() => handleSort(col.field)} className="text-left py-3 px-5 text-[10px] font-bold text-ink-muted dark:text-ink-faint uppercase tracking-wider cursor-pointer hover:text-ink dark:hover:text-paper transition-colors font-sans">
+                          <div className="flex items-center gap-1.5">{col.label} <SortIcon field={col.field} /></div>
+                        </th>
+                      ))}
+                      <th className="text-right py-3 px-5 text-[10px] font-bold text-ink-muted dark:text-ink-faint uppercase tracking-wider font-sans">Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {stats.recentUsers?.map((u, i) => (
-                      <tr key={i} className="border-b border-[#eee] dark:border-[#2a2a2a] last:border-0 hover:bg-gray-50 dark:hover:bg-white/[0.02]">
-                        <td className="py-3 px-3">
-                          <div className="text-xs font-semibold text-gray-900 dark:text-white">{u.name}</div>
-                          <div className="text-[10px] text-gray-400">{u.email}</div>
+                  <tbody className="divide-y divide-paper-line dark:divide-paper-dark-line">
+                    {adminUsersLoading ? (
+                      <tr>
+                        <td colSpan="7" className="py-12 text-center">
+                          <div className="w-5 h-5 border-2 border-ink border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                          <p className="text-xs text-ink-faint font-sans uppercase tracking-wider">Loading users</p>
                         </td>
-                        <td className="py-3 px-3">
-                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase ${
-                            u.role === 'admin' 
-                              ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 border border-indigo-200 dark:border-indigo-500/20' 
-                              : 'bg-gray-50 dark:bg-white/5 text-gray-500 border border-gray-200 dark:border-gray-700'
-                          }`}>{u.role}</span>
-                        </td>
-                        <td className="py-3 px-3 text-xs font-bold text-emerald-600">{u.analysisCount || 0}</td>
-                        <td className="py-3 px-3 text-[11px] text-gray-400">{new Date(u.createdAt).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                       </tr>
-                    ))}
+                    ) : adminUsers.length > 0 ? adminUsers.map((u) => (
+                      <tr key={u._id} className="hover:bg-paper/50 dark:hover:bg-paper-dark/50 transition-colors">
+                        <td className="py-3 px-5">
+                          <span className="text-xs font-semibold text-ink dark:text-paper font-sans">{u.name}</span>
+                        </td>
+                        <td className="py-3 px-5">
+                          <span className="text-[11px] text-ink-muted dark:text-ink-faint font-sans">{u.email}</span>
+                        </td>
+                        <td className="py-3 px-5">
+                          <select
+                            value={u.role}
+                            onChange={(e) => handleRoleChange(u._id, e.target.value)}
+                            disabled={processingUserId === u._id}
+                            className={`text-[10px] font-bold uppercase tracking-wider font-sans bg-transparent border border-ink/10 dark:border-paper/10 px-2 py-1 cursor-pointer focus:outline-none ${
+                              u.role === 'admin' ? 'text-red-700 dark:text-red-400' : 'text-ink-muted dark:text-ink-faint'
+                            }`}
+                          >
+                            <option value="user">user</option>
+                            <option value="admin">admin</option>
+                          </select>
+                        </td>
+                        <td className="py-3 px-5">
+                          <span className="text-xs font-bold text-ink dark:text-paper font-sans">{u.analysisCount || 0}</span>
+                        </td>
+                        <td className="py-3 px-5">
+                          <button
+                            onClick={() => handleToggleStatus(u._id, u.isActive !== false)}
+                            disabled={processingUserId === u._id}
+                            className={`text-[10px] font-bold uppercase tracking-wider font-sans border border-ink dark:border-paper px-2 py-0.5 transition-colors ${
+                              u.isActive !== false
+                                ? 'text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20'
+                                : 'text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+                            }`}
+                          >
+                            {u.isActive !== false ? 'Active' : 'Disabled'}
+                          </button>
+                        </td>
+                        <td className="py-3 px-5">
+                          <span className="text-[11px] text-ink-muted dark:text-ink-faint font-sans">
+                            {new Date(u.createdAt).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
+                        </td>
+                        <td className="py-3 px-5 text-right">
+                          {deleteConfirmUserId === u._id ? (
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => handleDeleteUser(u._id)}
+                                disabled={processingUserId === u._id}
+                                className="text-[10px] font-bold text-paper bg-red-700 dark:bg-red-600 px-2 py-1 uppercase tracking-wider font-sans hover:bg-red-800 dark:hover:bg-red-700 transition-colors"
+                              >
+                                Confirm
+                              </button>
+                              <button
+                                onClick={() => setDeleteConfirmUserId(null)}
+                                className="text-[10px] font-bold text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper uppercase tracking-wider font-sans"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setDeleteConfirmUserId(u._id)}
+                              disabled={processingUserId === u._id}
+                              className="text-[10px] font-bold text-red-700 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 uppercase tracking-wider font-sans transition-colors"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan="7" className="py-12 text-center">
+                          <p className="text-xs text-ink-faint font-sans">No users found matching your filters</p>
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination */}
+              {adminUsersTotal > 0 && (
+                <div className="px-5 py-3 border-t border-paper-line dark:border-paper-dark-line flex items-center justify-between">
+                  <span className="text-[10px] text-ink-faint font-sans">
+                    Showing {((adminUsersPage - 1) * 10) + 1}–{Math.min(adminUsersPage * 10, adminUsersTotal)} of {adminUsersTotal}
+                  </span>
+                  <div className="flex items-center gap-0">
+                    <button
+                      onClick={() => setAdminUsersPage(p => Math.max(1, p - 1))}
+                      disabled={adminUsersPage <= 1 || adminUsersLoading}
+                      className={`text-[10px] font-bold uppercase tracking-wider font-sans px-3 py-1.5 border border-ink dark:border-paper transition-colors ${
+                        adminUsersPage <= 1 ? 'text-ink-faint opacity-40 cursor-not-allowed' : 'text-ink dark:text-paper hover:bg-ink hover:text-paper dark:hover:bg-paper dark:hover:text-ink'
+                      }`}
+                    >
+                      Prev
+                    </button>
+                    <span className="text-[10px] text-ink-muted dark:text-ink-faint font-sans px-3">
+                      {adminUsersPage} / {adminUsersTotalPages || 1}
+                    </span>
+                    <button
+                      onClick={() => setAdminUsersPage(p => Math.min(adminUsersTotalPages, p + 1))}
+                      disabled={adminUsersPage >= adminUsersTotalPages || adminUsersLoading}
+                      className={`text-[10px] font-bold uppercase tracking-wider font-sans px-3 py-1.5 border border-ink dark:border-paper transition-colors ${
+                        adminUsersPage >= adminUsersTotalPages ? 'text-ink-faint opacity-40 cursor-not-allowed' : 'text-ink dark:text-paper hover:bg-ink hover:text-paper dark:hover:bg-paper dark:hover:text-ink'
+                      }`}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
 
         {activeTab === 'content' && (
-          <motion.div key="content" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-5">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">High Impact Articles</h3>
-                <div className="space-y-2">
+          <motion.div key="content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+            <div className="grid md:grid-cols-2 gap-0">
+              <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
+                <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+                  <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">High Impact Articles</h3>
+                </div>
+                <div className="divide-y divide-paper-line dark:divide-paper-dark-line">
                   {stats.topImpactArticles?.length > 0 ? stats.topImpactArticles.map((a, i) => (
-                    <div key={i} className="py-2.5 border-b border-[#eee] dark:border-[#2a2a2a] last:border-0">
-                      <div className="text-xs font-medium text-gray-900 dark:text-white leading-snug">
+                    <div key={i} className="px-5 py-3">
+                      <div className="text-xs font-medium text-ink dark:text-paper leading-snug line-clamp-2 font-sans">
                         {a.title?.slice(0, 80)}{a.title?.length > 80 ? '...' : ''}
                       </div>
-                      <div className="flex gap-2 mt-1 text-[10px]">
-                        <span className="font-bold" style={{ color: a.sentiment === 'Positive' ? '#10b981' : a.sentiment === 'Negative' ? '#ef4444' : '#6366f1' }}>{a.sentiment}</span>
-                        <span className="text-gray-400">{a.source}</span>
-                        {a.impactScore && <span className="font-bold text-amber-500">Impact: {a.impactScore}</span>}
+                      <div className="flex gap-2 mt-1 text-[10px] font-sans">
+                        <span className="font-bold" style={{ color: a.sentiment === 'Positive' ? '#16a34a' : a.sentiment === 'Negative' ? '#dc2626' : '#ca8a04' }}>{a.sentiment}</span>
+                        <span className="text-ink-faint">{a.source}</span>
+                        {a.impactScore && <span className="font-bold text-ink-muted">Impact: {a.impactScore}</span>}
                       </div>
                     </div>
-                  )) : <p className="text-xs text-gray-500">No impact data available</p>}
+                  )) : <p className="px-5 py-4 text-xs text-ink-faint font-sans">No impact data available</p>}
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-5">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Source Distribution</h3>
-                <div className="space-y-3">
+              <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card border-l-0 md:border-l-0">
+                <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+                  <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">Source Distribution</h3>
+                </div>
+                <div className="px-5 py-4 space-y-3">
                   {stats.topSources?.map((s, i) => {
                     const maxSource = stats.topSources[0]?.count || 1;
                     return (
                       <div key={i} className="flex items-center gap-3">
-                        <span className="text-[11px] text-gray-500 w-24 font-medium truncate">{s.source || 'Unknown'}</span>
-                        <div className="flex-1 h-2 rounded-full bg-gray-100 dark:bg-white/5 overflow-hidden">
-                          <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500" style={{ width: `${(s.count / maxSource) * 100}%` }} />
+                        <span className="text-[11px] text-ink-muted dark:text-ink-faint w-24 font-medium truncate font-sans">{s.source || 'Unknown'}</span>
+                        <div className="flex-1 h-1.5 bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                          <div className="h-full bg-ink dark:bg-paper opacity-40" style={{ width: `${(s.count / maxSource) * 100}%` }} />
                         </div>
-                        <span className="text-[11px] font-bold text-gray-900 dark:text-white w-8 text-right">{s.count}</span>
+                        <span className="text-[11px] font-bold text-ink dark:text-paper w-8 text-right font-sans">{s.count}</span>
                       </div>
                     );
                   })}
@@ -359,81 +636,73 @@ const AdminDashboard = () => {
         )}
 
         {activeTab === 'api' && (
-          <motion.div key="api" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+          <motion.div key="api" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
             {metricsLoading || !metrics ? (
-              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-10 text-center">
-                <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                <p className="text-sm text-gray-500">Loading API metrics...</p>
+              <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card py-10 text-center">
+                <div className="w-6 h-6 border-2 border-ink border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-xs text-ink-faint font-sans uppercase tracking-wider">Loading metrics</p>
               </div>
             ) : (
               <>
-                {/* API Stats */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-paper-line dark:divide-paper-dark-line border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card mb-6">
                   {[
-                    { label: 'Total API Calls', value: metrics.totalCalls.toLocaleString(), sub: `${metrics.requestsPerMinute} req/min`, icon: <Zap size={18} />, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-500/10' },
-                    { label: 'Avg Response Time', value: `${metrics.avgResponseTime}ms`, sub: 'Server latency', icon: <Clock size={18} />, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
-                    { label: 'Error Rate', value: `${metrics.errorRate}%`, sub: `${metrics.errors} total errors`, icon: <AlertTriangle size={18} />, color: 'text-red-500', bg: 'bg-red-50 dark:bg-red-500/10' },
-                    { label: 'Uptime', value: metrics.uptime, sub: `Since ${new Date(metrics.startedAt).toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' })}`, icon: <Cpu size={18} />, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-500/10' },
+                    { label: 'Total API Calls', value: metrics.totalCalls.toLocaleString(), sub: `${metrics.requestsPerMinute} req/min` },
+                    { label: 'Avg Response', value: `${metrics.avgResponseTime}ms`, sub: 'Server latency' },
+                    { label: 'Error Rate', value: `${metrics.errorRate}%`, sub: `${metrics.errors} total errors` },
+                    { label: 'Uptime', value: metrics.uptime, sub: `Since ${new Date(metrics.startedAt).toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' })}` },
                   ].map(card => (
-                    <div key={card.label} className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-5">
-                      <div className={`w-9 h-9 rounded-xl ${card.bg} ${card.color} flex items-center justify-center mb-3`}>
-                        {card.icon}
-                      </div>
-                      <div className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{card.label}</div>
-                      <div className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{card.value}</div>
-                      <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{card.sub}</div>
+                    <div key={card.label} className="px-4 py-3">
+                      <div className="text-[10px] font-semibold uppercase tracking-widest text-ink-muted dark:text-ink-faint mb-1 font-sans">{card.label}</div>
+                      <div className="text-xl font-bold text-ink dark:text-paper font-display">{card.value}</div>
+                      <div className="text-[10px] text-ink-faint font-sans mt-0.5">{card.sub}</div>
                     </div>
                   ))}
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
-                  {/* HTTP Methods */}
-                  <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-5">
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">HTTP Methods</h3>
-                    <div className="space-y-3">
+                <div className="grid md:grid-cols-2 gap-0">
+                  <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
+                    <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+                      <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">HTTP Methods</h3>
+                    </div>
+                    <div className="px-5 py-4 space-y-3">
                       {Object.entries(metrics.methods).filter(([_, v]) => v > 0).map(([method, count]) => {
-                        const colors = { GET: '#10b981', POST: '#6366f1', PUT: '#f59e0b', DELETE: '#ef4444', PATCH: '#8b5cf6' };
                         const maxMethod = Math.max(...Object.values(metrics.methods));
                         return (
                           <div key={method} className="flex items-center gap-3">
-                            <span className="text-[11px] font-mono font-bold w-12" style={{ color: colors[method] || '#94a3b8' }}>{method}</span>
-                            <div className="flex-1 h-2 rounded-full bg-gray-100 dark:bg-white/5 overflow-hidden">
-                              <div className="h-full rounded-full" style={{ width: `${(count / maxMethod) * 100}%`, background: colors[method] || '#6366f1' }} />
+                            <span className="text-[11px] font-mono font-bold w-12 text-ink dark:text-paper">{method}</span>
+                            <div className="flex-1 h-1.5 bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                              <div className="h-full bg-ink dark:bg-paper opacity-40" style={{ width: `${(count / maxMethod) * 100}%` }} />
                             </div>
-                            <span className="text-[11px] font-bold text-gray-900 dark:text-white w-8 text-right">{count}</span>
+                            <span className="text-[11px] font-bold text-ink dark:text-paper w-8 text-right font-sans">{count}</span>
                           </div>
                         );
                       })}
                     </div>
-
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white mt-6 mb-3">Status Codes</h3>
-                    <div className="space-y-1">
-                      {Object.entries(metrics.statusCodes).sort((a, b) => b[1] - a[1]).map(([code, count]) => {
-                        const color = code.startsWith('2') ? '#10b981' : code.startsWith('3') ? '#6366f1' : code.startsWith('4') ? '#f59e0b' : '#ef4444';
-                        return (
-                          <div key={code} className="flex justify-between items-center py-1.5 border-b border-[#eee] dark:border-[#2a2a2a] last:border-0">
-                            <span className="text-xs font-mono font-bold" style={{ color }}>{code}</span>
-                            <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">{count} requests</span>
+                    <div className="px-5 py-4 border-t border-paper-line dark:border-paper-dark-line">
+                      <h3 className="text-[10px] font-semibold text-ink-muted dark:text-ink-faint uppercase tracking-wider mb-2 font-sans">Status Codes</h3>
+                      <div className="divide-y divide-paper-line dark:divide-paper-dark-line">
+                        {Object.entries(metrics.statusCodes).sort((a, b) => b[1] - a[1]).map(([code, count]) => (
+                          <div key={code} className="flex justify-between items-center py-1.5">
+                            <span className="text-xs font-mono font-bold text-ink dark:text-paper">{code}</span>
+                            <span className="text-[11px] text-ink-muted dark:text-ink-faint font-sans">{count}</span>
                           </div>
-                        );
-                      })}
+                        ))}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Top Endpoints */}
-                  <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-5">
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
-                      Top Endpoints
-                      <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-500/10 text-blue-600 uppercase">{metrics.topEndpoints.length} tracked</span>
-                    </h3>
-                    <div className="space-y-1">
+                  <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card border-l-0 md:border-l-0">
+                    <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+                      <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">Top Endpoints</h3>
+                    </div>
+                    <div className="divide-y divide-paper-line dark:divide-paper-dark-line">
                       {metrics.topEndpoints.map((ep, i) => (
-                        <div key={i} className="flex justify-between items-center py-2 border-b border-[#eee] dark:border-[#2a2a2a] last:border-0">
+                        <div key={i} className="flex justify-between items-center px-5 py-3">
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-gray-400 w-5">#{i + 1}</span>
-                            <code className="text-[11px] text-gray-700 dark:text-gray-300 font-medium bg-gray-50 dark:bg-white/5 px-2 py-0.5 rounded">{ep.endpoint}</code>
+                            <span className="text-[10px] font-bold text-ink-faint w-5 font-sans">#{i + 1}</span>
+                            <code className="text-[11px] text-ink dark:text-paper font-sans">{ep.endpoint}</code>
                           </div>
-                          <span className="text-[11px] font-bold text-blue-600">{ep.count}x</span>
+                          <span className="text-[11px] font-bold text-ink-muted dark:text-ink-faint font-sans">{ep.count}x</span>
                         </div>
                       ))}
                     </div>
@@ -441,8 +710,8 @@ const AdminDashboard = () => {
                 </div>
 
                 <div className="text-right mt-4">
-                  <button onClick={loadMetrics} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 rounded-lg transition-colors ml-auto">
-                    <RefreshCw size={12} /> Refresh Metrics
+                  <button onClick={loadMetrics} className="text-xs font-medium uppercase tracking-wider text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-colors font-sans">
+                    Refresh Metrics
                   </button>
                 </div>
               </>
@@ -451,35 +720,46 @@ const AdminDashboard = () => {
         )}
 
         {activeTab === 'insights' && (
-          <motion.div key="insights" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-            <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-5">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
-                AI Strategic Insights
-                <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-purple-50 dark:bg-purple-500/10 text-purple-600 uppercase">GPT-4o</span>
-              </h3>
+          <motion.div key="insights" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+            <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
+              <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+                <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">Strategic Insights</h3>
+              </div>
               {insightsLoading ? (
                 <div className="py-10 text-center">
-                  <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                  <p className="text-sm text-gray-500">Generating insights...</p>
+                  <div className="w-6 h-6 border-2 border-ink border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                  <p className="text-xs text-ink-faint font-sans uppercase tracking-wider">Generating insights</p>
                 </div>
               ) : insights ? (
-                <div className="space-y-4">
-                  <div className="p-4 rounded-xl bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-500/5 dark:to-orange-500/5 border border-red-200 dark:border-red-500/15">
-                    <div className="text-[10px] font-bold text-red-500 uppercase tracking-wide mb-1.5">Risk Assessment</div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{insights.risk}</p>
+                <div className="divide-y divide-paper-line dark:divide-paper-dark-line">
+                  <div className="px-5 py-4 border-l-3 border-red-600">
+                    <div className="text-[10px] font-bold text-red-700 dark:text-red-400 uppercase tracking-widest mb-1.5 font-sans">Risk Assessment</div>
+                    <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed font-sans">{insights.risk}</p>
                   </div>
-                  <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-cyan-50 dark:from-emerald-500/5 dark:to-cyan-500/5 border border-emerald-200 dark:border-emerald-500/15">
-                    <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-wide mb-1.5">Opportunity</div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{insights.opportunity}</p>
+                  <div className="px-5 py-4 border-l-3 border-green-600">
+                    <div className="text-[10px] font-bold text-green-700 dark:text-green-400 uppercase tracking-widest mb-1.5 font-sans">Opportunity</div>
+                    <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed font-sans">{insights.opportunity}</p>
                   </div>
-                  <button onClick={loadInsights} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 rounded-lg transition-colors">
-                    <RefreshCw size={12} /> Regenerate Insights
-                  </button>
+                  {insights.trend && (
+                    <div className="px-5 py-3 flex items-center gap-3">
+                      <span className={`text-[10px] font-bold uppercase tracking-widest font-sans ${
+                        insights.trend === 'Improving' ? 'text-green-600' :
+                        insights.trend === 'Declining' ? 'text-red-600' :
+                        insights.trend === 'Slightly Declining' ? 'text-amber-600' :
+                        'text-ink-muted'
+                      }`}>Trend: {insights.trend}</span>
+                    </div>
+                  )}
+                  <div className="px-5 py-3">
+                    <button onClick={loadInsights} className="text-xs font-medium uppercase tracking-wider text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-colors font-sans">
+                      Regenerate Insights
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="py-8 text-center">
-                  <p className="text-sm text-gray-500 mb-3">Click to generate AI-powered strategic insights from recent news data</p>
-                  <button onClick={loadInsights} className="px-4 py-2 text-xs font-medium bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors">
+                  <p className="text-xs text-ink-faint mb-3 font-sans">Data-driven insights from article sentiment analysis</p>
+                  <button onClick={loadInsights} className="px-5 py-2.5 bg-ink text-paper text-xs font-semibold uppercase tracking-wider hover:bg-accent transition-colors font-sans">
                     Generate Insights
                   </button>
                 </div>

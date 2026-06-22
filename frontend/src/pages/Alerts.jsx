@@ -110,8 +110,9 @@ const Alerts = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-2 border-accent border-t-transparent rounded-full" />
+      <div className="flex flex-col items-center justify-center h-64 gap-3">
+        <p className="text-ink-muted dark:text-paper-dark-muted font-display text-sm tracking-wide uppercase">Loading alerts…</p>
+        <div className="w-16 editorial-rule" />
       </div>
     );
   }
@@ -130,8 +131,9 @@ const Alerts = () => {
         className="flex items-center justify-between"
       >
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Alerts</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Get notified when news matches your criteria</p>
+          <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">Alerts</h1>
+          <div className="mt-2 editorial-rule w-24" />
+          <p className="text-sm text-ink-muted dark:text-paper-dark-muted mt-2">Get notified when news matches your criteria</p>
         </div>
         <motion.button
           whileHover={{ scale: 1.02 }}
@@ -151,7 +153,7 @@ const Alerts = () => {
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-12 text-center"
+          className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card p-12 text-center"
         >
           <motion.div
             animate={{ y: [0, -5, 0] }}
@@ -162,8 +164,8 @@ const Alerts = () => {
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
             </svg>
           </motion.div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No alerts yet</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Create your first alert to get notified about news sentiment changes</p>
+          <h3 className="text-lg font-semibold text-ink dark:text-paper font-display mb-2">No alerts yet</h3>
+          <p className="text-sm text-ink-muted dark:text-paper-dark-muted">Create your first alert to get notified about news sentiment changes</p>
         </motion.div>
       ) : (
         <div className="space-y-3">
@@ -176,7 +178,7 @@ const Alerts = () => {
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ delay: i * 0.05 }}
                 whileHover={{ y: -2, scale: 1.005 }}
-                className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-5 hover:shadow-lg transition-shadow"
+                className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card p-5"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
@@ -197,7 +199,7 @@ const Alerts = () => {
                       }`}>
                         {alert.conditions?.sentiment || 'any'} sentiment
                       </span>
-                      <span className="text-xs text-gray-400">≥{Math.round((alert.conditions?.threshold || 0.7) * 100)}%</span>
+                      <span className="text-xs text-ink-muted dark:text-paper-dark-muted">≥{Math.round((alert.conditions?.threshold || 0.7) * 100)}%</span>
                     </div>
 
                     {(alert.conditions?.topics?.length > 0 || alert.conditions?.sources?.length > 0) && (
@@ -228,7 +230,7 @@ const Alerts = () => {
                     {/* Test */}
                     <button
                       onClick={() => handleTest(alert._id)}
-                      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 hover:text-accent transition-colors"
+                      className="p-2 hover:text-accent text-ink-muted dark:text-paper-dark-muted transition-colors"
                       title="Send test"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -239,7 +241,7 @@ const Alerts = () => {
                     {/* Edit */}
                     <button
                       onClick={() => openEdit(alert)}
-                      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors"
+                      className="p-2 text-ink-muted dark:text-paper-dark-muted hover:text-ink dark:hover:text-paper transition-colors"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -249,7 +251,7 @@ const Alerts = () => {
                     {/* Delete */}
                     <button
                       onClick={() => handleDelete(alert._id)}
-                      className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-colors"
+                      className="p-2 text-ink-muted dark:text-paper-dark-muted hover:text-red-500 transition-colors"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -281,15 +283,16 @@ const Alerts = () => {
               className="fixed inset-0 z-50 flex items-center justify-center p-4"
               onClick={(e) => e.target === e.currentTarget && closeModal()}
             >
-              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-6 w-full max-w-md shadow-xl">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+              <div className="border-2 border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card p-6 w-full max-w-md">
+                <h2 className="text-xl font-bold text-ink dark:text-paper font-display mb-1">
                   {editingAlert ? 'Edit Alert' : 'Create Alert'}
                 </h2>
+                <div className="editorial-rule mb-4" />
 
                 <div className="space-y-4">
                   {/* Type */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">Alert Type</label>
+                    <label className="block text-xs font-medium text-ink-muted dark:text-paper-dark-muted uppercase tracking-wider mb-1.5">Alert Type</label>
                     <div className="flex gap-2">
                       {['email', 'telegram'].map(t => (
                         <button
@@ -297,8 +300,8 @@ const Alerts = () => {
                           onClick={() => setForm(f => ({ ...f, type: t }))}
                           className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${
                             form.type === t
-                              ? 'bg-accent text-white'
-                              : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
+                              ? 'bg-ink text-paper dark:bg-paper dark:text-ink'
+                              : 'border border-paper-line dark:border-paper-dark-line text-ink-muted dark:text-paper-dark-muted hover:bg-paper-line/30 dark:hover:bg-paper-dark-line/30'
                           }`}
                         >
                           {t === 'email' ? '📧 Email' : '✈️ Telegram'}
@@ -310,24 +313,24 @@ const Alerts = () => {
                   {/* Telegram Chat ID */}
                   {form.type === 'telegram' && (
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">Telegram Chat ID</label>
+                      <label className="block text-xs font-medium text-ink-muted dark:text-paper-dark-muted uppercase tracking-wider mb-1.5">Telegram Chat ID</label>
                       <input
                         type="text"
                         value={form.telegramChatId}
                         onChange={(e) => setForm(f => ({ ...f, telegramChatId: e.target.value }))}
                         placeholder="e.g. 123456789"
-                        className="w-full px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-[#eee] dark:border-[#2a2a2a] text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent/30"
+                        className="w-full px-3 py-2.5 bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line text-sm text-ink dark:text-paper placeholder-ink-muted/50 dark:placeholder-paper-dark-muted/50 focus:outline-none focus:border-ink dark:focus:border-paper"
                       />
                     </div>
                   )}
 
                   {/* Sentiment */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">Sentiment Filter</label>
+                    <label className="block text-xs font-medium text-ink-muted dark:text-paper-dark-muted uppercase tracking-wider mb-1.5">Sentiment Filter</label>
                     <select
                       value={form.sentiment}
                       onChange={(e) => setForm(f => ({ ...f, sentiment: e.target.value }))}
-                      className="w-full px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-[#eee] dark:border-[#2a2a2a] text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent/30"
+                      className="w-full px-3 py-2.5 bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line text-sm text-ink dark:text-paper focus:outline-none focus:border-ink dark:focus:border-paper"
                     >
                       <option value="any">Any sentiment</option>
                       <option value="negative">Negative only</option>
@@ -337,7 +340,7 @@ const Alerts = () => {
 
                   {/* Threshold */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                    <label className="block text-xs font-medium text-ink-muted dark:text-paper-dark-muted uppercase tracking-wider mb-1.5">
                       Confidence Threshold: {Math.round(form.threshold * 100)}%
                     </label>
                     <input
@@ -353,25 +356,25 @@ const Alerts = () => {
 
                   {/* Topics */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">Topics (comma-separated)</label>
+                    <label className="block text-xs font-medium text-ink-muted dark:text-paper-dark-muted uppercase tracking-wider mb-1.5">Topics (comma-separated)</label>
                     <input
                       type="text"
                       value={form.topics}
                       onChange={(e) => setForm(f => ({ ...f, topics: e.target.value }))}
                       placeholder="e.g. economy, politics, education"
-                      className="w-full px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-[#eee] dark:border-[#2a2a2a] text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent/30"
+                      className="w-full px-3 py-2.5 bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line text-sm text-ink dark:text-paper placeholder-ink-muted/50 dark:placeholder-paper-dark-muted/50 focus:outline-none focus:border-ink dark:focus:border-paper"
                     />
                   </div>
 
                   {/* Sources */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">Sources (comma-separated)</label>
+                    <label className="block text-xs font-medium text-ink-muted dark:text-paper-dark-muted uppercase tracking-wider mb-1.5">Sources (comma-separated)</label>
                     <input
                       type="text"
                       value={form.sources}
                       onChange={(e) => setForm(f => ({ ...f, sources: e.target.value }))}
                       placeholder="e.g. The Star, Malaysiakini"
-                      className="w-full px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-[#eee] dark:border-[#2a2a2a] text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent/30"
+                      className="w-full px-3 py-2.5 bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line text-sm text-ink dark:text-paper placeholder-ink-muted/50 dark:placeholder-paper-dark-muted/50 focus:outline-none focus:border-ink dark:focus:border-paper"
                     />
                   </div>
                 </div>
@@ -380,13 +383,13 @@ const Alerts = () => {
                 <div className="flex gap-3 mt-6">
                   <button
                     onClick={closeModal}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+                    className="flex-1 py-2.5 text-sm font-medium border border-paper-line dark:border-paper-dark-line text-ink-muted dark:text-paper-dark-muted hover:bg-paper-line/30 dark:hover:bg-paper-dark-line/30 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleCreate}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-accent text-white hover:bg-accent/90 transition-colors"
+                    className="flex-1 py-2.5 text-sm font-medium bg-ink text-paper dark:bg-paper dark:text-ink hover:opacity-90 transition-colors"
                   >
                     {editingAlert ? 'Update' : 'Create'}
                   </button>

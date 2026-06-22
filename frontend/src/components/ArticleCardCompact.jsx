@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import React, { useState } from 'react';
 import { ExternalLink, Bookmark, BookmarkCheck } from 'lucide-react';
 import SentimentBadge from './SentimentBadge';
@@ -130,6 +131,18 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
                   <Bookmark className="w-4 h-4" />
                 )}
               </button>
+
+              {/* View Details */}
+              <Link
+                to={'/articles/' + (article._id || article.id)}
+                onClick={(e) => e.stopPropagation()}
+                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition-colors"
+                title="View full analysis"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                </svg>
+              </Link>
 
               {/* Open External */}
               <button

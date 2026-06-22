@@ -31,6 +31,7 @@ const Alerts = lazy(() => import('./pages/Alerts'));
 const SourceCredibility = lazy(() => import('./pages/SourceCredibility'));
 const ApiDocs = lazy(() => import('./pages/ApiDocs'));
 const SharedArticle = lazy(() => import('./pages/SharedArticle'));
+const ArticleDetail = lazy(() => import('./pages/ArticleDetail'));
 
 // Use case pages (lazy loaded)
 const ResearchersPage = lazy(() => import('./pages/usecases/ResearchersPage'));
@@ -59,6 +60,10 @@ import PageTransition from './components/PageTransition';
 import { ArticleAnalysisProvider } from './context/ArticleAnalysisContext';
 import OfflineBanner from './components/OfflineBanner';
 import Layout from './components/Layout';
+import useKeyboardShortcuts from './hooks/useKeyboardShortcuts';
+import KeyboardShortcutsModal from './components/KeyboardShortcutsModal';
+import { FreshnessProvider } from './context/FreshnessContext';
+import OnboardingTour from './components/OnboardingTour';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
@@ -126,7 +131,7 @@ const Sidebar = ({ isOpen, isCollapsed, onClose }) => {
         </Link>
 
         <div className="sidebar-section">
-          <div className="sidebar-section-label">Analytics</div>
+          <div className="sidebar-section-label">{t('analyticsSection')}</div>
           <nav className="sidebar-nav">
             <SideLink to="/dashboard" onClick={onClose} icon={
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -153,23 +158,23 @@ const Sidebar = ({ isOpen, isCollapsed, onClose }) => {
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49"/><path d="M7.76 16.24a6 6 0 0 1 0-8.49"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 19.07a10 10 0 0 1 0-14.14"/>
               </svg>
-            }>Live Feed</SideLink>
+            }>{t('liveFeed')}</SideLink>
             <SideLink to="/timeline" onClick={onClose} icon={
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
               </svg>
-            }>Timeline</SideLink>
+            }>{t('timeline')}</SideLink>
             <SideLink to="/entities" onClick={onClose} icon={
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3"/><circle cx="4" cy="6" r="2"/><circle cx="20" cy="6" r="2"/><circle cx="4" cy="18" r="2"/><circle cx="20" cy="18" r="2"/>
                 <line x1="6" y1="7" x2="10" y2="10"/><line x1="18" y1="7" x2="14" y2="10"/><line x1="6" y1="17" x2="10" y2="14"/><line x1="18" y1="17" x2="14" y2="14"/>
               </svg>
-            }>Entities</SideLink>
+            }>{t('entities')}</SideLink>
           </nav>
         </div>
 
         <div className="sidebar-section">
-          <div className="sidebar-section-label">System</div>
+          <div className="sidebar-section-label">{t('systemSection')}</div>
           <nav className="sidebar-nav">
             {user?.role === 'admin' && (
               <SideLink to="/admin" onClick={onClose} icon={
@@ -284,7 +289,7 @@ const BottomNav = () => {
         <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
       </svg>
     )},
-    { path: '/entities', label: 'Entities', icon: (
+    { path: '/entities', label: t('entities'), icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3"/><circle cx="4" cy="6" r="2"/><circle cx="20" cy="6" r="2"/><circle cx="4" cy="18" r="2"/><circle cx="20" cy="18" r="2"/>
         <line x1="6" y1="7" x2="10" y2="10"/><line x1="18" y1="7" x2="14" y2="10"/><line x1="6" y1="17" x2="10" y2="14"/><line x1="18" y1="17" x2="14" y2="14"/>
@@ -493,6 +498,7 @@ const AppInner = () => (
     <Route path="/heatmap" element={<ProtectedRoute><Layout><Heatmap /></Layout></ProtectedRoute>} />
     <Route path="/categories" element={<ProtectedRoute><Layout><Categories /></Layout></ProtectedRoute>} />
     <Route path="/forecast" element={<ProtectedRoute><Layout><Forecast /></Layout></ProtectedRoute>} />
+    <Route path="/articles/:id" element={<ProtectedRoute><Layout><ArticleDetail /></Layout></ProtectedRoute>} />
     
     {/* Public shared article page (no auth, no layout) */}
     <Route path="/shared/:id" element={<SharedArticle />} />
@@ -520,18 +526,38 @@ const AppInner = () => (
   </Suspense>
 );
 
+const AppRoutes = () => {
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  useKeyboardShortcuts({
+    onShowHelp: () => setShowShortcuts(true),
+    onCloseModals: () => setShowShortcuts(false),
+  });
+
+  return (
+    <>
+      <AppInner />
+      <OnboardingTour />
+      <KeyboardShortcutsModal
+        isOpen={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+      />
+    </>
+  );
+};
+
 const App = () => (
   <ErrorBoundary>
   <QueryClientProvider client={queryClient}>
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <ThemeProvider>
-        <LanguageProvider>
+        <FreshnessProvider><LanguageProvider>
           <AuthProvider>
             <SocketProvider>
               <ArticleAnalysisProvider>
                 <Router>
-                  <AppInner />
-                  <Toaster 
+                  <AppRoutes />
+                  <Toaster
                     position={window.innerWidth <= 768 ? 'bottom-center' : 'top-center'}
                     containerStyle={window.innerWidth <= 768 ? { bottom: 80 } : { top: 10 }}
                     toastOptions={{
@@ -551,7 +577,7 @@ const App = () => (
               </ArticleAnalysisProvider>
             </SocketProvider>
           </AuthProvider>
-        </LanguageProvider>
+        </LanguageProvider></FreshnessProvider>
       </ThemeProvider>
     </GoogleOAuthProvider>
   </QueryClientProvider>

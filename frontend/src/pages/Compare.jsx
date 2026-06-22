@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import toast from 'react-hot-toast';
 import api from '../services/api';
@@ -46,7 +45,6 @@ const Compare = () => {
     }
   };
 
-  // Prepare radar data
   const radarData = results ? [
     { dimension: 'Positive %', ...Object.fromEntries(results.map(r => [r.topic, r.positivePercent])) },
     { dimension: 'Negative %', ...Object.fromEntries(results.map(r => [r.topic, r.negativePercent])) },
@@ -55,7 +53,6 @@ const Compare = () => {
     { dimension: 'Avg Score', ...Object.fromEntries(results.map(r => [r.topic, Math.round(r.avgSentiment * 100)])) },
   ] : [];
 
-  // Bar chart data
   const barData = results ? results.map(r => ({
     topic: r.topic,
     Positive: r.positivePercent,
@@ -63,44 +60,43 @@ const Compare = () => {
     Neutral: r.neutralPercent,
   })) : [];
 
-  // Winner
   const winner = results ? results.reduce((best, r) => r.positivePercent > best.positivePercent ? r : best, results[0]) : null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="max-w-5xl mx-auto space-y-6"
-    >
+    <div className="max-w-5xl mx-auto">
       {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Comparative Analysis</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Compare sentiment across multiple topics</p>
-      </motion.div>
+      <div className="mb-6">
+        <h1 className="font-display text-3xl font-bold text-ink dark:text-paper tracking-tight">
+          Comparative Analysis
+        </h1>
+        <p className="text-sm text-ink-muted dark:text-ink-faint mt-1 font-sans">
+          Compare sentiment across multiple topics
+        </p>
+      </div>
 
       {/* Input Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-6"
-      >
-        <div className="space-y-3">
+      <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card mb-6">
+        <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+          <h2 className="text-xs font-semibold text-ink-muted dark:text-ink-faint uppercase tracking-widest font-sans">
+            Topics to Compare
+          </h2>
+        </div>
+        <div className="p-5 space-y-3">
           {topics.map((topic, idx) => (
             <div key={idx} className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[idx] }} />
+              <div className="w-2 h-2 shrink-0" style={{ backgroundColor: COLORS[idx] }} />
               <input
                 type="text"
                 value={topic}
                 onChange={(e) => updateTopic(idx, e.target.value)}
                 placeholder={`Topic ${idx + 1} (e.g. economy, politics)`}
-                className="flex-1 px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-[#eee] dark:border-[#2a2a2a] text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent/30"
+                className="flex-1 px-3 py-2 border border-paper-line dark:border-paper-dark-line bg-white dark:bg-white/5 text-sm text-ink dark:text-paper placeholder-ink-faint focus:outline-none focus:border-ink dark:focus:border-paper font-sans"
                 onKeyDown={(e) => e.key === 'Enter' && handleCompare()}
               />
               {topics.length > 2 && (
                 <button
                   onClick={() => removeTopic(idx)}
-                  className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-colors"
+                  className="p-2 text-ink-faint hover:text-red-600 transition-colors"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -110,21 +106,19 @@ const Compare = () => {
             </div>
           ))}
         </div>
-
-        <div className="flex items-center gap-3 mt-4">
+        <div className="px-5 py-3 border-t border-paper-line dark:border-paper-dark-line flex flex-wrap items-center gap-3">
           {topics.length < 5 && (
             <button
               onClick={addTopic}
-              className="px-3 py-2 rounded-xl text-xs font-medium bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+              className="px-3 py-1.5 text-xs font-medium uppercase tracking-wider text-ink-muted dark:text-ink-faint border border-paper-line dark:border-paper-dark-line hover:text-ink dark:hover:text-paper transition-colors font-sans"
             >
               + Add Topic
             </button>
           )}
-
           <select
             value={days}
             onChange={(e) => setDays(parseInt(e.target.value))}
-            className="px-3 py-2 rounded-xl bg-gray-50 dark:bg-white/5 border border-[#eee] dark:border-[#2a2a2a] text-xs text-gray-700 dark:text-gray-300 focus:outline-none"
+            className="px-3 py-1.5 border border-paper-line dark:border-paper-dark-line bg-white dark:bg-white/5 text-xs text-ink dark:text-paper focus:outline-none font-sans"
           >
             <option value={7}>Last 7 days</option>
             <option value={14}>Last 14 days</option>
@@ -132,57 +126,48 @@ const Compare = () => {
             <option value={60}>Last 60 days</option>
             <option value={90}>Last 90 days</option>
           </select>
-
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+          <button
             onClick={handleCompare}
             disabled={loading}
-            className="ml-auto px-5 py-2.5 bg-accent text-white rounded-xl text-sm font-medium hover:bg-accent/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+            className="ml-auto px-5 py-2 bg-ink dark:bg-paper text-paper dark:text-ink text-xs font-semibold uppercase tracking-wider hover:opacity-80 transition-opacity disabled:opacity-40 font-sans flex items-center gap-2"
           >
             {loading ? (
-              <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+              <div className="w-3.5 h-3.5 border-2 border-paper dark:border-ink border-t-transparent rounded-full animate-spin" />
             ) : (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M16 3h5v5"/><path d="M8 3H3v5"/><path d="M21 16v5h-5"/><path d="M3 16v5h5"/><path d="M4 12h16"/>
               </svg>
             )}
             Compare
-          </motion.button>
+          </button>
         </div>
-      </motion.div>
+      </div>
 
       {/* Results */}
-      <AnimatePresence>
-        {results && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="space-y-6"
-          >
-            {/* Winner Banner */}
-            {winner && winner.articleCount > 0 && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-500/10 dark:to-emerald-500/10 border border-green-200 dark:border-green-500/20 rounded-2xl p-5"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">🏆</span>
-                  <div>
-                    <p className="text-sm font-semibold text-green-800 dark:text-green-300">Most Positive Topic</p>
-                    <p className="text-lg font-bold text-green-900 dark:text-green-200">{winner.topic} — {winner.positivePercent}% positive</p>
-                  </div>
-                </div>
-              </motion.div>
-            )}
+      {results && (
+        <div className="space-y-6">
+          {/* Winner Banner */}
+          {winner && winner.articleCount > 0 && (
+            <div className="border-l-4 border-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 px-5 py-4">
+              <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider font-sans mb-1">
+                Most Positive Topic
+              </p>
+              <p className="text-lg font-bold text-emerald-900 dark:text-emerald-200 font-display">
+                {winner.topic} &mdash; {winner.positivePercent}% positive
+              </p>
+            </div>
+          )}
 
-            {/* Charts Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Radar Chart */}
-              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-5">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Multi-Dimension Comparison</h3>
+          {/* Charts Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            {/* Radar Chart */}
+            <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
+              <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+                <h3 className="text-xs font-semibold text-ink-muted dark:text-ink-faint uppercase tracking-widest font-sans">
+                  Multi-Dimension Comparison
+                </h3>
+              </div>
+              <div className="p-4">
                 <ResponsiveContainer width="100%" height={300}>
                   <RadarChart data={radarData}>
                     <PolarGrid stroke="#e5e7eb" />
@@ -195,84 +180,102 @@ const Compare = () => {
                         dataKey={r.topic}
                         stroke={COLORS[i]}
                         fill={COLORS[i]}
-                        fillOpacity={0.15}
+                        fillOpacity={0.1}
                         strokeWidth={2}
+                        isAnimationActive={true}
+                        animationDuration={1500}
+                        animationEasing="ease-out"
                       />
                     ))}
                     <Legend wrapperStyle={{ fontSize: 11 }} />
                   </RadarChart>
                 </ResponsiveContainer>
               </div>
+            </div>
 
-              {/* Bar Chart */}
-              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-5">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Sentiment Distribution</h3>
+            {/* Bar Chart */}
+            <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
+              <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+                <h3 className="text-xs font-semibold text-ink-muted dark:text-ink-faint uppercase tracking-widest font-sans">
+                  Sentiment Distribution
+                </h3>
+              </div>
+              <div className="p-4">
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={barData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                     <XAxis dataKey="topic" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} unit="%" />
-                    <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #eee', fontSize: 12 }} />
+                    <Tooltip contentStyle={{ borderRadius: 0, border: '1px solid #e5e7eb', fontSize: 12 }} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Bar dataKey="Positive" fill="#10b981" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="Neutral" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="Negative" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Positive" fill="#10b981" isAnimationActive={true} animationDuration={1500} animationEasing="ease-out" />
+                    <Bar dataKey="Neutral" fill="#f59e0b" isAnimationActive={true} animationDuration={1500} animationEasing="ease-out" />
+                    <Bar dataKey="Negative" fill="#ef4444" isAnimationActive={true} animationDuration={1500} animationEasing="ease-out" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
+          </div>
 
-            {/* Stats Table */}
-            <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl overflow-hidden">
-              <div className="p-5 border-b border-[#eee] dark:border-[#2a2a2a]">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Detailed Statistics</h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-[#eee] dark:border-[#2a2a2a]">
-                      <th className="text-left px-5 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">Topic</th>
-                      <th className="text-center px-3 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">Articles</th>
-                      <th className="text-center px-3 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">Avg Score</th>
-                      <th className="text-center px-3 py-3 text-xs font-medium text-green-600">Positive</th>
-                      <th className="text-center px-3 py-3 text-xs font-medium text-yellow-600">Neutral</th>
-                      <th className="text-center px-3 py-3 text-xs font-medium text-red-600">Negative</th>
-                      <th className="text-center px-3 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">Trend</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {results.map((r, i) => (
-                      <tr key={r.topic} className="border-b border-[#eee] dark:border-[#2a2a2a] last:border-0">
-                        <td className="px-5 py-3 font-medium text-gray-900 dark:text-white">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[i] }} />
-                            {r.topic}
-                          </div>
-                        </td>
-                        <td className="text-center px-3 py-3 text-gray-600 dark:text-gray-400">{r.articleCount}</td>
-                        <td className="text-center px-3 py-3 text-gray-600 dark:text-gray-400">{r.avgSentiment}</td>
-                        <td className="text-center px-3 py-3 text-green-600 font-medium">{r.positivePercent}%</td>
-                        <td className="text-center px-3 py-3 text-yellow-600 font-medium">{r.neutralPercent}%</td>
-                        <td className="text-center px-3 py-3 text-red-600 font-medium">{r.negativePercent}%</td>
-                        <td className="text-center px-3 py-3">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium ${
-                            r.trend === 'improving' ? 'bg-green-50 dark:bg-green-500/10 text-green-600' :
-                            r.trend === 'declining' ? 'bg-red-50 dark:bg-red-500/10 text-red-600' :
-                            'bg-gray-100 dark:bg-white/5 text-gray-500'
-                          }`}>
-                            {r.trend === 'improving' ? '↑' : r.trend === 'declining' ? '↓' : '→'} {r.trend}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+          {/* Stats Table */}
+          <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
+            <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+              <h3 className="text-xs font-semibold text-ink-muted dark:text-ink-faint uppercase tracking-widest font-sans">
+                Detailed Statistics
+              </h3>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-paper-line dark:border-paper-dark-line">
+                    <th className="text-left px-5 py-3 text-[10px] font-semibold text-ink-muted dark:text-ink-faint uppercase tracking-widest font-sans">Topic</th>
+                    <th className="text-center px-3 py-3 text-[10px] font-semibold text-ink-muted dark:text-ink-faint uppercase tracking-widest font-sans">Articles</th>
+                    <th className="text-center px-3 py-3 text-[10px] font-semibold text-ink-muted dark:text-ink-faint uppercase tracking-widest font-sans">Avg Score</th>
+                    <th className="text-center px-3 py-3 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest font-sans">Positive</th>
+                    <th className="text-center px-3 py-3 text-[10px] font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-widest font-sans">Neutral</th>
+                    <th className="text-center px-3 py-3 text-[10px] font-semibold text-red-700 dark:text-red-400 uppercase tracking-widest font-sans">Negative</th>
+                    <th className="text-center px-3 py-3 text-[10px] font-semibold text-ink-muted dark:text-ink-faint uppercase tracking-widest font-sans">Trend</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {results.map((r, i) => (
+                    <tr key={r.topic} className="border-b border-paper-line dark:border-paper-dark-line last:border-0">
+                      <td className="px-5 py-3 font-semibold text-ink dark:text-paper font-sans">
+                        <span className="inline-block w-2 h-2 mr-2" style={{ backgroundColor: COLORS[i] }} />
+                        {r.topic}
+                      </td>
+                      <td className="text-center px-3 py-3 text-ink-muted dark:text-ink-faint font-sans">{r.articleCount}</td>
+                      <td className="text-center px-3 py-3 text-ink-muted dark:text-ink-faint font-sans">{r.avgSentiment}</td>
+                      <td className="text-center px-3 py-3 text-emerald-700 dark:text-emerald-400 font-semibold font-sans">{r.positivePercent}%</td>
+                      <td className="text-center px-3 py-3 text-amber-700 dark:text-amber-400 font-semibold font-sans">{r.neutralPercent}%</td>
+                      <td className="text-center px-3 py-3 text-red-700 dark:text-red-400 font-semibold font-sans">{r.negativePercent}%</td>
+                      <td className="text-center px-3 py-3">
+                        <span className={`text-xs font-semibold uppercase tracking-wider font-sans ${
+                          r.trend === 'improving' ? 'text-emerald-700 dark:text-emerald-400' :
+                          r.trend === 'declining' ? 'text-red-700 dark:text-red-400' :
+                          'text-ink-muted dark:text-ink-faint'
+                        }`}>
+                          {r.trend === 'improving' ? '\u2191' : r.trend === 'declining' ? '\u2193' : '\u2192'} {r.trend}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!results && !loading && (
+        <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card text-center py-16">
+          <p className="text-sm text-ink-muted dark:text-ink-faint font-sans">
+            Enter at least 2 topics above and click Compare to see results.
+          </p>
+        </div>
+      )}
+    </div>
   );
 };
 

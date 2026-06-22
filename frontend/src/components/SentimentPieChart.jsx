@@ -29,7 +29,7 @@ const CustomTooltip = ({ active, payload }) => {
 };
 
 const SentimentPieChart = ({ distribution, onSegmentClick, activeFilter }) => {
-  const data = Object.entries(distribution).filter(([, v]) => v > 0).map(([name, value]) => ({ name, value }));
+  const data = Object.entries(distribution || {}).filter(([, v]) => v > 0).map(([name, value]) => ({ name, value }));
 
   return (
     <div className="chart-panel">

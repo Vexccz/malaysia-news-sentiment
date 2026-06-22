@@ -18,10 +18,11 @@ import AnalyzingOverlay from '../components/AnalyzingOverlay';
 import usePullToRefresh from '../hooks/usePullToRefresh';
 import useSwipeTabs from '../hooks/useSwipeTabs';
 import { hapticImpact } from '../utils/haptics';
-import { Search, Clock, ArrowLeft, Sparkles, FileDown, Printer, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Brain, Download, Settings2, Globe } from 'lucide-react';
+import { Search, Clock, ArrowLeft, Sparkles, FileDown, Printer, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Brain, Download, Settings2, Globe, GripVertical } from 'lucide-react';
 import DashboardCustomizer from '../components/DashboardCustomizer';
 import EmptyState from '../components/EmptyState';
 import DashboardSummary from '../components/DashboardSummary';
+import OnboardingTour, { useOnboardingTour } from '../components/OnboardingTour';
 
 // Lazy load chart components
 const SentimentBarChart = lazy(() => import('../components/SentimentBarChart'));
@@ -93,7 +94,6 @@ const DashboardSkeleton = () => (
 );
 
 import SourceCredibility from '../components/SourceCredibility';
-import { List as VirtualList } from 'react-window';
 import ExportPPT from '../components/ExportPPT';
 import { InlineErrorBoundary } from '../components/ErrorBoundary';
 import { Skeleton } from 'boneyard-js/react';
@@ -121,14 +121,54 @@ const calcDistribution = (arts) => ({
 });
 
 const TIME_OPTIONS = [
-  { key: '',    label: 'All Time' },
-  { key: '24h', label: 'Last 24H' },
-  { key: '7d',  label: 'Last 7D' },
-  { key: '30d', label: 'Last 30D' },
+  { key: '',    labelKey: 'allTime' },
+  { key: '24h', labelKey: 'last24h' },
+  { key: '7d',  labelKey: 'last7d' },
+  { key: '30d', labelKey: 'last30d' },
 ];
 
 // Consistent card style
-const CARD = 'bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl dark:shadow-[0_0_15px_rgba(59,130,246,0.03)]';
+const CARD = 'border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card';
+
+// Widget layout defaults
+const DEFAULT_VISIBILITY = { kpi: true, charts: true, articles: true, ai: true, wordcloud: true, sources: true };
+const DEFAULT_WIDGET_ORDER = ['kpi', 'charts', 'ai', 'articles', 'wordcloud', 'sources'];
+const WIDGET_ID_MAP = {
+  'sentiment-overview': 'kpi',
+  'recent-articles': 'articles',
+  'source-stats': 'sources',
+  'ai-insights': 'ai',
+};
+
+/**
+ * Trend badge – shows % change vs previous period.
+ * `pct` is the raw percentage change (e.g. 12, -5, 0).
+ * `inverted` inverts the arrow colour logic (used for Negative sentiment
+ * where a decrease is actually good).
+ */
+const TrendBadge = ({ pct, inverted = false }) => {
+  if (pct === 0 || pct === undefined || pct === null) {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 mt-1">
+        → 0% vs last week
+      </span>
+    );
+  }
+  const isUp = pct > 0;
+  // For "normal" metrics up = green, down = red.
+  // For inverted metrics (negative sentiment) flip that.
+  const good = inverted ? !isUp : isUp;
+  const colorClass = good
+    ? 'text-emerald-600 dark:text-emerald-400'
+    : 'text-red-500 dark:text-red-400';
+  const arrow = isUp ? '↑' : '↓';
+
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs font-semibold ${colorClass} mt-1`}>
+      {arrow}{Math.abs(pct)}% vs last week
+    </span>
+  );
+};
 
 const Dashboard = () => {
   const { user, toggleBookmark } = useAuth();
@@ -150,6 +190,29 @@ const Dashboard = () => {
   const [dashboardLayout, setDashboardLayout] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [showFabTooltip, setShowFabTooltip] = useState(false);
+
+  // Widget layout state (persisted to localStorage)
+  const [widgetVisibility, setWidgetVisibility] = useState(() => {
+    try {
+      const saved = localStorage.getItem('dashboard-widget-visibility');
+      return saved ? { ...DEFAULT_VISIBILITY, ...JSON.parse(saved) } : DEFAULT_VISIBILITY;
+    } catch { return DEFAULT_VISIBILITY; }
+  });
+  const [layoutOrder, setLayoutOrder] = useState(() => {
+    try {
+      const saved = localStorage.getItem('dashboard-layout-order');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const merged = [...new Set([...parsed, ...DEFAULT_WIDGET_ORDER])];
+        return merged.filter(k => DEFAULT_WIDGET_ORDER.includes(k));
+      }
+      return DEFAULT_WIDGET_ORDER;
+    } catch { return DEFAULT_WIDGET_ORDER; }
+  });
+  const [draggedWidget, setDraggedWidget] = useState(null);
+
+  // Onboarding tour
+  const { key: tourKey, startTour } = useOnboardingTour();
 
   const handleTabSwitch = useCallback((tab) => {
     if (tab === mobileTab) return;
@@ -189,6 +252,14 @@ const Dashboard = () => {
       return () => clearTimeout(timer);
     }
   }, [isMobile]);
+
+  // Persist widget layout to localStorage
+  useEffect(() => {
+    localStorage.setItem('dashboard-widget-visibility', JSON.stringify(widgetVisibility));
+  }, [widgetVisibility]);
+  useEffect(() => {
+    localStorage.setItem('dashboard-layout-order', JSON.stringify(layoutOrder));
+  }, [layoutOrder]);
 
   // Dashboard Init Query (History Mode)
   const { 
@@ -259,6 +330,7 @@ const Dashboard = () => {
   };
   const keywords = dashboardData?.keywords || [];
   const stats = dashboardData?.stats || { total: 0, sentiments: {}, alerts: 0 };
+  const periodComparison = dashboardData?.periodComparison || { total: 0, positive: 0, negative: 0, neutral: 0 };
   const error = manualError || (dashboardError ? (dashboardError.friendlyMessage || 'Could not load analysis history. Please check if the server is running.') : '');
   
   const initLoading = isDashboardLoading && isHistoryView;
@@ -424,7 +496,8 @@ const Dashboard = () => {
       gradient: 'from-blue-500 via-blue-600 to-blue-700',
       sub: 'articles analyzed', 
       hero: true,
-      icon: '📊'
+      icon: '📊',
+      trend: periodComparison.total,
     },
     { 
       label: t('positive'), 
@@ -432,7 +505,8 @@ const Dashboard = () => {
       color: 'text-white', 
       gradient: 'from-emerald-500 via-emerald-600 to-emerald-700',
       sub: `${counts.total ? Math.round(counts.positive / counts.total * 100) : 0}% of total`,
-      icon: '✅'
+      icon: '✅',
+      trend: periodComparison.positive,
     },
     { 
       label: t('negative'), 
@@ -440,7 +514,9 @@ const Dashboard = () => {
       color: 'text-white', 
       gradient: 'from-red-500 via-red-600 to-red-700',
       sub: `${counts.total ? Math.round(counts.negative / counts.total * 100) : 0}% of total`,
-      icon: '⚠️'
+      icon: '⚠️',
+      trend: periodComparison.negative,
+      trendInverted: true,
     },
     { 
       label: t('neutral'), 
@@ -448,7 +524,8 @@ const Dashboard = () => {
       color: 'text-white', 
       gradient: 'from-amber-500 via-amber-600 to-amber-700',
       sub: `${counts.total ? Math.round(counts.neutral / counts.total * 100) : 0}% of total`,
-      icon: '➖'
+      icon: '➖',
+      trend: periodComparison.neutral,
     },
   ];
 
@@ -497,6 +574,63 @@ const Dashboard = () => {
     }
   };
 
+  // Drag-and-drop handlers for widget reordering
+  const handleDragStart = useCallback((e, widgetKey) => {
+    setDraggedWidget(widgetKey);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', widgetKey);
+  }, []);
+
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const handleDrop = useCallback((e, targetKey) => {
+    e.preventDefault();
+    if (!draggedWidget || draggedWidget === targetKey) { setDraggedWidget(null); return; }
+    setLayoutOrder(prev => {
+      const newOrder = [...prev];
+      const fromIdx = newOrder.indexOf(draggedWidget);
+      const toIdx = newOrder.indexOf(targetKey);
+      if (fromIdx === -1 || toIdx === -1) return prev;
+      newOrder.splice(fromIdx, 1);
+      newOrder.splice(toIdx, 0, draggedWidget);
+      return newOrder;
+    });
+    setDraggedWidget(null);
+  }, [draggedWidget]);
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedWidget(null);
+  }, []);
+
+  // Handle customizer save — maps DashboardCustomizer layout to widget states
+  const handleCustomizerSave = useCallback((layout) => {
+    setDashboardLayout(layout);
+    const vis = { ...DEFAULT_VISIBILITY };
+    const order = [];
+    layout.forEach(item => {
+      const key = WIDGET_ID_MAP[item.widgetId];
+      if (key) {
+        vis[key] = item.visible;
+        order.push(key);
+      }
+    });
+    // Add widgets not present in the customizer (charts, wordcloud)
+    DEFAULT_WIDGET_ORDER.forEach(k => { if (!order.includes(k)) order.push(k); });
+    setWidgetVisibility(vis);
+    setLayoutOrder(order.filter(k => DEFAULT_WIDGET_ORDER.includes(k)));
+  }, []);
+
+  // Reset layout to defaults
+  const handleResetLayout = useCallback(() => {
+    setWidgetVisibility(DEFAULT_VISIBILITY);
+    setLayoutOrder(DEFAULT_WIDGET_ORDER);
+    localStorage.removeItem('dashboard-widget-visibility');
+    localStorage.removeItem('dashboard-layout-order');
+  }, []);
+
   const isLoading = initLoading || searchLoading;
 
   // Animation variants - subtle
@@ -533,9 +667,20 @@ const Dashboard = () => {
   };
 
   // Section header component
-  const SectionHeader = ({ title, badge, children }) => (
+  const SectionHeader = ({ title, badge, widgetKey, children }) => (
     <div className="flex items-center justify-between mb-4">
       <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-2">
+        {widgetKey && (
+          <span
+            draggable
+            onDragStart={(e) => handleDragStart(e, widgetKey)}
+            onDragEnd={handleDragEnd}
+            className="cursor-grab active:cursor-grabbing text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors"
+            title="Drag to reorder"
+          >
+            <GripVertical size={14} />
+          </span>
+        )}
         {title}
         {badge !== undefined && (
           <span className="text-[11px] font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded-full normal-case tracking-normal">{badge}</span>
@@ -565,29 +710,45 @@ const Dashboard = () => {
 
       <AnalyzingOverlay progress={analysisProgress} />
 
-      {/* Greeting Header */}
+      {/* Newspaper Masthead */}
       <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-6 flex items-start justify-between"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="mb-8 border-b-2 border-ink dark:border-paper pb-4"
+        data-tour="metrics"
       >
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {user?.name ? `Welcome back, ${user.name.split(' ')[0]}` : 'Dashboard'}
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Malaysia News Sentiment Analysis
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={startTour}
+              className="text-[10px] font-medium uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-colors font-sans border border-ink/15 dark:border-paper/15 px-2 py-0.5"
+            >
+              Tour
+            </button>
+            <button
+              onClick={() => setLang(lang === 'en' ? 'ms' : 'en')}
+              className="text-[10px] font-medium uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-colors font-sans flex items-center gap-1"
+            >
+              <Globe size={12} />
+              {lang === 'en' ? 'BM' : 'ENG'}
+            </button>
+          </div>
+          <p className="text-[10px] uppercase tracking-[0.25em] text-ink-muted dark:text-ink-faint font-sans">
+            {new Date().toLocaleDateString('en-MY', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
-        
-        {/* Language Toggle */}
-        <button
-          onClick={() => setLang(lang === 'en' ? 'ms' : 'en')}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-white dark:bg-[#1a1a1a] border-2 border-gray-200 dark:border-[#2a2a2a] rounded-xl hover:border-blue-500 dark:hover:border-blue-500 transition-colors text-gray-700 dark:text-gray-300"
-        >
-          <Globe size={14} />
-          <span>{lang === 'en' ? 'BM' : 'ENG'}</span>
-        </button>
+        <div className="text-center">
+          <h1 className="font-['Playfair_Display'] text-4xl sm:text-5xl lg:text-6xl font-bold text-ink dark:text-paper tracking-tight">
+            MY News <span className="italic">Sentiment</span>
+          </h1>
+          <div className="flex items-center justify-center gap-4 mt-2">
+            <span className="text-[10px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans">Vol 1</span>
+            <span className="text-ink/20 dark:text-paper/20">•</span>
+            <span className="text-[10px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans">Kuala Lumpur</span>
+            <span className="text-ink/20 dark:text-paper/20">•</span>
+            <span className="text-[10px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans">Malaysia</span>
+          </div>
+        </div>
       </motion.div>
 
       <SearchBarClean onSearch={handleSearch} loading={searchLoading} />
@@ -597,12 +758,11 @@ const Dashboard = () => {
 
       {error && (
         <motion.div
-          initial={{ opacity: 0, y: -5 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-4 flex items-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-2xl text-red-600 dark:text-red-400 text-sm"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mt-4 px-4 py-3 border-l-2 border-red-600 text-red-700 dark:text-red-400 text-sm font-sans"
           role="alert"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           {error}
         </motion.div>
       )}
@@ -624,9 +784,9 @@ const Dashboard = () => {
             {/* View Banner - Compact toolbar */}
             <Skeleton name="dash-banner" loading={isLoading}>
               <motion.div 
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`${CARD} flex flex-wrap items-center gap-3 px-4 py-2.5 mb-8`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="border border-ink/10 dark:border-paper/10 flex flex-wrap items-center gap-3 px-4 py-2.5 mb-8"
               >
                 {isHistoryView ? (
                   <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
@@ -639,7 +799,7 @@ const Dashboard = () => {
                     <span>Results for <strong className="text-gray-900 dark:text-white">"{currentQuery}"</strong></span>
                     <button 
                       onClick={() => { setIsHistoryView(true); setManualError(''); }}
-                      className="ml-2 flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                      className="ml-2 flex items-center gap-1 text-[11px] uppercase tracking-wider font-medium text-ink dark:text-paper hover:text-ink-muted dark:hover:text-ink-faint transition-colors"
                     >
                       <ArrowLeft size={12} /> Back
                     </button>
@@ -647,14 +807,14 @@ const Dashboard = () => {
                 )}
                 <div className="flex items-center gap-2 ml-auto flex-wrap">
                   {isHistoryView && (
-                    <div className="flex gap-0.5 bg-gray-50 dark:bg-white/5 rounded-lg p-0.5">
+                    <div className="flex items-center gap-0">
                       {TIME_OPTIONS.map(opt => (
                         <button
                           key={opt.key}
-                          className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                          className={`px-2 text-xs font-medium uppercase tracking-wider transition-colors font-sans ${
                             timeframe === opt.key 
-                              ? 'bg-white dark:bg-[#2a2a2a] text-blue-600 shadow-sm' 
-                              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                              ? 'text-ink dark:text-paper font-bold' 
+                              : 'text-ink-faint hover:text-ink-muted'
                           }`}
                           onClick={() => { setTimeframe(opt.key); setPage(1); }}
                         >
@@ -665,26 +825,26 @@ const Dashboard = () => {
                   )}
                   {/* Desktop action buttons - icon-only for cleanliness */}
                   <div className="hidden md:flex items-center gap-1 border-l border-gray-200 dark:border-[#2a2a2a] pl-2 ml-1">
-                    <button onClick={() => setShowCustomizer(true)} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors" title="Customize">
+                    <button onClick={() => setShowCustomizer(true)} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="Customize">
                       <Settings2 size={14} />
                     </button>
-                    <button onClick={handleManualForecast} className="p-1.5 text-purple-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-500/10 rounded-lg transition-colors" title="AI Forecast">
+                    <button onClick={handleManualForecast} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="AI Forecast">
                       <Sparkles size={14} />
                     </button>
                     <ExportPPT articles={articles} distribution={distribution} sources={sources} query={currentQuery} />
-                    <button onClick={handleDownloadPDF} className="p-1.5 text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors" title="Download PDF">
+                    <button onClick={handleDownloadPDF} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="Download PDF">
                       <FileDown size={14} />
                     </button>
-                    <button onClick={handlePrint} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors" title="Print Report">
+                    <button onClick={handlePrint} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="Print Report">
                       <Printer size={14} />
                     </button>
-                    <button onClick={handleExport} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors" title="Export CSV">
+                    <button onClick={handleExport} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="Export CSV">
                       <Download size={14} />
                     </button>
                   </div>
                   {/* Mobile: only customize + AI forecast inline, rest in FAB */}
                   <div className="flex md:hidden items-center gap-1">
-                    <button onClick={() => setShowCustomizer(true)} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg transition-colors">
+                    <button onClick={() => setShowCustomizer(true)} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors">
                       <Settings2 size={14} />
                     </button>
                   </div>
@@ -695,18 +855,18 @@ const Dashboard = () => {
             {/* Mobile Tab Layout */}
             {isMobile ? (
               <>
-                <div className={`${CARD} flex gap-1 p-1 mb-5`}>
+                <div className="flex border-b border-ink/10 dark:border-paper/10 mb-5">
                   {[
-                    { key: 'overview', label: 'Overview', icon: <BarChart3 size={14} /> },
-                    { key: 'charts', label: 'Charts', icon: <TrendingUp size={14} /> },
-                    { key: 'ai', label: 'AI Insights', icon: <Brain size={14} /> },
+                    { key: 'overview', label: 'Overview', icon: <BarChart3 size={12} /> },
+                    { key: 'charts', label: 'Charts', icon: <TrendingUp size={12} /> },
+                    { key: 'ai', label: 'AI Insights', icon: <Brain size={12} /> },
                   ].map(tab => (
                     <button
                       key={tab.key}
-                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-[11px] uppercase tracking-wider font-medium transition-all border-b-2 ${
                         mobileTab === tab.key
-                          ? 'bg-blue-600 text-white shadow-sm'
-                          : 'text-gray-500 dark:text-gray-400'
+                          ? 'border-ink dark:border-paper text-ink dark:text-paper'
+                          : 'border-transparent text-ink-muted dark:text-ink-faint'
                       }`}
                       onClick={() => handleTabSwitch(tab.key)}
                     >
@@ -729,7 +889,7 @@ const Dashboard = () => {
                   <div className="space-y-6">
                     {/* KPI Cards - PROPER DESIGN */}
                     <div>
-                      <SectionHeader title="Key Metrics" />
+                      <SectionHeader title={t("keyMetrics")} />
                       <Skeleton name="kpi-row" loading={isLoading}>
                         <motion.div 
                           className="space-y-5"
@@ -737,173 +897,100 @@ const Dashboard = () => {
                           initial="hidden"
                           animate="visible"
                         >
-                          {/* Main Stats Row */}
-                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                          {/* Editorial Stats Grid */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border border-ink/10 dark:border-paper/10">
                             {/* Total Articles */}
                             <motion.div 
-                              className="md:col-span-4 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-6 relative overflow-hidden"
+                              className="col-span-2 md:col-span-1 p-5 border-r border-b border-ink/10 dark:border-paper/10"
                               variants={kpiItemVariants}
-                              whileHover={{ y: -2 }}
                             >
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <div className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
-                                    Total Articles Analyzed
-                                  </div>
-                                  <div className="text-5xl font-black text-slate-900 dark:text-white mb-1">
-                                    {counts.total.toLocaleString()}
-                                  </div>
-                                  <div className="text-sm text-slate-600 dark:text-slate-400">
-                                    Complete dataset coverage
-                                  </div>
-                                </div>
-                                <div className="hidden md:flex items-center gap-8">
-                                  <div className="text-center">
-                                    <div className="text-2xl font-bold text-emerald-600">{counts.positive}</div>
-                                    <div className="text-xs text-slate-500">Positive</div>
-                                  </div>
-                                  <div className="text-center">
-                                    <div className="text-2xl font-bold text-red-600">{counts.negative}</div>
-                                    <div className="text-xs text-slate-500">Negative</div>
-                                  </div>
-                                  <div className="text-center">
-                                    <div className="text-2xl font-bold text-amber-600">{counts.neutral}</div>
-                                    <div className="text-xs text-slate-500">Neutral</div>
-                                  </div>
-                                </div>
+                              <div className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-2">
+                                Total Analyzed
+                              </div>
+                              <div className="font-['Playfair_Display'] text-4xl font-bold text-ink dark:text-paper">
+                                {counts.total.toLocaleString()}
+                              </div>
+                              <div className="mt-1">
+                                <TrendBadge pct={periodComparison.total} />
                               </div>
                             </motion.div>
-                          </div>
 
-                          {/* Sentiment Cards Row */}
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {/* Positive */}
                             <motion.div 
-                              className="bg-white dark:bg-slate-800 border-l-4 border-emerald-500 rounded-xl p-5 cursor-pointer hover:shadow-lg transition-shadow"
+                              className="p-5 border-r border-b border-ink/10 dark:border-paper/10 cursor-pointer hover:bg-ink/5 dark:hover:bg-paper/5 transition-colors"
                               variants={kpiItemVariants}
-                              whileHover={{ x: 4 }}
                               onClick={() => handleKpiClick('positive')}
                             >
-                              <div className="flex items-start justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                                    Positive Sentiment
-                                  </span>
-                                </div>
-                                <div className={`text-xs font-semibold px-2 py-1 rounded-md ${
-                                  filter === 'Positive' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
-                                }`}>
-                                  {counts.total ? Math.round(counts.positive / counts.total * 100) : 0}%
-                                </div>
+                              <div className="flex items-center gap-1.5 mb-2">
+                                <div className="w-1.5 h-1.5 bg-emerald-500" />
+                                <span className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">Positive</span>
                               </div>
-                              <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">
+                              <div className="font-['Playfair_Display'] text-3xl font-bold text-emerald-600">
                                 {counts.positive.toLocaleString()}
                               </div>
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full transition-all duration-500"
-                                    style={{ width: `${counts.total ? (counts.positive / counts.total * 100) : 0}%` }}
-                                  />
-                                </div>
+                              <div className="text-[11px] text-ink-muted dark:text-ink-faint mt-1">
+                                {counts.total ? Math.round(counts.positive / counts.total * 100) : 0}%
                               </div>
                             </motion.div>
 
                             {/* Negative */}
                             <motion.div 
-                              className="bg-white dark:bg-slate-800 border-l-4 border-red-500 rounded-xl p-5 cursor-pointer hover:shadow-lg transition-shadow"
+                              className="p-5 border-r border-b border-ink/10 dark:border-paper/10 cursor-pointer hover:bg-ink/5 dark:hover:bg-paper/5 transition-colors md:border-r-0"
                               variants={kpiItemVariants}
-                              whileHover={{ x: 4 }}
                               onClick={() => handleKpiClick('negative')}
                             >
-                              <div className="flex items-start justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full bg-red-500" />
-                                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                                    Negative Sentiment
-                                  </span>
-                                </div>
-                                <div className={`text-xs font-semibold px-2 py-1 rounded-md ${
-                                  filter === 'Negative' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
-                                }`}>
-                                  {counts.total ? Math.round(counts.negative / counts.total * 100) : 0}%
-                                </div>
+                              <div className="flex items-center gap-1.5 mb-2">
+                                <div className="w-1.5 h-1.5 bg-red-500" />
+                                <span className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">Negative</span>
                               </div>
-                              <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">
+                              <div className="font-['Playfair_Display'] text-3xl font-bold text-red-600">
                                 {counts.negative.toLocaleString()}
                               </div>
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-gradient-to-r from-red-500 to-red-600 rounded-full transition-all duration-500"
-                                    style={{ width: `${counts.total ? (counts.negative / counts.total * 100) : 0}%` }}
-                                  />
-                                </div>
+                              <div className="text-[11px] text-ink-muted dark:text-ink-faint mt-1">
+                                {counts.total ? Math.round(counts.negative / counts.total * 100) : 0}%
                               </div>
                             </motion.div>
 
                             {/* Neutral */}
                             <motion.div 
-                              className="bg-white dark:bg-slate-800 border-l-4 border-amber-500 rounded-xl p-5 cursor-pointer hover:shadow-lg transition-shadow"
+                              className="col-span-2 md:col-span-1 p-5 cursor-pointer hover:bg-ink/5 dark:hover:bg-paper/5 transition-colors"
                               variants={kpiItemVariants}
-                              whileHover={{ x: 4 }}
                               onClick={() => handleKpiClick('neutral')}
                             >
-                              <div className="flex items-start justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full bg-amber-500" />
-                                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                                    Neutral Sentiment
-                                  </span>
-                                </div>
-                                <div className={`text-xs font-semibold px-2 py-1 rounded-md ${
-                                  filter === 'Neutral' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
-                                }`}>
-                                  {counts.total ? Math.round(counts.neutral / counts.total * 100) : 0}%
-                                </div>
+                              <div className="flex items-center gap-1.5 mb-2">
+                                <div className="w-1.5 h-1.5 bg-amber-500" />
+                                <span className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">Neutral</span>
                               </div>
-                              <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">
+                              <div className="font-['Playfair_Display'] text-3xl font-bold text-amber-600">
                                 {counts.neutral.toLocaleString()}
                               </div>
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-gradient-to-r from-amber-500 to-amber-600 rounded-full transition-all duration-500"
-                                    style={{ width: `${counts.total ? (counts.neutral / counts.total * 100) : 0}%` }}
-                                  />
-                                </div>
+                              <div className="text-[11px] text-ink-muted dark:text-ink-faint mt-1">
+                                {counts.total ? Math.round(counts.neutral / counts.total * 100) : 0}%
                               </div>
                             </motion.div>
                           </div>
                         </motion.div>
                       </Skeleton>
                     </div>
-                    {/* Pie Chart */}
-                    <Skeleton name="charts-grid" loading={isLoading}>
-                      <motion.div 
-                        className={`${CARD} p-4`}
-                        variants={chartVariants}
-                        initial="hidden"
-                        animate="visible"
-                      >
-                        <InlineErrorBoundary name="Pie Chart">
-                          <SentimentDonutChart distribution={chartDistribution} onSegmentClick={handlePieSegmentClick} activeFilter={filter} />
-                        </InlineErrorBoundary>
-                      </motion.div>
-                    </Skeleton>
+                    {/* Pie Chart - Editorial */}
+                    <div className="border border-ink/10 dark:border-paper/10 p-5">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-4">Sentiment Distribution</p>
+                      <InlineErrorBoundary name="Pie Chart">
+                        <SentimentDonutChart distribution={chartDistribution} onSegmentClick={handlePieSegmentClick} activeFilter={filter} />
+                      </InlineErrorBoundary>
+                    </div>
 
                     {/* Articles */}
                     <div>
-                      <SectionHeader title="Recent Articles" badge={filteredArticles.length} />
+                      <SectionHeader title={t("recentArticles")} badge={filteredArticles.length} />
                       <div className="flex gap-2 overflow-x-auto pb-3 mb-4 scrollbar-hide -mx-1 px-1">
                         {FILTER_OPTIONS.map(opt => (
                           <button 
                             key={opt.key} 
-                            className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
+                            className={`shrink-0 px-3 py-1 text-[11px] uppercase tracking-wider font-medium transition-all border ${
                               filter === opt.key 
-                                ? 'bg-blue-600 text-white' 
-                                : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400'
+                                ? 'border-ink dark:border-paper text-ink dark:text-paper font-bold' 
+                                : 'border-transparent text-ink-muted dark:text-ink-faint hover:border-ink/20 dark:hover:border-paper/20'
                             }`}
                             onClick={() => setFilter(opt.key)}
                           >
@@ -985,7 +1072,7 @@ const Dashboard = () => {
                           initial="hidden"
                           animate="visible"
                         >
-                          <SectionHeader title="Charts" />
+                          <SectionHeader title={t("charts")} />
                           <div className={`${CARD} p-4`}>
                             <Suspense fallback={<ChartFallback />}>
                               <InlineErrorBoundary name="Bar Chart">
@@ -1032,7 +1119,7 @@ const Dashboard = () => {
                     transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
                   >
                   <div className="space-y-5">
-                    <SectionHeader title="AI Insights" />
+                    <SectionHeader title={t("aiInsights")} />
                     {(digest || digestLoading) && (
                       <AiDigestCard digest={digest} loading={digestLoading} topic={currentQuery} />
                     )}
@@ -1060,166 +1147,121 @@ const Dashboard = () => {
               /* Desktop Layout */
               <>
                 <div className="grid grid-cols-[1fr_300px] gap-8">
-                  <div className="space-y-8">
+                  <div className="flex flex-col gap-8">
                     {(digest || digestLoading) && !isHistoryView && (
                       <AiDigestCard digest={digest} loading={digestLoading} topic={currentQuery} />
                     )}
-                    
+
                     {/* KPI Cards - PROPER DESIGN */}
+                    {widgetVisibility.kpi && (
+                    <div
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, 'kpi')}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, 'kpi')}
+                      onDragEnd={handleDragEnd}
+                      style={{ order: layoutOrder.indexOf('kpi') }}
+                      className={`transition-opacity ${draggedWidget === 'kpi' ? 'opacity-40' : ''}`}
+                    >
                     <div>
-                      <SectionHeader title="Key Metrics" />
+                      <SectionHeader title={t("keyMetrics")} widgetKey="kpi" />
                       <Skeleton name="kpi-row" loading={isLoading}>
-                        <motion.div 
+                        <motion.div
                           className="space-y-5"
                           variants={containerVariants}
                           initial="hidden"
                           animate="visible"
                         >
-                          {/* Main Stats Row */}
-                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                          {/* Editorial Stats Grid */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border border-ink/10 dark:border-paper/10">
                             {/* Total Articles */}
-                            <motion.div 
-                              className="md:col-span-4 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-6 relative overflow-hidden"
+                            <motion.div
+                              className="col-span-2 md:col-span-1 p-5 border-r border-b border-ink/10 dark:border-paper/10"
                               variants={kpiItemVariants}
-                              whileHover={{ y: -2 }}
                             >
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <div className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
-                                    Total Articles Analyzed
-                                  </div>
-                                  <div className="text-5xl font-black text-slate-900 dark:text-white mb-1">
-                                    {counts.total.toLocaleString()}
-                                  </div>
-                                  <div className="text-sm text-slate-600 dark:text-slate-400">
-                                    Complete dataset coverage
-                                  </div>
-                                </div>
-                                <div className="hidden md:flex items-center gap-8">
-                                  <div className="text-center">
-                                    <div className="text-2xl font-bold text-emerald-600">{counts.positive}</div>
-                                    <div className="text-xs text-slate-500">Positive</div>
-                                  </div>
-                                  <div className="text-center">
-                                    <div className="text-2xl font-bold text-red-600">{counts.negative}</div>
-                                    <div className="text-xs text-slate-500">Negative</div>
-                                  </div>
-                                  <div className="text-center">
-                                    <div className="text-2xl font-bold text-amber-600">{counts.neutral}</div>
-                                    <div className="text-xs text-slate-500">Neutral</div>
-                                  </div>
-                                </div>
+                              <div className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-2">
+                                Total Analyzed
+                              </div>
+                              <div className="font-['Playfair_Display'] text-4xl font-bold text-ink dark:text-paper">
+                                {counts.total.toLocaleString()}
+                              </div>
+                              <div className="mt-1">
+                                <TrendBadge pct={periodComparison.total} />
                               </div>
                             </motion.div>
-                          </div>
 
-                          {/* Sentiment Cards Row */}
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {/* Positive */}
-                            <motion.div 
-                              className="bg-white dark:bg-slate-800 border-l-4 border-emerald-500 rounded-xl p-5 cursor-pointer hover:shadow-lg transition-shadow"
+                            <motion.div
+                              className="p-5 border-r border-b border-ink/10 dark:border-paper/10 cursor-pointer hover:bg-ink/5 dark:hover:bg-paper/5 transition-colors"
                               variants={kpiItemVariants}
-                              whileHover={{ x: 4 }}
                               onClick={() => handleKpiClick('positive')}
                             >
-                              <div className="flex items-start justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                                    Positive Sentiment
-                                  </span>
-                                </div>
-                                <div className={`text-xs font-semibold px-2 py-1 rounded-md ${
-                                  filter === 'Positive' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
-                                }`}>
-                                  {counts.total ? Math.round(counts.positive / counts.total * 100) : 0}%
-                                </div>
+                              <div className="flex items-center gap-1.5 mb-2">
+                                <div className="w-1.5 h-1.5 bg-emerald-500" />
+                                <span className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">Positive</span>
                               </div>
-                              <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">
+                              <div className="font-['Playfair_Display'] text-3xl font-bold text-emerald-600">
                                 {counts.positive.toLocaleString()}
                               </div>
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full transition-all duration-500"
-                                    style={{ width: `${counts.total ? (counts.positive / counts.total * 100) : 0}%` }}
-                                  />
-                                </div>
+                              <div className="text-[11px] text-ink-muted dark:text-ink-faint mt-1">
+                                {counts.total ? Math.round(counts.positive / counts.total * 100) : 0}%
                               </div>
                             </motion.div>
 
                             {/* Negative */}
-                            <motion.div 
-                              className="bg-white dark:bg-slate-800 border-l-4 border-red-500 rounded-xl p-5 cursor-pointer hover:shadow-lg transition-shadow"
+                            <motion.div
+                              className="p-5 border-r border-b border-ink/10 dark:border-paper/10 cursor-pointer hover:bg-ink/5 dark:hover:bg-paper/5 transition-colors md:border-r-0"
                               variants={kpiItemVariants}
-                              whileHover={{ x: 4 }}
                               onClick={() => handleKpiClick('negative')}
                             >
-                              <div className="flex items-start justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full bg-red-500" />
-                                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                                    Negative Sentiment
-                                  </span>
-                                </div>
-                                <div className={`text-xs font-semibold px-2 py-1 rounded-md ${
-                                  filter === 'Negative' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
-                                }`}>
-                                  {counts.total ? Math.round(counts.negative / counts.total * 100) : 0}%
-                                </div>
+                              <div className="flex items-center gap-1.5 mb-2">
+                                <div className="w-1.5 h-1.5 bg-red-500" />
+                                <span className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">Negative</span>
                               </div>
-                              <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">
+                              <div className="font-['Playfair_Display'] text-3xl font-bold text-red-600">
                                 {counts.negative.toLocaleString()}
                               </div>
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-gradient-to-r from-red-500 to-red-600 rounded-full transition-all duration-500"
-                                    style={{ width: `${counts.total ? (counts.negative / counts.total * 100) : 0}%` }}
-                                  />
-                                </div>
+                              <div className="text-[11px] text-ink-muted dark:text-ink-faint mt-1">
+                                {counts.total ? Math.round(counts.negative / counts.total * 100) : 0}%
                               </div>
                             </motion.div>
 
                             {/* Neutral */}
-                            <motion.div 
-                              className="bg-white dark:bg-slate-800 border-l-4 border-amber-500 rounded-xl p-5 cursor-pointer hover:shadow-lg transition-shadow"
+                            <motion.div
+                              className="col-span-2 md:col-span-1 p-5 cursor-pointer hover:bg-ink/5 dark:hover:bg-paper/5 transition-colors"
                               variants={kpiItemVariants}
-                              whileHover={{ x: 4 }}
                               onClick={() => handleKpiClick('neutral')}
                             >
-                              <div className="flex items-start justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full bg-amber-500" />
-                                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                                    Neutral Sentiment
-                                  </span>
-                                </div>
-                                <div className={`text-xs font-semibold px-2 py-1 rounded-md ${
-                                  filter === 'Neutral' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
-                                }`}>
-                                  {counts.total ? Math.round(counts.neutral / counts.total * 100) : 0}%
-                                </div>
+                              <div className="flex items-center gap-1.5 mb-2">
+                                <div className="w-1.5 h-1.5 bg-amber-500" />
+                                <span className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">Neutral</span>
                               </div>
-                              <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">
+                              <div className="font-['Playfair_Display'] text-3xl font-bold text-amber-600">
                                 {counts.neutral.toLocaleString()}
                               </div>
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-gradient-to-r from-amber-500 to-amber-600 rounded-full transition-all duration-500"
-                                    style={{ width: `${counts.total ? (counts.neutral / counts.total * 100) : 0}%` }}
-                                  />
-                                </div>
+                              <div className="text-[11px] text-ink-muted dark:text-ink-faint mt-1">
+                                {counts.total ? Math.round(counts.neutral / counts.total * 100) : 0}%
                               </div>
                             </motion.div>
                           </div>
                         </motion.div>
                       </Skeleton>
                     </div>
+                    </div>
+                    )}
                     {/* Charts Grid */}
+                    {widgetVisibility.charts && (
+                    <div
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, 'charts')}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, 'charts')}
+                      onDragEnd={handleDragEnd}
+                      style={{ order: layoutOrder.indexOf('charts') }}
+                      className={`transition-opacity ${draggedWidget === 'charts' ? 'opacity-40' : ''}`}
+                    >
                     <div>
-                      <SectionHeader title="Charts" />
+                      <SectionHeader title={t("charts")} widgetKey="charts" />
                       <Skeleton name="charts-grid" loading={isLoading}>
                         <motion.div 
                           className="grid grid-cols-2 gap-5"
@@ -1263,16 +1305,32 @@ const Dashboard = () => {
                         </motion.div>
                       </Skeleton>
                     </div>
-                    
+                    </div>
+                    )}
+
                     {/* Forecast */}
-                    <InlineErrorBoundary name="AI Forecast">
-                      <ForecastCard forecast={forecast} loading={forecastLoading} topic={currentQuery} />
-                    </InlineErrorBoundary>
+                    {widgetVisibility.ai && (
+                    <div
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, 'ai')}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, 'ai')}
+                      onDragEnd={handleDragEnd}
+                      style={{ order: layoutOrder.indexOf('ai') }}
+                      className={`transition-opacity ${draggedWidget === 'ai' ? 'opacity-40' : ''}`}
+                    >
+                      <SectionHeader title={t("aiInsights")} widgetKey="ai" />
+                      <InlineErrorBoundary name="AI Forecast">
+                        <ForecastCard forecast={forecast} loading={forecastLoading} topic={currentQuery} />
+                      </InlineErrorBoundary>
+                    </div>
+                    )}
                   </div>
                   
                   {/* Sidebar */}
                   <aside className="space-y-5">
                     <div className="sticky top-6 space-y-5">
+                      {widgetVisibility.wordcloud && (
                       <Skeleton name="word-cloud" loading={isLoading}>
                         <div className={`${CARD} p-5`}>
                           <InlineErrorBoundary name="Word Cloud">
@@ -1280,25 +1338,29 @@ const Dashboard = () => {
                           </InlineErrorBoundary>
                         </div>
                       </Skeleton>
+                      )}
+                      {widgetVisibility.sources && (
                       <div className={`${CARD} p-5`}>
                         <InlineErrorBoundary name="Source Credibility">
                           <SourceCredibility />
                         </InlineErrorBoundary>
                       </div>
+                      )}
                     </div>
                   </aside>
                 </div>
 
                 {/* Articles Section */}
+                {widgetVisibility.articles && (
                 <div className="mt-10" id="analysis-results">
-                  <SectionHeader title="Recent Articles" badge={filteredArticles.length}>
+                  <SectionHeader title={t("recentArticles")} badge={filteredArticles.length}>
                     <div className="flex gap-1.5">
                       {FILTER_OPTIONS.map(opt => (
-                        <button 
-                          key={opt.key} 
+                        <button
+                          key={opt.key}
                           className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                            filter === opt.key 
-                              ? 'bg-blue-600 text-white shadow-sm' 
+                            filter === opt.key
+                              ? 'bg-blue-600 text-white shadow-sm'
                               : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
                           }`}
                           onClick={() => setFilter(opt.key)}
@@ -1316,29 +1378,7 @@ const Dashboard = () => {
                     animate="visible"
                   >
                     <Skeleton name="article-card" loading={isLoading || historyLoading} count={3}>
-                      {filteredArticles.length > 20 ? (
-                        <VirtualList
-                          height={600}
-                          itemCount={filteredArticles.length}
-                          itemSize={140}
-                          width="100%"
-                          style={{ overflow: 'auto' }}
-                        >
-                          {({ index, style }) => {
-                            const article = filteredArticles[index];
-                            return (
-                              <div style={style} key={article._id || article.url}>
-                                <ArticleCardCompact 
-                                  article={article} 
-                                  onBookmark={toggleBookmark}
-                                  isBookmarked={user?.bookmarks?.includes(article._id || article.id)}
-                                />
-                              </div>
-                            );
-                          }}
-                        </VirtualList>
-                      ) : (
-                        filteredArticles.map((article) => (
+                      {filteredArticles.map((article) => (
                           <motion.div
                             key={article._id || article.url}
                             variants={articleVariants}
@@ -1349,8 +1389,7 @@ const Dashboard = () => {
                               isBookmarked={user?.bookmarks?.includes(article._id || article.id)}
                             />
                           </motion.div>
-                        ))
-                      )}
+                        ))}
                     </Skeleton>
                   </motion.div>
 
@@ -1378,6 +1417,7 @@ const Dashboard = () => {
                     </div>
                   )}
                 </div>
+                )}
               </>
             )}
           </>
@@ -1486,11 +1526,14 @@ const Dashboard = () => {
 
       <ScrollToTop />
 
+      {/* Onboarding Tour */}
+      <OnboardingTour key={tourKey} />
+
       {/* Dashboard Customizer Modal */}
       <DashboardCustomizer
         isOpen={showCustomizer}
         onClose={() => setShowCustomizer(false)}
-        onSave={(layout) => setDashboardLayout(layout)}
+        onSave={handleCustomizerSave}
       />
     </div>
   );

@@ -3,10 +3,9 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import ArticleCard from '../components/ArticleCard';
 import ArticlePreviewModal from '../components/ArticlePreviewModal';
-import { getHistory, deleteArticle, getStats } from '../services/api';
+import { getHistory, deleteArticle, bulkDeleteArticles, getStats } from '../services/api';
 import { exportToCSV } from '../services/exportUtils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, Download, Clock, ChevronLeft, ChevronRight, Archive } from 'lucide-react';
 
 const History = () => {
   const queryClient = useQueryClient();
@@ -21,9 +20,11 @@ const History = () => {
     limit: 50
   });
 
-  // Debounced search
   const [searchInput, setSearchInput] = useState('');
   const debounceRef = useRef(null);
+
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = useState(new Set());
 
   const handleSearchChange = (value) => {
     setSearchInput(value);
@@ -37,11 +38,9 @@ const History = () => {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, []);
 
-  // Preview Modal
   const [selectedArticle, setSelectedArticle] = useState(null);
-  const [showPreview, setShowPreview]         = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
-  // Queries
   const { 
     data: historyData, 
     isLoading: isHistoryLoading,
@@ -59,7 +58,6 @@ const History = () => {
     staleTime: 60000,
   });
 
-  // Mutations
   const deleteMutation = useMutation({
     mutationFn: (id) => deleteArticle(id),
     onSuccess: () => {
@@ -72,7 +70,19 @@ const History = () => {
     }
   });
 
-  // Derived data
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (ids) => bulkDeleteArticles(ids),
+    onSuccess: (_, ids) => {
+      toast.success(`${ids.length} article${ids.length > 1 ? 's' : ''} deleted`);
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries(['history']);
+      queryClient.invalidateQueries(['stats']);
+    },
+    onError: () => {
+      toast.error('Failed to delete selected articles.');
+    }
+  });
+
   const articles = historyData?.articles || [];
   const totalPages = historyData?.pages || 1;
   const totalCount = historyData?.total || 0;
@@ -100,187 +110,284 @@ const History = () => {
     toast.success('Export started');
   };
 
+  // Bulk selection handlers
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === articles.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(articles.map(a => a._id || a.id)));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`Permanently delete ${selectedIds.size} selected article${selectedIds.size > 1 ? 's' : ''}?`)) return;
+    bulkDeleteMutation.mutate(Array.from(selectedIds));
+  };
+
+  const handleBulkExport = () => {
+    if (selectedIds.size === 0) return;
+    const selected = articles.filter(a => selectedIds.has(a._id || a.id));
+    if (selected.length === 0) return toast.error('No articles to export.');
+    exportToCSV(selected, `history-export-selected-${new Date().toISOString().split('T')[0]}.csv`);
+    toast.success(`Exported ${selected.length} article${selected.length > 1 ? 's' : ''}`);
+  };
+
+  const isAllSelected = articles.length > 0 && selectedIds.size === articles.length;
+  const isSomeSelected = selectedIds.size > 0;
+
   const KPI = stats ? [
-    { label: 'Total Analyzed', value: stats.total, color: 'text-blue-600', sub: 'in database' },
-    { label: 'Positive', value: stats.sentiments.Positive, color: 'text-emerald-600', sub: `${stats.total ? Math.round(stats.sentiments.Positive/stats.total*100) : 0}%` },
-    { label: 'Negative', value: stats.sentiments.Negative, color: 'text-red-500', sub: `${stats.total ? Math.round(stats.sentiments.Negative/stats.total*100) : 0}%` },
-    { label: 'Neutral', value: stats.sentiments.Neutral, color: 'text-amber-500', sub: `${stats.total ? Math.round(stats.sentiments.Neutral/stats.total*100) : 0}%` },
+    { label: 'Total Analyzed', value: stats.total, sub: 'in database' },
+    { label: 'Positive', value: stats.sentiments.Positive, sub: `${stats.total ? Math.round(stats.sentiments.Positive/stats.total*100) : 0}%` },
+    { label: 'Negative', value: stats.sentiments.Negative, sub: `${stats.total ? Math.round(stats.sentiments.Negative/stats.total*100) : 0}%` },
+    { label: 'Neutral', value: stats.sentiments.Neutral, sub: `${stats.total ? Math.round(stats.sentiments.Neutral/stats.total*100) : 0}%` },
   ] : [];
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.04 } }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 10 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.25 } }
-  };
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="max-w-5xl mx-auto"
-    >
+    <div className="max-w-5xl mx-auto">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-6"
-      >
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-          <Clock size={24} className="text-blue-600" />
-          History
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Your past searches and analyses
+      <div className="mb-6">
+        <div className="flex items-baseline gap-3 mb-1">
+          <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">
+            History
+          </h1>
+        </div>
+        <div className="editorial-rule mb-3" />
+        <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed max-w-xl font-sans">
+          Your past searches and sentiment analyses across Malaysian news sources.
         </p>
-      </motion.div>
+      </div>
 
       {error && (
-        <div className="flex items-center gap-2 px-4 py-3 mb-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl text-red-600 dark:text-red-400 text-sm" role="alert">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          {error}
+        <div className="border-l-3 border-red-600 bg-red-50 dark:bg-red-950/30 px-4 py-3 mb-6">
+          <p className="text-sm text-red-700 dark:text-red-400 font-sans">{error}</p>
         </div>
       )}
 
-      {/* KPI Cards */}
+      {/* KPI Strip — newspaper stat bar */}
       {stats && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6"
-        >
+        <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-paper-line dark:divide-paper-dark-line border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card mb-6">
           {KPI.map(c => (
-            <div key={c.label} className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-4">
-              <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{c.label}</div>
-              <div className={`text-2xl font-bold mt-1 ${c.color}`}>{c.value}</div>
-              <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">{c.sub}</div>
+            <div key={c.label} className="px-4 py-3">
+              <div className="text-[10px] font-semibold uppercase tracking-widest text-ink-muted dark:text-ink-faint mb-1 font-sans">
+                {c.label}
+              </div>
+              <div className="text-xl font-bold text-ink dark:text-paper font-display">
+                {c.value}
+              </div>
+              <div className="text-[10px] text-ink-faint font-sans mt-0.5">{c.sub}</div>
             </div>
           ))}
-        </motion.div>
+        </div>
       )}
 
-      {/* Toolbar */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl"
-      >
-        {/* Search */}
-        <div className="relative flex-1 min-w-[200px]">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input 
-            type="text" 
-            placeholder="Search history..." 
-            value={searchInput}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="w-full pl-8 pr-3 py-2 text-sm bg-gray-50 dark:bg-white/5 border border-transparent focus:border-blue-500 rounded-xl outline-none text-gray-900 dark:text-white placeholder:text-gray-400 transition-colors"
-          />
+      {/* Toolbar — editorial filter strip */}
+      <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card mb-6">
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+          {/* Search */}
+          <div className="relative flex-1 min-w-[180px]">
+            <input 
+              type="text" 
+              placeholder="Search history..." 
+              value={searchInput}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-paper-line dark:border-paper-dark-line bg-paper dark:bg-paper-dark text-ink dark:text-paper placeholder:text-ink-faint focus:outline-none focus:border-accent transition-colors font-sans"
+            />
+          </div>
+
+          {/* Sentiment Filter */}
+          <select
+            value={params.sentiment}
+            onChange={(e) => handleParamChange('sentiment', e.target.value)}
+            className="px-3 py-2 text-xs font-medium border border-paper-line dark:border-paper-dark-line bg-paper dark:bg-paper-dark text-ink dark:text-paper focus:outline-none focus:border-accent transition-colors font-sans uppercase tracking-wider"
+          >
+            <option value="">All Sentiment</option>
+            <option value="Positive">Positive</option>
+            <option value="Negative">Negative</option>
+            <option value="Neutral">Neutral</option>
+          </select>
+
+          {/* Date Range */}
+          <div className="flex items-center gap-2">
+            <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">
+              From
+            </label>
+            <input
+              type="date"
+              value={params.from}
+              onChange={(e) => handleParamChange('from', e.target.value)}
+              className="px-2.5 py-2 text-xs border-2 border-ink dark:border-paper bg-paper dark:bg-paper-dark text-ink dark:text-paper focus:outline-none focus:border-accent transition-colors font-sans"
+              title="From Date"
+            />
+            <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">
+              To
+            </label>
+            <input
+              type="date"
+              value={params.to}
+              onChange={(e) => handleParamChange('to', e.target.value)}
+              className="px-2.5 py-2 text-xs border-2 border-ink dark:border-paper bg-paper dark:bg-paper-dark text-ink dark:text-paper focus:outline-none focus:border-accent transition-colors font-sans"
+              title="To Date"
+            />
+          </div>
+
+          {/* Export */}
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-ink dark:text-paper border border-ink dark:border-paper hover:bg-paper dark:hover:bg-paper-dark transition-colors font-sans"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Export
+          </button>
         </div>
+      </div>
 
-        {/* Sentiment Filter */}
-        <select
-          value={params.sentiment}
-          onChange={(e) => handleParamChange('sentiment', e.target.value)}
-          className="px-3 py-2 text-xs font-medium bg-gray-50 dark:bg-white/5 border border-[#eee] dark:border-[#2a2a2a] rounded-xl text-gray-700 dark:text-gray-300 outline-none"
-        >
-          <option value="">All Sentiment</option>
-          <option value="Positive">Positive</option>
-          <option value="Negative">Negative</option>
-          <option value="Neutral">Neutral</option>
-        </select>
-
-        {/* Date Range */}
-        <div className="flex items-center gap-2">
-          <input
-            type="date"
-            value={params.from}
-            onChange={(e) => handleParamChange('from', e.target.value)}
-            className="px-2.5 py-2 text-xs bg-gray-50 dark:bg-white/5 border border-[#eee] dark:border-[#2a2a2a] rounded-xl text-gray-700 dark:text-gray-300 outline-none"
-            title="From Date"
-          />
-          <span className="text-xs text-gray-400">to</span>
-          <input
-            type="date"
-            value={params.to}
-            onChange={(e) => handleParamChange('to', e.target.value)}
-            className="px-2.5 py-2 text-xs bg-gray-50 dark:bg-white/5 border border-[#eee] dark:border-[#2a2a2a] rounded-xl text-gray-700 dark:text-gray-300 outline-none"
-            title="To Date"
-          />
+      {/* Bulk Action Bar */}
+      {isSomeSelected && (
+        <div className="border border-ink dark:border-paper bg-paper-card dark:bg-paper-dark-card px-4 py-3 mb-4 flex items-center gap-4">
+          <span className="text-xs font-semibold text-ink dark:text-paper font-sans uppercase tracking-wider">
+            {selectedIds.size} selected
+          </span>
+          <button
+            onClick={handleBulkDelete}
+            disabled={bulkDeleteMutation.isLoading}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-red-700 dark:text-red-400 border border-red-700 dark:border-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors font-sans disabled:opacity-50"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+            </svg>
+            Delete Selected
+          </button>
+          <button
+            onClick={handleBulkExport}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-ink dark:text-paper border border-ink dark:border-paper hover:bg-paper dark:hover:bg-paper-dark transition-colors font-sans"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Export Selected
+          </button>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="text-xs font-medium text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-colors font-sans ml-auto"
+          >
+            Clear selection
+          </button>
         </div>
-
-        {/* Export */}
-        <button
-          onClick={handleExport}
-          className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 rounded-xl transition-colors"
-        >
-          <Download size={14} /> Export
-        </button>
-      </motion.div>
+      )}
 
       {/* Articles */}
       <div>
         {loading ? (
-          <div className="space-y-3">
+          <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card divide-y divide-paper-line dark:divide-paper-dark-line">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-24 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl animate-pulse" />
+              <div key={i} className="px-5 py-4 animate-pulse">
+                <div className="h-3.5 bg-gray-200 dark:bg-gray-700 w-3/4 mb-2.5" />
+                <div className="h-3 bg-gray-100 dark:bg-gray-800 w-full mb-2" />
+                <div className="flex gap-2">
+                  <div className="h-2.5 w-16 bg-gray-200 dark:bg-gray-700" />
+                  <div className="h-2.5 w-10 bg-gray-200 dark:bg-gray-700" />
+                </div>
+              </div>
             ))}
           </div>
         ) : articles.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="flex flex-col items-center justify-center py-20 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl"
-          >
-            <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}>
-              <Archive size={48} className="text-gray-300 dark:text-gray-600" />
-            </motion.div>
-            <h3 className="mt-4 text-base font-semibold text-gray-700 dark:text-gray-300">No matches found</h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Adjust your filters or try another search term.</p>
-          </motion.div>
+          <div className="text-center py-20 border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
+            <div className="text-4xl mb-4 opacity-15">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mx-auto text-ink-muted">
+                <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
+              </svg>
+            </div>
+            <h3 className="text-base font-semibold text-ink dark:text-paper mb-1.5 font-display">
+              No matches found
+            </h3>
+            <p className="text-xs text-ink-faint max-w-sm mx-auto font-sans leading-relaxed">
+              Adjust your filters or try another search term to find past analyses.
+            </p>
+          </div>
         ) : (
           <>
-            <motion.div
-              className="space-y-3"
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-            >
-              {articles.map(article => (
-                <motion.div key={article._id} variants={itemVariants}>
-                  <ArticleCard 
-                    article={article} 
-                    onPreview={handlePreview} 
-                    onDelete={handleDelete}
-                  />
-                </motion.div>
-              ))}
-            </motion.div>
+            {/* Select All header */}
+            <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card px-5 py-2.5 flex items-center gap-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isAllSelected}
+                  onChange={toggleSelectAll}
+                  className="w-4 h-4 border-2 border-ink dark:border-paper bg-paper dark:bg-paper-dark checked:bg-ink dark:checked:bg-paper accent-ink dark:accent-paper cursor-pointer"
+                />
+                <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">
+                  Select All
+                </span>
+              </label>
+              <span className="text-[10px] text-ink-faint font-sans ml-auto">
+                {totalCount} item{totalCount !== 1 ? 's' : ''}
+              </span>
+            </div>
 
-            {/* Pagination */}
+            <div className="border border-t-0 border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card divide-y divide-paper-line dark:divide-paper-dark-line">
+              {articles.map(article => {
+                const articleId = article._id || article.id;
+                const isSelected = selectedIds.has(articleId);
+                return (
+                  <div key={articleId} className="flex items-start gap-0">
+                    {/* Checkbox column */}
+                    <div className="flex-shrink-0 flex items-start pt-4 pl-4">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(articleId)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-4 h-4 border-2 border-ink dark:border-paper bg-paper dark:bg-paper-dark checked:bg-ink dark:checked:bg-paper accent-ink dark:accent-paper cursor-pointer mt-1"
+                      />
+                    </div>
+                    {/* Article card wrapper */}
+                    <div className="flex-1 min-w-0">
+                      <ArticleCard 
+                        article={article} 
+                        onPreview={handlePreview} 
+                        onDelete={handleDelete}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Pagination — editorial style */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-6 px-2">
+              <div className="flex items-center justify-between mt-6 px-1">
                 <button 
                   disabled={params.page === 1} 
                   onClick={() => handleParamChange('page', params.page - 1)}
-                  className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-xl disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                  className="text-xs font-medium uppercase tracking-wider text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper disabled:opacity-30 transition-colors font-sans"
                 >
-                  <ChevronLeft size={16} /> Previous
+                  ← Previous
                 </button>
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  Page <strong className="text-gray-900 dark:text-white">{params.page}</strong> of {totalPages}
-                  <span className="text-xs ml-2 text-gray-400">({totalCount} items)</span>
+                <div className="text-xs text-ink-faint font-sans">
+                  Page <strong className="text-ink dark:text-paper">{params.page}</strong> of {totalPages}
+                  <span className="ml-2">({totalCount} items)</span>
                 </div>
                 <button 
                   disabled={params.page === totalPages} 
                   onClick={() => handleParamChange('page', params.page + 1)}
-                  className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-xl disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                  className="text-xs font-medium uppercase tracking-wider text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper disabled:opacity-30 transition-colors font-sans"
                 >
-                  Next <ChevronRight size={16} />
+                  Next →
                 </button>
               </div>
             )}
@@ -294,7 +401,7 @@ const History = () => {
         isOpen={showPreview} 
         onClose={() => setShowPreview(false)} 
       />
-    </motion.div>
+    </div>
   );
 };
 

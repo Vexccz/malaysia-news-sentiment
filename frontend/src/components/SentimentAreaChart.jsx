@@ -14,22 +14,22 @@ const SentimentAreaChart = ({ trendsData = [] }) => {
     if (active && payload && payload.length) {
       const total = payload.reduce((sum, item) => sum + item.value, 0);
       return (
-        <div className="bg-white dark:bg-gray-800 px-4 py-3 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700">
-          <p className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">{label}</p>
+        <div className="bg-paper dark:bg-ink border border-ink/15 dark:border-paper/15 px-4 py-3">
+          <p className="text-[10px] uppercase tracking-[0.15em] font-semibold text-ink dark:text-paper mb-2">{label}</p>
           {payload.reverse().map((item, index) => (
             <div key={index} className="flex items-center justify-between gap-4 mb-1">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">{item.name}</span>
+                <div className="w-2 h-2" style={{ backgroundColor: item.color }} />
+                <span className="text-[11px] text-ink/60 dark:text-paper/60 font-sans">{item.name}</span>
               </div>
-              <span className="text-sm font-bold" style={{ color: item.color }}>
+              <span className="text-xs font-semibold" style={{ color: item.color }}>
                 {item.value} ({total > 0 ? ((item.value / total) * 100).toFixed(0) : 0}%)
               </span>
             </div>
           ))}
-          <div className="border-t border-gray-200 dark:border-gray-700 mt-2 pt-2">
-            <span className="text-xs text-gray-500 dark:text-gray-400">Total: </span>
-            <span className="text-sm font-bold text-gray-900 dark:text-white">{total}</span>
+          <div className="border-t border-ink/10 dark:border-paper/10 mt-2 pt-2">
+            <span className="text-[10px] text-ink/40 dark:text-paper/40 uppercase tracking-wider">Total: </span>
+            <span className="text-xs font-bold text-ink dark:text-paper">{total}</span>
           </div>
         </div>
       );
@@ -40,11 +40,11 @@ const SentimentAreaChart = ({ trendsData = [] }) => {
   const CustomLegend = (props) => {
     const { payload } = props;
     return (
-      <div className="flex justify-center gap-6 mt-4">
+      <div className="flex justify-center gap-5 mt-4">
         {payload.map((entry, index) => (
           <div key={`legend-${index}`} className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded" style={{ backgroundColor: entry.color }} />
-            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+            <div className="w-2.5 h-2.5" style={{ backgroundColor: entry.color }} />
+            <span className="text-[10px] uppercase tracking-[0.15em] text-ink-muted dark:text-ink-faint font-sans">
               {entry.value}
             </span>
           </div>
@@ -55,7 +55,7 @@ const SentimentAreaChart = ({ trendsData = [] }) => {
 
   if (!chartData || chartData.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64 text-gray-400 dark:text-gray-600">
+      <div className="flex items-center justify-center h-64 text-ink/30 dark:text-paper/30">
         <p className="text-sm">No trend data available</p>
       </div>
     );
@@ -64,40 +64,44 @@ const SentimentAreaChart = ({ trendsData = [] }) => {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+        <h3 className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">
           Sentiment Trends Over Time
         </h3>
-        <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-full">
-          Stacked Area
+        <span className="text-[10px] uppercase tracking-[0.15em] text-ink/30 dark:text-paper/30 border border-ink/10 dark:border-paper/10 px-2 py-0.5 font-sans">
+          Stacked
         </span>
       </div>
       
-      <ResponsiveContainer width="100%" height={280}>
-        <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+      <ResponsiveContainer width="100%" height={260}>
+        <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="colorPositive" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-              <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
+              <stop offset="5%" stopColor="#059669" stopOpacity={0.6}/>
+              <stop offset="95%" stopColor="#059669" stopOpacity={0.05}/>
             </linearGradient>
             <linearGradient id="colorNegative" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
-              <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
+              <stop offset="5%" stopColor="#dc2626" stopOpacity={0.6}/>
+              <stop offset="95%" stopColor="#dc2626" stopOpacity={0.05}/>
             </linearGradient>
             <linearGradient id="colorNeutral" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8}/>
-              <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.1}/>
+              <stop offset="5%" stopColor="#d97706" stopOpacity={0.6}/>
+              <stop offset="95%" stopColor="#d97706" stopOpacity={0.05}/>
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.3} />
+          <CartesianGrid strokeDasharray="1 3" stroke="currentColor" opacity={0.08} />
           <XAxis 
             dataKey="date" 
-            stroke="#9ca3af" 
-            style={{ fontSize: '11px' }}
+            stroke="currentColor" 
+            opacity={0.3}
+            style={{ fontSize: '10px', fontFamily: "'Inter', sans-serif", textTransform: 'uppercase', letterSpacing: '0.1em' }}
             tickMargin={10}
+            axisLine={{ stroke: 'currentColor', opacity: 0.15 }}
           />
           <YAxis 
-            stroke="#9ca3af" 
-            style={{ fontSize: '12px' }}
+            stroke="currentColor" 
+            opacity={0.3}
+            style={{ fontSize: '10px', fontFamily: "'Inter', sans-serif" }}
+            axisLine={{ stroke: 'currentColor', opacity: 0.15 }}
           />
           <Tooltip content={<CustomTooltip />} />
           <Legend content={<CustomLegend />} />
@@ -105,25 +109,34 @@ const SentimentAreaChart = ({ trendsData = [] }) => {
             type="monotone" 
             dataKey="Positive" 
             stackId="1"
-            stroke="#10b981" 
-            strokeWidth={2}
+            stroke="#059669" 
+            strokeWidth={1.5}
             fill="url(#colorPositive)" 
+            isAnimationActive={true}
+            animationDuration={1500}
+            animationEasing="ease-out"
           />
           <Area 
             type="monotone" 
             dataKey="Negative" 
             stackId="1"
-            stroke="#ef4444" 
-            strokeWidth={2}
+            stroke="#dc2626" 
+            strokeWidth={1.5}
             fill="url(#colorNegative)" 
+            isAnimationActive={true}
+            animationDuration={1500}
+            animationEasing="ease-out"
           />
           <Area 
             type="monotone" 
             dataKey="Neutral" 
             stackId="1"
-            stroke="#f59e0b" 
-            strokeWidth={2}
+            stroke="#d97706" 
+            strokeWidth={1.5}
             fill="url(#colorNeutral)" 
+            isAnimationActive={true}
+            animationDuration={1500}
+            animationEasing="ease-out"
           />
         </AreaChart>
       </ResponsiveContainer>

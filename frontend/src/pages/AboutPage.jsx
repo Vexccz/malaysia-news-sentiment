@@ -43,116 +43,41 @@ const ScrollProgress = () => {
   );
 };
 
-// ── Gradient Orbs ──
-const GradientOrbs = () => (
-  <div className="absolute inset-0 overflow-hidden pointer-events-none">
-    <motion.div
-      className="absolute -top-40 -left-40 w-[500px] h-[500px] rounded-full bg-gradient-to-br from-blue-400/20 to-purple-500/10 blur-3xl"
-      animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
-      transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
-    />
-    <motion.div
-      className="absolute -bottom-40 -right-40 w-[600px] h-[600px] rounded-full bg-gradient-to-br from-accent/15 to-teal-400/10 blur-3xl"
-      animate={{ scale: [1.1, 1, 1.1], opacity: [0.4, 0.2, 0.4] }}
-      transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
-    />
-    <motion.div
-      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-gradient-to-br from-pink-400/10 to-orange-400/5 blur-3xl"
-      animate={{ scale: [1, 1.3, 1], opacity: [0.2, 0.4, 0.2] }}
-      transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut', delay: 4 }}
-    />
-  </div>
-);
-
-// ── Floating Particles ──
-const FloatingParticles = ({ count = 18 }) => {
-  const particles = useMemo(() =>
-    Array.from({ length: count }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 3 + 1,
-      duration: Math.random() * 20 + 15,
-      delay: Math.random() * 5,
-    })), [count]);
-
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {particles.map((p) => (
-        <motion.div
-          key={p.id}
-          className="absolute rounded-full bg-accent/20 dark:bg-accent/10"
-          style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size }}
-          animate={{
-            y: [0, -30, 0, 20, 0],
-            x: [0, 15, -10, 5, 0],
-            opacity: [0.3, 0.7, 0.4, 0.8, 0.3],
-          }}
-          transition={{ duration: p.duration, repeat: Infinity, delay: p.delay, ease: 'easeInOut' }}
-        />
-      ))}
-    </div>
-  );
-};
-
-// ── Animated Grid Background ──
-const AnimatedGrid = () => (
-  <div className="absolute inset-0 overflow-hidden pointer-events-none">
-    <div
-      className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]"
-      style={{
-        backgroundImage: `linear-gradient(rgba(0,0,0,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.3) 1px, transparent 1px)`,
-        backgroundSize: '60px 60px',
-        maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 70%)',
-        WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 70%)',
-      }}
-    />
-    {/* Accent glow spots */}
-    <motion.div
-      className="absolute top-1/4 left-1/3 w-2 h-2 rounded-full bg-accent/40"
-      animate={{ opacity: [0, 0.8, 0], scale: [0.5, 1.5, 0.5] }}
-      transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-    />
-    <motion.div
-      className="absolute top-2/3 right-1/4 w-2 h-2 rounded-full bg-accent/30"
-      animate={{ opacity: [0, 0.6, 0], scale: [0.5, 1.2, 0.5] }}
-      transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
-    />
-    <motion.div
-      className="absolute bottom-1/4 left-1/2 w-1.5 h-1.5 rounded-full bg-purple-400/30"
-      animate={{ opacity: [0, 0.5, 0], scale: [0.5, 1.3, 0.5] }}
-      transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut', delay: 3 }}
-    />
+// ── Double Rule Separator ──
+const DoubleRule = ({ className = '' }) => (
+  <div className={className}>
+    <div className="h-[2px] bg-ink dark:bg-paper" />
+    <div className="h-px bg-ink/10 dark:bg-paper/10 mt-[2px]" />
   </div>
 );
 
 // ── Navbar ──
 const Navbar = ({ isDark, toggleTheme, navigate }) => (
   <motion.nav
-    className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-[#0f0f0f]/80 border-b border-[#eee] dark:border-[#2a2a2a]"
+    className="fixed top-0 left-0 right-0 z-50 bg-paper dark:bg-ink border-b border-ink/10 dark:border-paper/10"
     initial={{ y: -80 }} animate={{ y: 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
   >
     <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-      <Link to="/" className="flex items-center gap-2 text-lg font-bold text-gray-900 dark:text-white">
+      <Link to="/" className="flex items-center gap-2 text-lg font-bold text-ink dark:text-paper">
         <Newspaper className="w-5 h-5 text-accent" />
         <span>MY News <span className="text-accent">Sentiment</span></span>
       </Link>
-      <div className="hidden md:flex items-center gap-8 text-sm text-gray-600 dark:text-gray-400">
+      <div className="hidden md:flex items-center gap-8 text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">
         <Link to="/features" className="hover:text-accent transition-colors">Features</Link>
         <Link to="/pricing" className="hover:text-accent transition-colors">Pricing</Link>
         <Link to="/about" className="hover:text-accent transition-colors">About</Link>
         <Link to="/contact" className="hover:text-accent transition-colors">Contact</Link>
       </div>
       <div className="flex items-center gap-3">
-        <button onClick={toggleTheme} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#1a1a1a] transition-colors">
-          {isDark ? <Sun className="w-4 h-4 text-gray-400" /> : <Moon className="w-4 h-4 text-gray-600" />}
+        <button onClick={toggleTheme} className="p-2 hover:bg-ink/5 dark:hover:bg-paper/5 transition-colors">
+          {isDark ? <Sun className="w-4 h-4 text-ink-muted dark:text-ink-faint" /> : <Moon className="w-4 h-4 text-ink-muted dark:text-ink-faint" />}
         </button>
-        <Link to="/login" className="hidden sm:inline-flex text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-accent transition-colors">
+        <Link to="/login" className="hidden sm:inline-flex text-xs font-medium text-ink-muted dark:text-ink-faint hover:text-accent transition-colors uppercase tracking-wider">
           Log in
         </Link>
         <motion.button
           onClick={() => navigate('/register')}
-          className="px-4 py-2 text-sm font-medium text-white bg-accent rounded-lg hover:bg-blue-700 transition-colors"
+          className="px-4 py-2 text-xs font-medium text-paper bg-accent uppercase tracking-wider"
           whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
         >
           Get Started
@@ -164,40 +89,41 @@ const Navbar = ({ isDark, toggleTheme, navigate }) => (
 
 // ── Footer ──
 const Footer = () => (
-  <footer className="border-t border-[#eee] dark:border-[#2a2a2a] bg-white dark:bg-[#0f0f0f]">
+  <footer className="border-t border-ink/10 dark:border-paper/10">
     <div className="max-w-7xl mx-auto px-6 py-16">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
         <div className="md:col-span-1">
-          <div className="flex items-center gap-2 text-lg font-bold text-gray-900 dark:text-white mb-3">
+          <div className="flex items-center gap-2 text-lg font-bold text-ink dark:text-paper mb-3">
             <Newspaper className="w-5 h-5 text-accent" />
             <span>MY News Sentiment</span>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">AI-powered sentiment analysis for Malaysian news.</p>
+          <p className="text-sm text-ink-muted dark:text-ink-faint">AI-powered sentiment analysis for Malaysian news.</p>
         </div>
         <div>
-          <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Product</h4>
-          <div className="flex flex-col gap-2 text-sm text-gray-500 dark:text-gray-400">
+          <h4 className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-4">Product</h4>
+          <div className="flex flex-col gap-2 text-sm text-ink-muted dark:text-ink-faint">
             <Link to="/features" className="hover:text-accent transition-colors">Features</Link>
             <Link to="/pricing" className="hover:text-accent transition-colors">Pricing</Link>
             <Link to="/api" className="hover:text-accent transition-colors">API</Link>
           </div>
         </div>
         <div>
-          <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Company</h4>
-          <div className="flex flex-col gap-2 text-sm text-gray-500 dark:text-gray-400">
+          <h4 className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-4">Company</h4>
+          <div className="flex flex-col gap-2 text-sm text-ink-muted dark:text-ink-faint">
             <Link to="/about" className="hover:text-accent transition-colors">About</Link>
             <Link to="/contact" className="hover:text-accent transition-colors">Contact</Link>
             <Link to="/jobs" className="hover:text-accent transition-colors">Careers</Link>
           </div>
         </div>
         <div>
-          <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Legal</h4>
-          <div className="flex flex-col gap-2 text-sm text-gray-500 dark:text-gray-400">
+          <h4 className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-4">Legal</h4>
+          <div className="flex flex-col gap-2 text-sm text-ink-muted dark:text-ink-faint">
             <Link to="/privacy" className="hover:text-accent transition-colors">Privacy</Link>
           </div>
         </div>
       </div>
-      <div className="mt-12 pt-8 border-t border-[#eee] dark:border-[#2a2a2a] text-center text-sm text-gray-400">
+      <DoubleRule className="mt-12" />
+      <div className="pt-6 text-center text-xs text-ink/40 dark:text-paper/40 uppercase tracking-widest">
         © 2026 MY News Sentiment. All rights reserved.
       </div>
     </div>
@@ -208,11 +134,10 @@ const Footer = () => (
 const AnimatedTimeline = ({ milestones }) => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
-  const currentMilestoneIndex = 4; // May 2026 is index 4
+  const currentMilestoneIndex = 4;
 
   return (
     <div ref={ref} className="relative">
-      {/* Animated vertical line */}
       <motion.div
         className="absolute left-6 top-0 bottom-0 w-0.5 bg-accent/30"
         initial={{ scaleY: 0 }}
@@ -220,8 +145,7 @@ const AnimatedTimeline = ({ milestones }) => {
         transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
         style={{ originY: 0 }}
       />
-      {/* Static background line */}
-      <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-[#eee] dark:bg-[#2a2a2a]" />
+      <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-ink/10 dark:bg-paper/10" />
 
       <div className="space-y-8">
         {milestones.map((ms, i) => (
@@ -232,19 +156,17 @@ const AnimatedTimeline = ({ milestones }) => {
             animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 28 }}
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: i * 0.15 }}
           >
-            {/* Dot */}
-            <div className="absolute left-4 top-1 w-4 h-4 rounded-full bg-accent border-4 border-white dark:border-[#1a1a1a]" />
-            {/* Pulsing ring on current milestone */}
+            <div className="absolute left-4 top-1 w-4 h-4 bg-accent border-2 border-paper dark:border-ink" />
             {i === currentMilestoneIndex && (
               <motion.div
-                className="absolute left-3 top-0 w-6 h-6 rounded-full border-2 border-accent"
+                className="absolute left-3 top-0 w-6 h-6 border-2 border-accent"
                 animate={{ scale: [1, 1.8, 1], opacity: [0.8, 0, 0.8] }}
                 transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
               />
             )}
-            <span className="text-xs font-bold text-accent uppercase tracking-wider">{ms.date}</span>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mt-1">{ms.title}</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{ms.desc}</p>
+            <span className="text-[10px] font-sans font-bold text-accent uppercase tracking-[0.2em]">{ms.date}</span>
+            <h3 className="text-lg font-['Playfair_Display'] font-semibold text-ink dark:text-paper mt-1">{ms.title}</h3>
+            <p className="text-sm text-ink-muted dark:text-ink-faint mt-1">{ms.desc}</p>
           </motion.div>
         ))}
       </div>
@@ -318,26 +240,21 @@ const AboutPage = () => {
   useEffect(() => { window.scrollTo(0, 0); }, []);
 
   return (
-    <div className="min-h-screen bg-[#fafaf9] dark:bg-[#0f0f0f] transition-colors">
+    <div className="min-h-screen bg-paper dark:bg-ink transition-colors">
       <ScrollProgress />
       <Navbar isDark={isDark} toggleTheme={toggleTheme} navigate={navigate} />
 
       {/* ─── HERO ─── */}
-      <motion.header className="relative pt-32 pb-16 px-6 text-center overflow-hidden" initial="hidden" animate="visible" variants={staggerContainer}>
-        {/* Background effects */}
-        {!prefersReducedMotion && <GradientOrbs />}
-        {!prefersReducedMotion && <FloatingParticles count={18} />}
-        <AnimatedGrid />
-
-        <div className="relative max-w-4xl mx-auto">
-          <motion.div variants={staggerItem} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-secondary/10 text-secondary text-sm font-medium mb-6">
+      <motion.header className="pt-32 pb-16 px-6 text-center" initial="hidden" animate="visible" variants={staggerContainer}>
+        <div className="max-w-4xl mx-auto">
+          <motion.p variants={staggerItem} className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-6">
             About Us
-          </motion.div>
-          <motion.h1 variants={staggerItem} className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white leading-tight mb-6">
-            Making Malaysian news intelligence{' '}
-            <span className="text-accent">accessible to everyone</span>
+          </motion.p>
+          <motion.h1 variants={staggerItem} className="font-['Playfair_Display'] text-4xl sm:text-5xl font-bold text-ink dark:text-paper leading-tight mb-6">
+            About MY News Sentiment
           </motion.h1>
-          <motion.p variants={staggerItem} className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+          <DoubleRule className="max-w-xs mx-auto mb-6" />
+          <motion.p variants={staggerItem} className="text-lg text-ink-muted dark:text-ink-faint max-w-2xl mx-auto">
             We're building the infrastructure to monitor, analyze, and predict news sentiment across Malaysia's multilingual media landscape.
           </motion.p>
         </div>
@@ -345,7 +262,7 @@ const AboutPage = () => {
 
       {/* ─── STATS ─── */}
       <AnimatedSection className="py-12 px-6" variants={staggerContainer}>
-        <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-6" ref={statsRef}>
+        <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3" ref={statsRef}>
           {[
             { num: `${counters.articles.toLocaleString()}+`, label: 'Articles Analyzed', icon: Newspaper },
             { num: `${counters.accuracy}%`, label: 'AI Accuracy', icon: Brain },
@@ -353,13 +270,12 @@ const AboutPage = () => {
           ].map((s, i) => (
             <motion.div
               key={i}
-              className="text-center p-6 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl"
+              className={`text-center p-6 border border-ink/10 dark:border-paper/10 ${i > 0 ? 'border-l-0' : ''}`}
               variants={staggerItem}
-              whileHover={{ y: -4 }}
             >
-              <s.icon className="w-8 h-8 text-accent mx-auto mb-3" />
-              <div className="text-3xl font-bold text-gray-900 dark:text-white">{s.num}</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{s.label}</div>
+              <s.icon className="w-6 h-6 text-accent mx-auto mb-3" />
+              <div className="text-3xl font-['Playfair_Display'] font-bold text-ink dark:text-paper">{s.num}</div>
+              <div className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mt-1">{s.label}</div>
             </motion.div>
           ))}
         </div>
@@ -367,32 +283,35 @@ const AboutPage = () => {
 
       {/* ─── MISSION ─── */}
       <AnimatedSection className="py-16 px-6" variants={fadeInUp}>
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Our Mission</h2>
-          <p className="text-gray-600 dark:text-gray-400 text-lg leading-relaxed">
-            To provide transparent, unbiased, and accessible news sentiment analysis for Malaysia. We believe that understanding media narratives is essential for informed decision-making in a democratic society.
-          </p>
+        <div className="max-w-3xl mx-auto">
+          <div className="border border-ink/10 dark:border-paper/10 p-8">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-4">Our Mission</p>
+            <h2 className="font-['Playfair_Display'] text-2xl font-bold text-ink dark:text-paper mb-4">Our Mission</h2>
+            <p className="text-ink-muted dark:text-ink-faint leading-relaxed">
+              To provide transparent, unbiased, and accessible news sentiment analysis for Malaysia. We believe that understanding media narratives is essential for informed decision-making in a democratic society.
+            </p>
+          </div>
         </div>
       </AnimatedSection>
 
       {/* ─── TECH STACK ─── */}
-      <section className="py-16 px-6 bg-white dark:bg-[#1a1a1a]">
+      <section className="py-16 px-6 border-t border-b border-ink/10 dark:border-paper/10">
         <div className="max-w-6xl mx-auto">
-          <p className="text-center text-sm font-medium text-accent uppercase tracking-wider mb-2">Technology</p>
-          <h2 className="text-center text-3xl font-bold text-gray-900 dark:text-white mb-4">Built with modern tools</h2>
-          <p className="text-center text-gray-500 dark:text-gray-400 max-w-xl mx-auto mb-10">A full-stack architecture designed for real-time sentiment analysis at scale.</p>
+          <p className="text-center text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-2">Technology</p>
+          <h2 className="text-center font-['Playfair_Display'] text-3xl font-bold text-ink dark:text-paper mb-3">Built with modern tools</h2>
+          <DoubleRule className="max-w-xs mx-auto mb-4" />
+          <p className="text-center text-ink-muted dark:text-ink-faint max-w-xl mx-auto mb-10">A full-stack architecture designed for real-time sentiment analysis at scale.</p>
 
-          <AnimatedSection className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" variants={staggerContainer}>
-            {techStack.map((tech) => (
+          <AnimatedSection className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" variants={staggerContainer}>
+            {techStack.map((tech, i) => (
               <motion.div
                 key={tech.name}
-                className="p-6 bg-[#fafaf9] dark:bg-[#0f0f0f] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl hover:border-accent/50 transition-all"
+                className={`p-6 border border-ink/10 dark:border-paper/10 ${i % 3 !== 0 ? 'border-l-0' : ''} ${i >= 3 ? 'border-t-0' : ''}`}
                 variants={staggerItem}
-                whileHover={{ y: -4 }}
               >
                 <img src={tech.icon} alt={tech.name} className="w-8 h-8 mb-3" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{tech.name}</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{tech.desc}</p>
+                <h3 className="font-['Playfair_Display'] text-lg font-semibold text-ink dark:text-paper">{tech.name}</h3>
+                <p className="text-sm text-ink-muted dark:text-ink-faint mt-1">{tech.desc}</p>
               </motion.div>
             ))}
           </AnimatedSection>
@@ -402,29 +321,23 @@ const AboutPage = () => {
       {/* ─── TEAM ─── */}
       <section className="py-16 px-6">
         <div className="max-w-4xl mx-auto">
-          <p className="text-center text-sm font-medium text-accent uppercase tracking-wider mb-2">Team</p>
-          <h2 className="text-center text-3xl font-bold text-gray-900 dark:text-white mb-4">The people behind the platform</h2>
-          <p className="text-center text-gray-500 dark:text-gray-400 max-w-xl mx-auto mb-10">A dedicated team building the future of Malaysian media intelligence.</p>
+          <p className="text-center text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-2">Team</p>
+          <h2 className="text-center font-['Playfair_Display'] text-3xl font-bold text-ink dark:text-paper mb-3">The people behind the platform</h2>
+          <DoubleRule className="max-w-xs mx-auto mb-4" />
+          <p className="text-center text-ink-muted dark:text-ink-faint max-w-xl mx-auto mb-10">A dedicated team building the future of Malaysian media intelligence.</p>
 
-          <AnimatedSection className="grid grid-cols-1 sm:grid-cols-3 gap-6" variants={staggerContainer}>
-            {team.map((member) => (
+          <AnimatedSection className="grid grid-cols-1 sm:grid-cols-3" variants={staggerContainer}>
+            {team.map((member, i) => (
               <motion.div
                 key={member.name}
-                className="group text-center p-8 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl transition-all hover:shadow-lg hover:shadow-accent/5"
+                className={`text-center p-8 border border-ink/10 dark:border-paper/10 ${i > 0 ? 'border-l-0' : ''}`}
                 variants={staggerItem}
-                whileHover={{ y: -4 }}
               >
-                {/* Avatar with gradient ring on hover */}
-                <div className="relative w-16 h-16 mx-auto mb-4">
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-accent to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300 scale-110" />
-                  <div className="relative w-16 h-16 flex items-center justify-center bg-accent/10 text-accent font-bold text-xl rounded-full border-2 border-transparent group-hover:border-white dark:group-hover:border-[#1a1a1a]">
-                    {member.initials}
-                  </div>
+                <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center border-2 border-ink/20 dark:border-paper/20 text-accent font-['Playfair_Display'] font-bold text-xl">
+                  {member.initials}
                 </div>
-                {/* Hover glow */}
-                <div className="absolute inset-0 rounded-2xl bg-accent/0 group-hover:bg-accent/[0.02] transition-colors duration-300 pointer-events-none" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{member.name}</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{member.role}</p>
+                <h3 className="font-['Playfair_Display'] text-lg font-semibold text-ink dark:text-paper">{member.name}</h3>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mt-1">{member.role}</p>
               </motion.div>
             ))}
           </AnimatedSection>
@@ -432,10 +345,10 @@ const AboutPage = () => {
       </section>
 
       {/* ─── TIMELINE ─── */}
-      <section className="py-16 px-6 bg-white dark:bg-[#1a1a1a]">
+      <section className="py-16 px-6 border-t border-b border-ink/10 dark:border-paper/10">
         <div className="max-w-3xl mx-auto">
-          <p className="text-center text-sm font-medium text-accent uppercase tracking-wider mb-2">Milestones</p>
-          <h2 className="text-center text-3xl font-bold text-gray-900 dark:text-white mb-10">Our journey so far</h2>
+          <p className="text-center text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-2">Milestones</p>
+          <h2 className="text-center font-['Playfair_Display'] text-3xl font-bold text-ink dark:text-paper mb-10">Our journey so far</h2>
 
           <AnimatedTimeline milestones={milestones} />
         </div>
@@ -443,13 +356,13 @@ const AboutPage = () => {
 
       {/* ─── UMPSA Banner ─── */}
       <AnimatedSection className="py-16 px-6" variants={fadeInUp}>
-        <div className="max-w-3xl mx-auto text-center p-10 bg-gradient-to-br from-accent/5 to-secondary/5 border border-accent/20 rounded-3xl">
-          <GraduationCap className="w-12 h-12 text-accent mx-auto mb-4" />
-          <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Built at UMPSA</h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
+        <div className="max-w-3xl mx-auto text-center p-10 border-2 border-ink/20 dark:border-paper/20">
+          <GraduationCap className="w-10 h-10 text-accent mx-auto mb-4" />
+          <h3 className="font-['Playfair_Display'] text-2xl font-bold text-ink dark:text-paper mb-3">Built at UMPSA</h3>
+          <p className="text-ink-muted dark:text-ink-faint mb-4">
             This platform is developed as a Final Year Project (FYP) at Universiti Malaysia Pahang Al-Sultan Abdullah (UMPSA), Faculty of Computing (FSKKP).
           </p>
-          <span className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-full text-sm text-gray-600 dark:text-gray-400">
+          <span className="inline-flex items-center gap-2 px-4 py-2 border border-ink/10 dark:border-paper/10 text-xs text-ink-muted dark:text-ink-faint uppercase tracking-[0.2em] font-sans">
             <Building2 className="w-4 h-4" /> UMPSA · Gambang, Pahang
           </span>
         </div>

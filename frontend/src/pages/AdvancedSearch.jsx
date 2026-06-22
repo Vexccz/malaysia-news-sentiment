@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 
 const SENTIMENTS = ['Positive', 'Negative', 'Neutral'];
@@ -19,6 +20,7 @@ const SkeletonCard = () => (
 );
 
 const AdvancedSearch = () => {
+  const [searchParams] = useSearchParams();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -64,6 +66,14 @@ const AdvancedSearch = () => {
       setLoading(false);
     }
   }, [query, filters]);
+
+  // Read state param from heatmap navigation
+  useEffect(() => {
+    const stateParam = searchParams.get('state');
+    if (stateParam) {
+      setQuery(stateParam);
+    }
+  }, [searchParams]);
 
   // Debounced search on query/filter change
   useEffect(() => {
@@ -141,7 +151,7 @@ const AdvancedSearch = () => {
       </motion.div>
 
       {/* Search Bar */}
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
         <div className="flex-1 relative">
           <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
@@ -154,6 +164,7 @@ const AdvancedSearch = () => {
             className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent/30"
           />
         </div>
+        <div className="flex gap-2">
         <button
           onClick={() => setShowFilters(!showFilters)}
           className={`px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
@@ -175,6 +186,7 @@ const AdvancedSearch = () => {
             <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
           </svg>
         </button>
+        </div>
       </div>
 
 
@@ -223,15 +235,15 @@ const AdvancedSearch = () => {
         </motion.div>
       )}
 
-      <div className="flex gap-6">
+      <div className="flex flex-col md:flex-row gap-6">
         {/* Filters Panel */}
         <AnimatePresence>
           {showFilters && (
             <motion.aside
               initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 260, opacity: 1 }}
+              animate={{ width: 'auto', opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
-              className="flex-shrink-0 space-y-5 overflow-hidden"
+              className="flex-shrink-0 space-y-5 overflow-hidden md:w-[260px]"
             >
               {/* Sentiment */}
               <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-4">
@@ -346,7 +358,7 @@ const AdvancedSearch = () => {
         </AnimatePresence>
 
         {/* Results */}
-        <div className="flex-1 space-y-4">
+        <div className="flex-1 min-w-0 space-y-4">
           {/* Results count */}
           {results && (
             <div className="flex items-center justify-between">

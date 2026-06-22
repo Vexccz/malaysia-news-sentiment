@@ -1,4 +1,4 @@
-/* ── Analyzing Overlay (ANIMATED VERSION) ─────────────────────────── */
+/* ── Analyzing Overlay (Editorial) ─────────────────────────── */
 .analyzing-overlay { 
   position: fixed; 
   inset: 0; 
@@ -6,40 +6,27 @@
   display: flex; 
   align-items: center; 
   justify-content: center; 
-  background: rgba(0, 0, 0, 0.75); 
-  backdrop-filter: blur(12px); 
+  background: rgba(0, 0, 0, 0.6); 
+  backdrop-filter: blur(4px); 
   overflow: hidden;
-}
-
-/* Floating Particles Background */
-.analyzing-particles {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.analyzing-particle {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  background: linear-gradient(135deg, #14b8a6, #0ea5e9);
-  border-radius: 50%;
-  filter: blur(2px);
-  opacity: 0.3;
 }
 
 /* Main Card */
 .analyzing-card { 
-  background: var(--card); 
-  border: 1px solid var(--border); 
-  border-radius: 20px; 
-  padding: 48px 56px; 
+  background: #FFFFFF; 
+  border: 1px solid #E8E4DB; 
+  border-radius: 0; 
+  padding: 40px 48px; 
   text-align: center; 
-  max-width: 480px; 
+  max-width: 400px; 
   width: 90%; 
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   position: relative;
   overflow: hidden;
+}
+
+.dark .analyzing-card {
+  background: #1A1917;
+  border-color: #2A2824;
 }
 
 .analyzing-card::before {
@@ -48,151 +35,152 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #14b8a6, #0ea5e9, #8b5cf6);
-  background-size: 200% 100%;
-  animation: gradientShift 3s linear infinite;
+  height: 3px;
+  background: #1A1A1A;
 }
 
-@keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 200% 50%; }
+.dark .analyzing-card::before {
+  background: #F5F3EE;
 }
 
-/* Modern Spinner with 3 Rings */
+/* Spinner */
 .analyzing-icon { 
   display: flex; 
   justify-content: center; 
   align-items: center;
-  margin-bottom: 24px; 
+  margin-bottom: 20px; 
   position: relative;
-  height: 80px;
+  height: 48px;
 }
 
 .analyzing-spinner-modern {
   position: relative;
-  width: 70px;
-  height: 70px;
+  width: 36px;
+  height: 36px;
 }
 
 .spinner-ring {
   position: absolute;
   border-radius: 50%;
-  border: 3px solid transparent;
+  border: 2px solid transparent;
 }
 
 .spinner-ring-1 {
   inset: 0;
-  border-top-color: #14b8a6;
-  animation: spin 1.5s linear infinite;
+  border-top-color: #1A1A1A;
+  animation: spin 1.2s linear infinite;
+}
+
+.dark .spinner-ring-1 {
+  border-top-color: #F5F3EE;
 }
 
 .spinner-ring-2 {
-  inset: 8px;
-  border-right-color: #0ea5e9;
-  animation: spin 2s linear infinite reverse;
+  inset: 6px;
+  border-right-color: #6B6A65;
+  animation: spin 1.8s linear infinite reverse;
 }
 
 .spinner-ring-3 {
-  inset: 16px;
-  border-bottom-color: #8b5cf6;
-  animation: spin 1.2s linear infinite;
+  inset: 12px;
+  border-bottom-color: #A8A59E;
+  animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
-/* Pulse Effect Behind Spinner */
-.analyzing-pulse {
-  position: absolute;
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(20, 184, 166, 0.4), transparent);
-  z-index: -1;
-}
-
-/* Title with Gradient Text Animation */
+/* Title */
 .analyzing-title { 
-  font-size: 22px; 
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 20px; 
   font-weight: 700; 
-  background: linear-gradient(90deg, #14b8a6, #0ea5e9, #8b5cf6, #14b8a6);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: 8px;
+  color: #1A1A1A;
+  margin-bottom: 6px; 
+  letter-spacing: -0.01em;
 }
 
-/* Count with Transition */
+.dark .analyzing-title {
+  color: #F5F3EE;
+}
+
+/* Count */
 .analyzing-count { 
-  font-size: 14px; 
-  font-weight: 600;
-  color: var(--text-muted); 
-  margin-bottom: 24px;
-  transition: all 0.3s ease;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px; 
+  font-weight: 500;
+  color: #6B6A65; 
+  margin-bottom: 20px;
+}
+
+.dark .analyzing-count {
+  color: #A8A59E;
 }
 
 /* Progress Bar Track */
 .analyzing-progress-track { 
   width: 100%; 
-  height: 8px; 
-  background: rgba(148, 163, 184, 0.2);
-  border-radius: 999px; 
+  height: 4px; 
+  background: #E8E4DB;
+  border-radius: 0; 
   overflow: hidden; 
-  margin-bottom: 12px;
-  position: relative;
+  margin-bottom: 10px;
 }
 
-/* Modern Progress Fill with Shimmer */
+.dark .analyzing-progress-track {
+  background: #2A2824;
+}
+
+/* Progress Fill */
 .analyzing-progress-fill-modern { 
   height: 100%; 
-  background: linear-gradient(90deg, #14b8a6, #0ea5e9);
-  border-radius: 999px;
-  position: relative;
-  overflow: hidden;
+  background: #1A1A1A;
+  border-radius: 0;
 }
 
-.analyzing-shimmer {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, 
-    transparent, 
-    rgba(255, 255, 255, 0.5), 
-    transparent
-  );
-  width: 50%;
+.dark .analyzing-progress-fill-modern {
+  background: #F5F3EE;
 }
 
-/* Percentage Badge */
+/* Percentage */
 .analyzing-pct { 
-  font-size: 16px; 
-  font-weight: 800; 
-  background: linear-gradient(135deg, #14b8a6, #0ea5e9);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px; 
+  font-weight: 700; 
+  color: #1A1A1A;
   display: inline-block; 
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   letter-spacing: 0.5px;
 }
 
-/* Fun Facts Container */
+.dark .analyzing-pct {
+  color: #F5F3EE;
+}
+
+/* Facts Container */
 .analyzing-fact-container {
-  min-height: 48px;
+  min-height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .analyzing-fact { 
-  font-size: 13px; 
-  color: var(--text-muted); 
+  font-family: 'Inter', sans-serif;
+  font-size: 11px; 
+  color: #6B6A65; 
   line-height: 1.6; 
-  padding: 12px 18px; 
-  background: linear-gradient(135deg, rgba(20, 184, 166, 0.1), rgba(14, 165, 233, 0.1));
-  border: 1px solid rgba(20, 184, 166, 0.2);
-  border-radius: 12px;
+  padding: 10px 14px; 
+  background: #FAF8F3;
+  border: 1px solid #E8E4DB;
+  border-radius: 0; 
   max-width: 100%;
+  text-align: left;
+}
+
+.dark .analyzing-fact {
+  background: #12110F;
+  border-color: #2A2824;
+  color: #A8A59E;
 }

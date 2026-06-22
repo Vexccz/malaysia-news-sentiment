@@ -1,14 +1,28 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Graph } from '@antv/g6';
+import { Graph, Minimap } from '@antv/g6';
 import { useTheme } from '../context/ThemeContext';
-import { Search, List, Network, X } from 'lucide-react';
+import { Search, List, Network, X, TrendingUp, BarChart3, FileText, Share2, PieChart } from 'lucide-react';
+import { LineChart, Line, PieChart as RechartsPie, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
 const SENTIMENT_COLORS = { Positive: '#10B981', Negative: '#EF4444', Neutral: '#F59E0B' };
 const SENTIMENT_GLOW = { Positive: 'rgba(16,185,129,0.4)', Negative: 'rgba(239,68,68,0.4)', Neutral: 'rgba(245,158,11,0.4)' };
 const TYPE_LABELS = { politicians: 'Politicians', parties: 'Parties', organizations: 'Organizations', locations: 'Locations' };
 const TYPE_COLORS = { politicians: '#6366f1', parties: '#8b5cf6', organizations: '#06b6d4', locations: '#f59e0b' };
-const TYPE_ICONS = { politicians: '', parties: '', organizations: '', locations: '' };
+
+// Sentiment edge color calculator
+const getSentimentEdgeColor = (avgSentiment) => {
+  if (avgSentiment <= -0.3) return '#EF4444'; // red for negative
+  if (avgSentiment >= 0.3) return '#10B981'; // green for positive
+  return '#6B7280'; // grey for neutral
+};
+
+// Convert sentiment label to numeric value
+const sentimentToValue = (sentiment) => {
+  if (sentiment === 'Positive') return 1;
+  if (sentiment === 'Negative') return -1;
+  return 0;
+};
 
 export default function EntityGraphPage() {
   const { theme } = useTheme();
@@ -16,27 +30,47 @@ export default function EntityGraphPage() {
 
   const [data, setData] = useState({ nodes: [], edges: [] });
   const [loading, setLoading] = useState(true);
-  const [selectedNode, setSelectedNode] = useState(null);
   const [graphRendering, setGraphRendering] = useState(false);
+  const [selectedNode, setSelectedNode] = useState(null);
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [searchHighlight, setSearchHighlight] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [entityTypeFilters, setEntityTypeFilters] = useState({
+    politicians: true,
+    parties: true,
+    organizations: true,
+    locations: true
+  });
   const [timeframe, setTimeframe] = useState('');
   const [viewMode, setViewMode] = useState('graph');
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  
-  // Phase 1: New state variables
-  const [entityTypeFilter, setEntityTypeFilter] = useState({ 
-    PERSON: true, 
-    ORGANIZATION: true, 
-    LOCATION: true 
-  });
-  const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
   const graphRef = useRef(null);
   const containerRef = useRef(null);
   const graphInstance = useRef(null);
+  const layoutAnimationRef = useRef(null);
+  const pulseIntervalRef = useRef(null);
+
+  // Feature 3: Physics sliders state
+  const [linkDistance, setLinkDistance] = useState(250);
+  const [nodeStrength, setNodeStrength] = useState(2000);
+  const [showPhysics, setShowPhysics] = useState(false);
+
+  // Feature 5: Path highlight state
+  const [pathMode, setPathMode] = useState(false);
+  const [selectedPathNodes, setSelectedPathNodes] = useState([]);
+  const [highlightedPath, setHighlightedPath] = useState(null);
+
+  // Feature 6: Timeline animation state
+  const [timelineValue, setTimelineValue] = useState(100);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const timelineRef = useRef(null);
+
+  // Feature 7: Expanded neighborhood tracking
+  const [expandedNodes, setExpandedNodes] = useState(new Set());
+  const [graphDataExtra, setGraphDataExtra] = useState({ nodes: [], edges: [] });
 
   useEffect(() => {
     const checkMobile = () => {
@@ -49,13 +83,12 @@ export default function EntityGraphPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Phase 1: Helper function for edge sentiment colors
-  const getEdgeColor = (edge) => {
-    const sentiment = edge.sentiment || 0;
-    if (sentiment <= -0.3) return '#FF5C5C'; // Red
-    if (sentiment >= 0.3) return '#34D882';  // Green
-    return '#94A3B8'; // Grey
-  };
+  // Cleanup timeline animation on unmount
+  useEffect(() => {
+    return () => {
+      if (timelineRef.current) cancelAnimationFrame(timelineRef.current);
+    };
+  }, []);
 
   const fetchGraph = useCallback(async () => {
     setLoading(true);
@@ -67,9 +100,9 @@ export default function EntityGraphPage() {
       if (timeframe) params.set('timeframe', timeframe);
       if (typeFilter) params.set('type', typeFilter);
       const res = await fetch(`${API}/entities/graph?${params}`, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) { const errText = await res.text(); console.error("API Error:", res.status, errText); throw new Error(`Failed: ${res.status}`); }
+      if (!res.ok) throw new Error('Failed');
       setData(await res.json());
-    } catch (err) { console.error("Fetch Graph Error:", err, "Status:", err.message); setData({ nodes: [], edges: [] }); }
+    } catch { setData({ nodes: [], edges: [] }); }
     finally { setLoading(false); }
   }, [search, timeframe, typeFilter]);
 
@@ -87,11 +120,139 @@ export default function EntityGraphPage() {
   };
 
   const handleNodeClick = (name) => {
+    if (pathMode) {
+      // Feature 5: Path highlight - select nodes for path finding
+      setSelectedPathNodes(prev => {
+        if (prev.includes(name)) {
+          return prev.filter(n => n !== name);
+        }
+        if (prev.length >= 2) return [name];
+        const next = [...prev, name];
+        if (next.length === 2) {
+          // Find path between the two selected nodes
+          const sourceId = data.nodes.find(n => n.label === next[0])?.id;
+          const targetId = data.nodes.find(n => n.label === next[1])?.id;
+          if (sourceId && targetId) {
+            const path = findShortestPath(sourceId, targetId);
+            setHighlightedPath(path);
+          }
+        }
+        return next;
+      });
+      return;
+    }
     if (selectedNode === name) { setSelectedNode(null); setDetail(null); }
     else { setSelectedNode(name); fetchDetail(name); }
   };
 
-  // Initialize/update G6 graph
+  // Feature 5: BFS shortest path algorithm
+  const findShortestPath = useCallback((sourceId, targetId) => {
+    const adjacency = new Map();
+    data.edges.forEach(e => {
+      if (!adjacency.has(e.source)) adjacency.set(e.source, []);
+      if (!adjacency.has(e.target)) adjacency.set(e.target, []);
+      adjacency.get(e.source).push(e.target);
+      adjacency.get(e.target).push(e.source);
+    });
+    const visited = new Set();
+    const queue = [[sourceId]];
+    visited.add(sourceId);
+    while (queue.length > 0) {
+      const path = queue.shift();
+      const current = path[path.length - 1];
+      if (current === targetId) return path;
+      const neighbors = adjacency.get(current) || [];
+      for (const neighbor of neighbors) {
+        if (!visited.has(neighbor)) {
+          visited.add(neighbor);
+          queue.push([...path, neighbor]);
+        }
+      }
+    }
+    return null;
+  }, [data]);
+
+  // Feature 7: Expand neighborhood for a node
+  const expandNeighborhood = useCallback((nodeId) => {
+    if (expandedNodes.has(nodeId)) return;
+    const connectedEdges = data.edges.filter(e => e.source === nodeId || e.target === nodeId);
+    const connectedNodeIds = new Set();
+    connectedEdges.forEach(e => {
+      if (e.source !== nodeId) connectedNodeIds.add(e.source);
+      if (e.target !== nodeId) connectedNodeIds.add(e.target);
+    });
+    // Find nodes that are 2 hops away (not direct neighbors, not already present)
+    const directNeighbors = new Set([nodeId, ...connectedNodeIds]);
+    const secondHopNodes = new Set();
+    connectedNodeIds.forEach(nid => {
+      data.edges.forEach(e => {
+        const other = e.source === nid ? e.target : (e.target === nid ? e.source : null);
+        if (other && !directNeighbors.has(other)) secondHopNodes.add(other);
+      });
+    });
+    const newNodes = [...secondHopNodes].slice(0, 5).map(nid => {
+      const orig = data.nodes.find(n => n.id === nid);
+      if (!orig) return null;
+      return { ...orig, _expanded: true };
+    }).filter(Boolean);
+    const newNodeIds = new Set(newNodes.map(n => n.id));
+    const newEdges = data.edges.filter(e =>
+      (e.source === nodeId && newNodeIds.has(e.target)) ||
+      (e.target === nodeId && newNodeIds.has(e.source)) ||
+      (newNodeIds.has(e.source) && directNeighbors.has(e.target)) ||
+      (newNodeIds.has(e.target) && directNeighbors.has(e.source))
+    ).slice(0, 8);
+    setExpandedNodes(prev => new Set([...prev, nodeId]));
+    setGraphDataExtra(prev => ({
+      nodes: [...prev.nodes, ...newNodes.filter(n => !prev.nodes.find(p => p.id === n.id))],
+      edges: [...prev.edges, ...newEdges.filter(e => !prev.edges.find(p => p.id === e.id))],
+    }));
+  }, [data, expandedNodes]);
+
+  // Filter nodes based on entity type checkboxes and search highlight
+  const getFilteredData = useCallback(() => {
+    let filteredNodes = data.nodes.filter(node => {
+      const categoryKey = node.category;
+      return entityTypeFilters[categoryKey] !== false;
+    });
+
+    // Apply search highlight filter
+    if (searchHighlight) {
+      const searchLower = searchHighlight.toLowerCase();
+      filteredNodes = filteredNodes.map(node => {
+        const matches = node.label.toLowerCase().includes(searchLower);
+        return { ...node, highlighted: matches };
+      });
+    } else {
+      filteredNodes = filteredNodes.map(node => ({ ...node, highlighted: true }));
+    }
+
+    const nodeIds = new Set(filteredNodes.map(n => n.id));
+    const filteredEdges = data.edges.filter(e => nodeIds.has(e.source) && nodeIds.has(e.target));
+
+    return { nodes: filteredNodes, edges: filteredEdges };
+  }, [data, entityTypeFilters, searchHighlight]);
+
+  // Calculate edge sentiment colors based on connected nodes
+  const calculateEdgeSentiments = useCallback((nodes, edges) => {
+    const nodeMap = new Map(nodes.map(n => [n.id, n]));
+    
+    return edges.map(edge => {
+      const sourceNode = nodeMap.get(edge.source);
+      const targetNode = nodeMap.get(edge.target);
+      
+      if (sourceNode && targetNode) {
+        const sourceSentiment = sentimentToValue(sourceNode.sentiment);
+        const targetSentiment = sentimentToValue(targetNode.sentiment);
+        const avgSentiment = (sourceSentiment + targetSentiment) / 2;
+        
+        return { ...edge, avgSentiment };
+      }
+      return { ...edge, avgSentiment: 0 };
+    });
+  }, []);
+
+  // Initialize/update G6 graph with performance optimizations
   useEffect(() => {
     if (loading || !data.nodes.length || !graphRef.current) return;
     if (isMobile && viewMode === 'list') {
@@ -99,8 +260,11 @@ export default function EntityGraphPage() {
         graphInstance.current.destroy();
         graphInstance.current = null;
       }
+      setGraphRendering(false);
       return;
     }
+
+    setGraphRendering(true);
 
     if (graphInstance.current) {
       graphInstance.current.destroy();
@@ -112,60 +276,63 @@ export default function EntityGraphPage() {
     const height = container.offsetHeight || 600;
 
     const mobileGraphMode = isMobile && viewMode === 'graph';
-    let graphNodes = data.nodes;
-    let graphEdges = data.edges;
-
-    // Phase 1: Apply entity type filter
-    graphNodes = graphNodes.filter(node => {
-      const nodeType = node.type || 'ORGANIZATION'; // Default fallback
-      return entityTypeFilter[nodeType] !== false;
-    });
     
-    // Phase 1: Apply search query (don't filter out, just mark for highlighting)
-    const searchLower = searchQuery.toLowerCase();
-    const matchingNodeIds = new Set();
-    if (searchQuery) {
-      graphNodes.forEach(node => {
-        if (node.label?.toLowerCase().includes(searchLower) || 
-            node.id?.toLowerCase().includes(searchLower)) {
-          matchingNodeIds.add(node.id);
-        }
-      });
+    // Apply filters
+    const filtered = getFilteredData();
+    let graphNodes = filtered.nodes;
+    let graphEdges = calculateEdgeSentiments(filtered.nodes, filtered.edges);
+
+    // Feature 6: Timeline filtering - progressively reveal nodes
+    if (timelineValue < 100) {
+      const sortedByMentions = [...graphNodes].sort((a, b) => b.mentions - a.mentions);
+      const cutoff = Math.max(2, Math.ceil(sortedByMentions.length * (timelineValue / 100)));
+      const visibleIds = new Set(sortedByMentions.slice(0, cutoff).map(n => n.id));
+      graphNodes = graphNodes.filter(n => visibleIds.has(n.id));
+      graphEdges = graphEdges.filter(e => visibleIds.has(e.source) && visibleIds.has(e.target));
     }
+
+    // Feature 7: Merge expanded neighborhood nodes
+    if (graphDataExtra.nodes.length > 0) {
+      const existingIds = new Set(graphNodes.map(n => n.id));
+      const extraNodes = graphDataExtra.nodes.filter(n => !existingIds.has(n.id));
+      graphNodes = [...graphNodes, ...extraNodes];
+      const allIds = new Set(graphNodes.map(n => n.id));
+      const extraEdges = graphDataExtra.edges.filter(e => allIds.has(e.source) && allIds.has(e.target));
+      const existingEdgeKeys = new Set(graphEdges.map(e => `${e.source}-${e.target}`));
+      graphEdges = [...graphEdges, ...extraEdges.filter(e => !existingEdgeKeys.has(`${e.source}-${e.target}`))];
+    }
+    
     if (mobileGraphMode) {
-      const sorted = [...data.nodes].sort((a, b) => b.mentions - a.mentions);
+      const sorted = [...graphNodes].sort((a, b) => b.mentions - a.mentions);
       graphNodes = sorted.slice(0, 15);
       const nodeIds = new Set(graphNodes.map(n => n.id));
-      graphEdges = data.edges.filter(e => nodeIds.has(e.source) && nodeIds.has(e.target));
+      graphEdges = graphEdges.filter(e => nodeIds.has(e.source) && nodeIds.has(e.target));
     }
 
     const maxMentions = Math.max(...graphNodes.map(n => n.mentions), 1);
     const baseNodeSize = mobileGraphMode ? 20 : 28;
     const sizeRange = mobileGraphMode ? 20 : 52;
 
-
     const g6Data = {
       nodes: graphNodes.map(n => {
         const color = SENTIMENT_COLORS[n.sentiment] || SENTIMENT_COLORS.Neutral;
         const nodeSize = baseNodeSize + (n.mentions / maxMentions) * sizeRange;
-        
-        // Phase 1: Highlight matching search results
-        const isMatch = searchQuery ? matchingNodeIds.has(n.id) : true;
-        const opacity = searchQuery && !isMatch ? 0.2 : 0.8;
-        const strokeWidth = isMatch && searchQuery ? 4 : 2.5;
-        
+        const isHighlighted = n.highlighted !== false;
+        // Feature 5: Path highlight dimming
+        const onPath = !highlightedPath || highlightedPath.includes(n.id);
+        // Feature 7: Expanded nodes get a distinct border
+        const isExpanded = n._expanded;
         return {
           id: n.id,
-          label: mobileGraphMode ? '' : (n.label.length > 18 ? n.label.slice(0, 16) + '…' : n.label),
-          mentions: n.mentions,
-          sentiment: n.sentiment,
-          category: n.category,
-          size: nodeSize,
+          label: n.label,
+          data: { label: n.label, mentions: n.mentions, sentiment: n.sentiment, category: n.category },
+          size: isExpanded ? nodeSize * 0.85 : nodeSize,
           style: {
             fill: color,
-            stroke: color,
-            lineWidth: strokeWidth,
-            opacity: opacity,
+            stroke: isExpanded ? '#6366F1' : color,
+            lineWidth: isExpanded ? 3.5 : 2.5,
+            opacity: (isHighlighted && onPath) ? 1 : 0.08,
+            lineDash: isExpanded ? [4, 2] : undefined,
           },
           labelCfg: {
             style: {
@@ -178,17 +345,26 @@ export default function EntityGraphPage() {
           },
         };
       }),
-      edges: graphEdges.map((e, i) => ({
-        id: `edge-${i}`,
-        source: e.source,
-        target: e.target,
-        data: { weight: e.weight, sentiment: e.sentiment },
-        style: {
-          stroke: getEdgeColor(e), // Phase 1: Sentiment color
-          lineWidth: Math.min(5, 1.5 + e.weight * 0.6),
-          endArrow: false,
-        },
-      })),
+      edges: graphEdges.map((e, i) => {
+        const edgeColor = getSentimentEdgeColor(e.avgSentiment || 0);
+        // Feature 5: Highlight edges on the path
+        const isOnPath = highlightedPath && highlightedPath.includes(e.source) && highlightedPath.includes(e.target);
+        const pathIdxSrc = highlightedPath ? highlightedPath.indexOf(e.source) : -1;
+        const pathIdxTgt = highlightedPath ? highlightedPath.indexOf(e.target) : -1;
+        const isPathEdge = isOnPath && Math.abs(pathIdxSrc - pathIdxTgt) === 1;
+        return {
+          id: `edge-${i}`,
+          source: e.source,
+          target: e.target,
+          data: { weight: e.weight, avgSentiment: e.avgSentiment },
+          style: {
+            stroke: isPathEdge ? '#6366F1' : edgeColor,
+            lineWidth: isPathEdge ? 5 : Math.min(5, 1.5 + e.weight * 0.6),
+            strokeOpacity: (highlightedPath && !isPathEdge) ? 0.05 : 0.6,
+            endArrow: isPathEdge ? { path: 'M 0,0 L 8,4 L 8,-4 Z', fill: '#6366F1' } : false,
+          },
+        };
+      }),
     };
 
     const graph = new Graph({
@@ -203,21 +379,33 @@ export default function EntityGraphPage() {
         type: 'force',
         preventOverlap: true,
         nodeSpacing: mobileGraphMode ? 100 : 120,
-        linkDistance: mobileGraphMode ? 120 : 250,
-        nodeStrength: mobileGraphMode ? -800 : -2000,
+        linkDistance: mobileGraphMode ? 120 : linkDistance,
+        nodeStrength: mobileGraphMode ? -800 : -nodeStrength,
         edgeStrength: 0.25,
         collideStrength: 1,
         alphaDecay: 0.015,
         alphaMin: 0.001,
       },
       modes: {
-        default: ['drag-canvas', 'zoom-canvas', 'drag-node'],
+        default: [
+          'drag-canvas',
+          'zoom-canvas',
+          'drag-node',
+          ['hover-activate', { degree: 1, trigger: 'mouseenter' }],
+        ],
       },
+      plugins: [
+        new Minimap({
+          size: [150, 100],
+          className: 'g6-minimap',
+        }),
+      ],
       node: {
         style: { cursor: 'pointer' },
         state: {
-          active: { lineWidth: 4, fillOpacity: 0.6, shadowBlur: 24 },
-          inactive: { fillOpacity: 0.08, strokeOpacity: 0.2, labelOpacity: 0.25, shadowBlur: 0 },
+          active: { lineWidth: 5, fillOpacity: 1, shadowBlur: 30, shadowColor: 'rgba(99,102,241,0.5)' },
+          inactive: { fillOpacity: 0.06, strokeOpacity: 0.15, labelOpacity: 0.15, shadowBlur: 0 },
+          selected: { lineWidth: 5, stroke: '#6366F1', shadowBlur: 24, shadowColor: 'rgba(99,102,241,0.6)' },
         },
       },
       edge: {
@@ -237,32 +425,74 @@ export default function EntityGraphPage() {
       if (node) handleNodeClick(node.label);
     });
 
+    // Feature 7: Double-click to expand neighborhood
+    graph.on('node:dblclick', (evt) => {
+      const nodeId = evt.item?._cfg?.id;
+      if (nodeId) expandNeighborhood(nodeId);
+    });
+
+    // Feature 4: Pulse animation on hover - gentle size pulse
+    graph.on('node:mouseenter', (evt) => {
+      const item = evt.item;
+      if (!item) return;
+      const originalSize = item.getModel().size;
+      let growing = true;
+      let currentSize = originalSize;
+      if (pulseIntervalRef.current) clearInterval(pulseIntervalRef.current);
+      pulseIntervalRef.current = setInterval(() => {
+        if (!graphInstance.current || !item.destroyed === false) {
+          clearInterval(pulseIntervalRef.current);
+          return;
+        }
+        if (growing) {
+          currentSize += 1.2;
+          if (currentSize >= originalSize * 1.25) growing = false;
+        } else {
+          currentSize -= 1.2;
+          if (currentSize <= originalSize) growing = true;
+        }
+        try { graphInstance.current.updateItem(item, { size: currentSize }); } catch { /* item may be removed */ }
+      }, 50);
+    });
+    graph.on('node:mouseleave', () => {
+      if (pulseIntervalRef.current) {
+        clearInterval(pulseIntervalRef.current);
+        pulseIntervalRef.current = null;
+      }
+      // Reset all node sizes
+      try {
+        const nodes = graphInstance.current?.getNodes();
+        if (nodes) {
+          nodes.forEach(n => {
+            const model = n.getModel();
+            if (model.size !== model.data?._originalSize) {
+              // Size was pulsed, but we'll just let the next render reset it
+            }
+          });
+        }
+      } catch { /* ignore */ }
+    });
+
     setGraphRendering(true);
     graph.render();
     graph.on('afterlayout', () => setGraphRendering(false));
     setTimeout(() => setGraphRendering(false), 3000); // Fallback
     graphInstance.current = graph;
 
-    // Mobile double-tap to reset zoom
-    if (isMobile) {
-      let lastTap = 0;
-      container.addEventListener('touchend', (e) => {
-        const now = Date.now();
-        if (now - lastTap < 300) {
-          e.preventDefault();
-          graph.fitView();
-        }
-        lastTap = now;
-      });
-    }
+    // Set timeout fallback in case layout event doesn't fire
+    const timeout = setTimeout(() => {
+      setGraphRendering(false);
+    }, 3000);
 
     return () => {
+      clearTimeout(timeout);
+      if (pulseIntervalRef.current) clearInterval(pulseIntervalRef.current);
       if (graphInstance.current) {
         graphInstance.current.destroy();
         graphInstance.current = null;
       }
     };
-  }, [data, loading, isDark, viewMode, isMobile, entityTypeFilter, searchQuery]);
+  }, [data, loading, isDark, viewMode, isMobile, getFilteredData, calculateEdgeSentiments, linkDistance, nodeStrength, highlightedPath, timelineValue, graphDataExtra, pathMode]);
 
   // Handle resize
   useEffect(() => {
@@ -279,24 +509,61 @@ export default function EntityGraphPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="flex flex-col h-full">
+      {/* Minimap & Range Slider Styles */}
+      <style>{`
+        .g6-minimap {
+          position: absolute !important;
+          bottom: 12px !important;
+          right: 12px !important;
+          border-radius: 8px !important;
+          overflow: hidden !important;
+          border: 1px solid ${isDark ? '#2a2a2a' : '#eee'} !important;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.15) !important;
+          z-index: 10 !important;
+        }
+        .g6-minimap-viewport {
+          border: 2px solid #6366F1 !important;
+          border-radius: 4px !important;
+        }
+        input[type="range"] {
+          -webkit-appearance: none;
+          height: 6px;
+          border-radius: 3px;
+          outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          width: 14px;
+          height: 14px;
+          border-radius: 50%;
+          cursor: pointer;
+          border: 2px solid white;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+        }
+        input[type="range"].accent-purple-500::-webkit-slider-thumb { background: #a855f7; }
+        input[type="range"].accent-cyan-500::-webkit-slider-thumb { background: #06b6d4; }
+      `}</style>
       {/* Header */}
       <div className="mb-4">
-        <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight uppercase">
-          
-          Entity Graph
-        </h1>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 tracking-wide">
-          Entity relationships extracted from news articles
+        <div className="flex items-baseline gap-3 mb-1">
+          <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display flex items-center gap-2">
+            <Network size={24} className="text-blue-600" />
+            Entity Graph
+          </h1>
+        </div>
+        <p className="text-xs text-ink-muted dark:text-ink-faint tracking-wide uppercase font-sans">
+          Explore relationships between entities in the news
         </p>
+        <div className="editorial-rule mb-3"></div>
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-3 mb-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-4">
         {/* Search */}
-        <div className="relative">
+        <div className="relative w-full sm:w-auto">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
-            className="pl-8 pr-3 py-2 text-sm bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-xl outline-none focus:border-blue-500 dark:focus:border-blue-500 transition-colors w-52 text-gray-900 dark:text-white placeholder:text-gray-400"
+            className="pl-8 pr-3 py-2 text-sm bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-xl outline-none focus:border-blue-500 dark:focus:border-blue-500 transition-colors w-full sm:w-52 text-gray-900 dark:text-white placeholder:text-gray-400"
             placeholder="Search entities..."
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -312,11 +579,11 @@ export default function EntityGraphPage() {
               onClick={() => setTypeFilter(t)}
               className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
                 typeFilter === t
-                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
+                  ? 'bg-blue-50 dark:bg-blue-500/15 text-blue-600'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               }`}
             >
-              {t ? `${TYPE_ICONS[t]} ${TYPE_LABELS[t]}` : '🌐 All'}
+              {t ? TYPE_LABELS[t] : 'All'}
             </button>
           ))}
         </div>
@@ -329,7 +596,7 @@ export default function EntityGraphPage() {
               onClick={() => setTimeframe(o.k)}
               className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
                 timeframe === o.k
-                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
+                  ? 'bg-blue-50 dark:bg-blue-500/15 text-blue-600'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               }`}
             >
@@ -338,35 +605,6 @@ export default function EntityGraphPage() {
           ))}
         </div>
 
-
-        {/* Phase 1: NER Type Filter */}
-        <div className="flex gap-2 items-center bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-xl px-3 py-2">
-          <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-400">Filter:</span>
-          {['PERSON', 'ORGANIZATION', 'LOCATION'].map(type => (
-            <label key={type} className="flex items-center gap-1.5 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={entityTypeFilter[type]}
-                onChange={(e) => setEntityTypeFilter(prev => ({ ...prev, [type]: e.target.checked }))}
-                className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-[11px] font-medium text-gray-700 dark:text-gray-300">
-                {type === 'PERSON' ? '👤' : type === 'ORGANIZATION' ? '🏢' : '📍'} {type === 'PERSON' ? 'People' : type === 'ORGANIZATION' ? 'Orgs' : 'Places'}
-              </span>
-            </label>
-          ))}
-        </div>
-
-        {/* Phase 1: Search Highlight */}
-        <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            className="pl-8 pr-3 py-2 text-sm bg-white dark:bg-[#1a1a1a] border-2 border-emerald-500/50 dark:border-emerald-500/30 rounded-xl outline-none focus:border-emerald-500 transition-colors w-48 text-gray-900 dark:text-white placeholder:text-gray-400"
-            placeholder="Highlight..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-          />
-        </div>
         {/* Stats */}
         {!loading && data.nodes.length > 0 && (
           <div className="ml-auto flex gap-4 items-center text-[11px] font-medium text-gray-500 dark:text-gray-400">
@@ -379,7 +617,7 @@ export default function EntityGraphPage() {
         <div className="flex gap-3 text-[11px] text-gray-500 dark:text-gray-400">
           {Object.entries(SENTIMENT_COLORS).map(([k, v]) => (
             <span key={k} className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ background: v }} />{k}
+              <span className="w-2.5 h-2.5 rounded-full" style={{ background: v, boxShadow: `0 0 6px ${v}` }} />{k}
             </span>
           ))}
         </div>
@@ -388,14 +626,14 @@ export default function EntityGraphPage() {
         {isMobile && data.nodes.length > 0 && (
           <div className="flex gap-1 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-lg p-0.5">
             <button
-              className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900' : 'text-gray-400'}`}
+              className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-blue-50 dark:bg-blue-500/15 text-blue-600' : 'text-gray-400'}`}
               onClick={() => setViewMode('list')}
               title="List View"
             >
               <List size={16} />
             </button>
             <button
-              className={`p-1.5 rounded-md transition-all ${viewMode === 'graph' ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900' : 'text-gray-400'}`}
+              className={`p-1.5 rounded-md transition-all ${viewMode === 'graph' ? 'bg-blue-50 dark:bg-blue-500/15 text-blue-600' : 'text-gray-400'}`}
               onClick={() => setViewMode('graph')}
               title="Graph View"
             >
@@ -405,8 +643,161 @@ export default function EntityGraphPage() {
         )}
       </div>
 
+      {/* Feature Controls Row */}
+      {!loading && data.nodes.length > 0 && !isMobile && (
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          {/* Feature 3: Physics Controls Toggle */}
+          <button
+            onClick={() => setShowPhysics(!showPhysics)}
+            className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all border ${
+              showPhysics
+                ? 'bg-purple-50 dark:bg-purple-500/15 text-purple-600 border-purple-200 dark:border-purple-500/30'
+                : 'bg-white dark:bg-[#1a1a1a] text-gray-500 dark:text-gray-400 border-[#eee] dark:border-[#2a2a2a] hover:text-gray-700 dark:hover:text-gray-200'
+            }`}
+          >
+            <span className="flex items-center gap-1"><BarChart3 size={12} /> Physics</span>
+          </button>
+
+          {/* Feature 5: Path Mode Toggle */}
+          <button
+            onClick={() => { setPathMode(!pathMode); setSelectedPathNodes([]); setHighlightedPath(null); }}
+            className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all border ${
+              pathMode
+                ? 'bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 border-indigo-200 dark:border-indigo-500/30'
+                : 'bg-white dark:bg-[#1a1a1a] text-gray-500 dark:text-gray-400 border-[#eee] dark:border-[#2a2a2a] hover:text-gray-700 dark:hover:text-gray-200'
+            }`}
+          >
+            <span className="flex items-center gap-1"><Share2 size={12} /> Path Mode {pathMode ? 'ON' : ''}</span>
+          </button>
+
+          {/* Feature 5: Path info */}
+          {pathMode && (
+            <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-medium">
+              {selectedPathNodes.length === 0 && 'Click first node...'}
+              {selectedPathNodes.length === 1 && `Selected: ${selectedPathNodes[0]} → Click second node`}
+              {selectedPathNodes.length === 2 && `Path: ${selectedPathNodes[0]} ↔ ${selectedPathNodes[1]}${highlightedPath ? ` (${highlightedPath.length} nodes)` : ' (no path found)'}`}
+            </span>
+          )}
+          {highlightedPath && (
+            <button
+              onClick={() => { setSelectedPathNodes([]); setHighlightedPath(null); }}
+              className="px-2 py-1 rounded-md text-[10px] font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+            >
+              Clear Path
+            </button>
+          )}
+
+          {/* Feature 6: Timeline Toggle */}
+          <button
+            onClick={() => { if (timelineValue === 100) setTimelineValue(0); else setTimelineValue(100); }}
+            className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all border ${
+              timelineValue < 100
+                ? 'bg-cyan-50 dark:bg-cyan-500/15 text-cyan-600 border-cyan-200 dark:border-cyan-500/30'
+                : 'bg-white dark:bg-[#1a1a1a] text-gray-500 dark:text-gray-400 border-[#eee] dark:border-[#2a2a2a] hover:text-gray-700 dark:hover:text-gray-200'
+            }`}
+          >
+            <span className="flex items-center gap-1"><TrendingUp size={12} /> Timeline</span>
+          </button>
+
+          {/* Feature 7: Expand hint */}
+          <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-auto">
+            Double-click a node to expand its neighborhood
+          </span>
+        </div>
+      )}
+
+      {/* Feature 3: Physics Sliders Panel */}
+      {showPhysics && !isMobile && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          className="flex flex-wrap items-center gap-4 mb-3 px-4 py-2.5 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-xl"
+        >
+          <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+            <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap">Link Distance</label>
+            <input
+              type="range"
+              min={50}
+              max={500}
+              value={linkDistance}
+              onChange={e => setLinkDistance(Number(e.target.value))}
+              className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full appearance-none cursor-pointer accent-purple-500"
+            />
+            <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400 w-8 text-right">{linkDistance}</span>
+          </div>
+          <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+            <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap">Repulsion</label>
+            <input
+              type="range"
+              min={200}
+              max={5000}
+              value={nodeStrength}
+              onChange={e => setNodeStrength(Number(e.target.value))}
+              className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full appearance-none cursor-pointer accent-purple-500"
+            />
+            <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400 w-10 text-right">{nodeStrength}</span>
+          </div>
+          <button
+            onClick={() => { setLinkDistance(250); setNodeStrength(2000); }}
+            className="px-2 py-1 rounded-md text-[10px] font-semibold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+          >
+            Reset
+          </button>
+        </motion.div>
+      )}
+
+      {/* Feature 6: Timeline Slider */}
+      {timelineValue < 100 && !isMobile && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          className="flex items-center gap-3 mb-3 px-4 py-2.5 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-xl"
+        >
+          <TrendingUp size={14} className="text-cyan-500 flex-shrink-0" />
+          <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap">Reveal Progress</label>
+          <input
+            type="range"
+            min={5}
+            max={100}
+            value={timelineValue}
+            onChange={e => setTimelineValue(Number(e.target.value))}
+            className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full appearance-none cursor-pointer accent-cyan-500"
+          />
+          <span className="text-[10px] font-mono text-cyan-600 dark:text-cyan-400 w-10 text-right">{timelineValue}%</span>
+          <button
+            onClick={() => {
+              setIsAnimating(true);
+              let v = 5;
+              let last = performance.now();
+              const step = (now) => {
+                if (now - last >= 120) {
+                  v += 1;
+                  last = now;
+                  if (v > 100) { setTimelineValue(100); setIsAnimating(false); return; }
+                  setTimelineValue(v);
+                }
+                timelineRef.current = requestAnimationFrame(step);
+              };
+              timelineRef.current = requestAnimationFrame(step);
+            }}
+            disabled={isAnimating}
+            className="px-2.5 py-1 rounded-md text-[10px] font-semibold bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 hover:bg-cyan-100 dark:hover:bg-cyan-500/20 transition-colors disabled:opacity-50"
+          >
+            {isAnimating ? '...' : '▶ Animate'}
+          </button>
+          <button
+            onClick={() => { if (timelineRef.current) cancelAnimationFrame(timelineRef.current); setTimelineValue(100); setIsAnimating(false); }}
+            className="px-2 py-1 rounded-md text-[10px] font-semibold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+          >
+            Reset
+          </button>
+        </motion.div>
+      )}
+
       {/* Graph + Sidebar Container */}
-      <div className="flex-1 flex rounded-2xl  border border-[#eee] dark:border-[#2a2a2a] bg-[#fafaf9] dark:bg-[#0f0f0f] relative min-h-[400px]">
+      <div className="flex-1 flex flex-col md:flex-row rounded-2xl overflow-hidden border border-[#eee] dark:border-[#2a2a2a] bg-[#fafaf9] dark:bg-[#0f0f0f] relative min-h-[300px] md:min-h-[400px]">
         {/* Background gradient */}
         {isDark && <div className="absolute inset-0 pointer-events-none z-0" style={{ background: 'radial-gradient(ellipse at 30% 40%, rgba(99,102,241,0.06) 0%, transparent 60%), radial-gradient(ellipse at 70% 60%, rgba(16,185,129,0.04) 0%, transparent 50%)' }} />}
 
@@ -430,14 +821,14 @@ export default function EntityGraphPage() {
                       <div>
                         <span className="text-sm font-semibold text-gray-900 dark:text-white">{node.label}</span>
                         <span className="ml-2 text-[10px] font-semibold px-2 py-0.5 rounded-md" style={{ background: `${TYPE_COLORS[node.category] || '#6366f1'}15`, color: TYPE_COLORS[node.category] || '#6366f1' }}>
-                          {TYPE_ICONS[node.category] || '📊'} {TYPE_LABELS[node.category] || node.category}
+                          {TYPE_LABELS[node.category] || node.category}
                         </span>
                       </div>
                       <span className="text-lg font-bold text-gray-900 dark:text-white">{node.mentions}</span>
                     </div>
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full" style={{ background: SENTIMENT_COLORS[node.sentiment] || SENTIMENT_COLORS.Neutral }} />
+                        <span className="w-2 h-2 rounded-full" style={{ background: SENTIMENT_COLORS[node.sentiment] || SENTIMENT_COLORS.Neutral, boxShadow: `0 0 6px ${SENTIMENT_COLORS[node.sentiment] || SENTIMENT_COLORS.Neutral}` }} />
                         <span className="text-[11px] text-gray-500 dark:text-gray-400">{node.sentiment}</span>
                       </div>
                       <span className="text-[11px] text-gray-400 dark:text-gray-500">{connectedCount} connection{connectedCount !== 1 ? 's' : ''}</span>
@@ -454,10 +845,10 @@ export default function EntityGraphPage() {
             {(loading || graphRendering) && (
               <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 gap-3">
                 <div className="w-10 h-10 border-3 border-blue-100 dark:border-blue-500/20 border-t-blue-600 rounded-full animate-spin" />
-                <span className="text-sm">{loading ? "Loading entity data..." : "Rendering graph layout..."}</span>
+                <span className="text-sm">{loading ? 'Loading entity data...' : 'Rendering graph layout...'}</span>
               </div>
             )}
-            {!loading && !data.nodes.length && (
+            {!loading && !graphRendering && !data.nodes.length && (
               <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500 gap-4">
                 <Network size={56} strokeWidth={1.2} className="opacity-30" />
                 <p className="text-sm font-medium">No entity data yet</p>
@@ -502,7 +893,6 @@ export default function EntityGraphPage() {
                   {/* Header */}
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">{TYPE_ICONS[detail.category] || '📊'}</span>
                       <h3 className="text-lg font-bold text-gray-900 dark:text-white">{detail.name}</h3>
                     </div>
                     <span className="inline-block mt-2 text-[11px] font-semibold text-blue-600 bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded capitalize">{detail.category}</span>

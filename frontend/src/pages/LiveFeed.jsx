@@ -2,12 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
 
-const SENTIMENT_COLORS = {
-  Positive: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-300', dot: 'bg-emerald-500' },
-  Negative: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300', dot: 'bg-red-500' },
-  Neutral:  { bg: 'bg-gray-100 dark:bg-gray-700/30', text: 'text-gray-700 dark:text-gray-300', dot: 'bg-gray-400' },
-};
-
 const timeAgo = (date) => {
   const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
   if (seconds < 60) return 'just now';
@@ -16,72 +10,74 @@ const timeAgo = (date) => {
   return `${Math.floor(seconds / 86400)}d ago`;
 };
 
-const SentimentBadge = ({ sentiment, language }) => {
-  const colors = SENTIMENT_COLORS[sentiment] || SENTIMENT_COLORS.Neutral;
+const SentimentMark = ({ sentiment }) => {
+  const map = {
+    Positive: { symbol: '+', color: 'text-green-700 dark:text-green-400' },
+    Negative: { symbol: '−', color: 'text-red-700 dark:text-red-400' },
+    Neutral:  { symbol: '~', color: 'text-gray-500 dark:text-gray-400' },
+  };
+  const m = map[sentiment] || map.Neutral;
   return (
-    <div className="flex items-center gap-1.5">
-      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${colors.bg} ${colors.text}`}>
-        <span className={`w-1.5 h-1.5 rounded-full ${colors.dot}`} />
-        {sentiment}
-      </span>
-      {language && (
-        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 uppercase">
-          {language === 'ms' ? 'BM' : 'EN'}
-        </span>
-      )}
-    </div>
+    <span className={`inline-block text-xs font-bold ${m.color} mr-1`}>
+      {m.symbol}
+    </span>
   );
 };
 
 const ArticleCard = ({ article, isNew }) => (
-  <motion.a
+  <a
     href={article.url}
     target="_blank"
     rel="noopener noreferrer"
-    initial={isNew ? { opacity: 0, y: -20, scale: 0.95 } : false}
-    animate={{ opacity: 1, y: 0, scale: 1 }}
-    transition={{ duration: 0.3 }}
-    whileHover={{ y: -3, scale: 1.01 }}
-    className={`block p-4 rounded-2xl border transition-all hover:shadow-lg cursor-pointer no-underline
-      bg-white dark:bg-[#1a1a1a] border-[#eee] dark:border-[#2a2a2a]
-      ${isNew ? 'ring-2 ring-blue-400/50 dark:ring-blue-500/30' : ''}
+    className={`block no-underline border-b border-paper-line dark:border-paper-dark-line last:border-b-0 px-5 py-4 transition-colors hover:bg-paper/50 dark:hover:bg-paper-dark/50
+      ${isNew ? 'bg-accent/5 dark:bg-accent/10' : ''}
     `}
   >
-    {isNew && (
-      <motion.div
-        initial={{ opacity: 1 }}
-        animate={{ opacity: 0 }}
-        transition={{ duration: 2, delay: 1 }}
-        className="absolute inset-0 rounded-2xl bg-blue-500/5 pointer-events-none"
-      />
-    )}
-    <div className="flex items-start justify-between gap-3">
+    <div className="flex items-start gap-3">
+      {/* Sentiment marker */}
+      <div className="flex-shrink-0 pt-0.5">
+        <SentimentMark sentiment={article.sentiment} />
+      </div>
+
+      {/* Content */}
       <div className="flex-1 min-w-0">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 mb-1.5">
+        <h3 className="text-sm font-semibold text-ink dark:text-paper leading-snug line-clamp-2 mb-1 font-sans">
           {article.title}
         </h3>
         {article.description && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-2">
+          <p className="text-xs text-ink-muted dark:text-ink-faint line-clamp-2 mb-2 leading-relaxed font-sans">
             {article.description}
           </p>
         )}
-        <div className="flex items-center gap-3 flex-wrap">
-          <SentimentBadge sentiment={article.sentiment} language={article.language} />
-          <span className="text-[11px] text-gray-400 dark:text-gray-500">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Source — editorial byline style */}
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted dark:text-ink-faint font-sans">
             {article.source}
           </span>
-          <span className="text-[11px] text-gray-400 dark:text-gray-500">
+          <span className="text-ink-faint">·</span>
+          {/* Time */}
+          <span className="text-[10px] text-ink-faint font-sans">
             {timeAgo(article.publishedAt)}
           </span>
+          {/* Language */}
+          {article.language && (
+            <>
+              <span className="text-ink-faint">·</span>
+              <span className="text-[10px] font-medium text-ink-faint uppercase font-sans">
+                {article.language === 'ms' ? 'BM' : 'EN'}
+              </span>
+            </>
+          )}
+          {/* Alert */}
           {article.isAlert && (
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-300">
-              ⚠️ ALERT
+            <span className="text-[10px] font-bold uppercase tracking-wider text-red-700 dark:text-red-400 font-sans ml-auto">
+              Alert
             </span>
           )}
         </div>
       </div>
     </div>
-  </motion.a>
+  </a>
 );
 
 const LiveFeed = () => {
@@ -96,7 +92,6 @@ const LiveFeed = () => {
   const containerRef = useRef(null);
   const eventSourceRef = useRef(null);
 
-  // Fetch initial articles
   const fetchArticles = useCallback(async () => {
     try {
       setLoading(true);
@@ -118,7 +113,6 @@ const LiveFeed = () => {
     fetchArticles();
   }, [fetchArticles]);
 
-  // SSE connection - use ref for autoScroll to avoid re-creating EventSource
   const autoScrollRef = useRef(autoScroll);
   useEffect(() => { autoScrollRef.current = autoScroll; }, [autoScroll]);
 
@@ -177,9 +171,8 @@ const LiveFeed = () => {
         eventSourceRef.current.close();
       }
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Clear "new" status after 5s
   useEffect(() => {
     if (newArticleIds.size === 0) return;
     const timer = setTimeout(() => setNewArticleIds(new Set()), 5000);
@@ -202,130 +195,129 @@ const LiveFeed = () => {
     return true;
   });
 
+  const filterOptions = [
+    { key: 'all', label: 'All' },
+    { key: 'Positive', label: 'Positive' },
+    { key: 'Negative', label: 'Negative' },
+    { key: 'Neutral', label: 'Neutral' },
+  ];
+
+  const langOptions = [
+    { key: 'all', label: 'All' },
+    { key: 'en', label: 'EN' },
+    { key: 'ms', label: 'BM' },
+  ];
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="max-w-4xl mx-auto space-y-4"
-    >
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, x: -10 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.1 }}
-        className="flex items-center justify-between flex-wrap gap-3"
-      >
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Live Feed</h1>
-          <span className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-medium ${
-            sseConnected 
-              ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' 
-              : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
+    <div className="max-w-4xl mx-auto">
+      {/* Header — newspaper section style */}
+      <div className="mb-6">
+        <div className="flex items-baseline gap-3 mb-1">
+          <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">
+            Live Feed
+          </h1>
+          <span className={`flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest font-sans ${
+            sseConnected ? 'text-green-700 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'
           }`}>
-            <span className={`w-2 h-2 rounded-full ${sseConnected ? 'bg-emerald-500 animate-pulse' : 'bg-yellow-500'}`} />
-            {sseConnected ? 'Live' : 'Reconnecting...'}
+            <span className={`inline-block w-1.5 h-1.5 rounded-full ${sseConnected ? 'bg-green-600' : 'bg-yellow-500'}`} />
+            {sseConnected ? 'Live' : 'Reconnecting'}
           </span>
         </div>
+        <div className="editorial-rule mb-3" />
+        <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed max-w-xl font-sans">
+          Real-time sentiment analysis of breaking news across Malaysian media sources.
+        </p>
+      </div>
 
-        {/* Filters */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {['all', 'Positive', 'Negative', 'Neutral'].map(s => (
-            <motion.button
-              key={s}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setFilter(s)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                filter === s
-                  ? 'bg-accent text-white shadow-sm'
-                  : 'bg-gray-100 dark:bg-[#222] text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#333]'
-              }`}
-            >
-              {s === 'all' ? 'All' : s}
-            </motion.button>
-          ))}
-          <span className="w-px h-5 bg-gray-200 dark:bg-gray-700" />
-          {['all', 'en', 'ms'].map(l => (
-            <motion.button
-              key={l}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setLangFilter(l)}
-              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                langFilter === l
-                  ? 'bg-blue-500 text-white shadow-sm'
-                  : 'bg-gray-100 dark:bg-[#222] text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#333]'
-              }`}
-            >
-              {l === 'all' ? 'All' : l === 'ms' ? 'BM' : 'EN'}
-            </motion.button>
-          ))}
+      {/* Filters — editorial tab style */}
+      <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card mb-6">
+        <div className="flex items-center justify-between px-4 py-2.5 gap-4 flex-wrap">
+          {/* Sentiment filters */}
+          <div className="flex items-center">
+            {filterOptions.map((s, i) => (
+              <React.Fragment key={s.key}>
+                {i > 0 && <span className="text-ink-faint mx-1.5">|</span>}
+                <button
+                  onClick={() => setFilter(s.key)}
+                  className={`text-xs font-medium uppercase tracking-wider transition-colors font-sans px-1 ${
+                    filter === s.key
+                      ? 'text-ink dark:text-paper font-bold'
+                      : 'text-ink-faint hover:text-ink-muted dark:hover:text-ink-faint'
+                  }`}
+                >
+                  {s.label}
+                </button>
+              </React.Fragment>
+            ))}
+          </div>
+
+          {/* Language filters */}
+          <div className="flex items-center">
+            {langOptions.map((l, i) => (
+              <React.Fragment key={l.key}>
+                {i > 0 && <span className="text-ink-faint mx-1.5">|</span>}
+                <button
+                  onClick={() => setLangFilter(l.key)}
+                  className={`text-[11px] font-medium uppercase tracking-wider transition-colors font-sans px-1 ${
+                    langFilter === l.key
+                      ? 'text-ink dark:text-paper font-bold'
+                      : 'text-ink-faint hover:text-ink-muted dark:hover:text-ink-faint'
+                  }`}
+                >
+                  {l.label}
+                </button>
+              </React.Fragment>
+            ))}
+          </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* New articles banner */}
       <AnimatePresence>
         {newCount > 0 && (
           <motion.button
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
             onClick={showNewArticles}
-            className="w-full py-2.5 rounded-xl bg-accent/10 text-accent text-sm font-medium hover:bg-accent/20 transition-colors"
+            className="w-full py-2.5 border-l-3 border-accent bg-accent/5 dark:bg-accent/10 text-accent text-xs font-semibold uppercase tracking-wider hover:bg-accent/10 transition-colors font-sans mb-4"
           >
-            ↑ {newCount} new article{newCount > 1 ? 's' : ''} available
+            {newCount} new article{newCount > 1 ? 's' : ''} — tap to view
           </motion.button>
         )}
       </AnimatePresence>
 
-      {/* Articles list */}
-      <div ref={containerRef} className="space-y-3">
+      {/* Articles list — editorial column */}
+      <div ref={containerRef} className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
         {loading ? (
-          <div className="space-y-3">
+          <div className="divide-y divide-paper-line dark:divide-paper-dark-line">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="p-4 rounded-2xl bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] animate-pulse">
-                <div className="h-4 bg-[#f0f0f0] dark:bg-[#2a2a2a] rounded w-3/4 mb-3" />
-                <div className="h-3 bg-[#f0f0f0] dark:bg-[#2a2a2a] rounded w-full mb-2" />
+              <div key={i} className="px-5 py-4 animate-pulse">
+                <div className="h-3.5 bg-gray-200 dark:bg-gray-700 w-3/4 mb-2.5" />
+                <div className="h-3 bg-gray-100 dark:bg-gray-800 w-full mb-2" />
                 <div className="flex gap-2">
-                  <div className="h-5 w-16 bg-[#f0f0f0] dark:bg-[#2a2a2a] rounded-full" />
-                  <div className="h-5 w-12 bg-[#f0f0f0] dark:bg-[#2a2a2a] rounded" />
+                  <div className="h-2.5 w-12 bg-gray-200 dark:bg-gray-700" />
+                  <div className="h-2.5 w-8 bg-gray-200 dark:bg-gray-700" />
                 </div>
               </div>
             ))}
           </div>
         ) : filteredArticles.length === 0 ? (
-          <motion.div
-            className="text-center py-20 text-gray-400 dark:text-gray-500"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-          >
-            <motion.svg
-              animate={{ y: [0, -5, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-              className="w-12 h-12 mx-auto mb-3 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
-            >
-              <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
-            </motion.svg>
-            <p className="text-sm">No articles found</p>
-          </motion.div>
+          <div className="text-center py-20">
+            <p className="text-sm text-ink-faint font-sans">No articles found</p>
+            <p className="text-xs text-ink-faint mt-1 font-sans">Try adjusting your filters</p>
+          </div>
         ) : (
           filteredArticles.map((article, i) => (
-            <motion.div
+            <ArticleCard
               key={article._id || article.url}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: Math.min(i * 0.03, 0.5) }}
-            >
-              <ArticleCard
-                article={article}
-                isNew={newArticleIds.has(article._id || article.url)}
-              />
-            </motion.div>
+              article={article}
+              isNew={newArticleIds.has(article._id || article.url)}
+            />
           ))
         )}
       </div>
-    </motion.div>
+    </div>
   );
 };
 

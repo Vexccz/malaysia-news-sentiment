@@ -173,6 +173,7 @@ app.use('/api/v1/forecast', require('./routes/forecastRoutes'));
 app.use('/api/v1', require('./routes/shareRoutes'));
 app.use('/api/v1/user', require('./routes/userRoutes'));
 app.use('/api/v1/admin', require('./routes/adminRoutes'));
+app.use('/api/v1/bookmarks', require('./routes/bookmarkRoutes'));
 
 // ── Backward compatibility — old routes redirect to v1 ───────
 app.use('/api/auth', authLimiter, require('./routes/authRoutes'));
@@ -190,6 +191,7 @@ app.use('/api/forecast', require('./routes/forecastRoutes'));
 app.use('/api', require('./routes/shareRoutes'));
 app.use('/api/user', require('./routes/userRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/bookmarks', require('./routes/bookmarkRoutes'));
 // Metrics backward compat
 app.get('/api/admin/metrics', protect, authorize('admin'), (req, res) => res.redirect('/api/v1/admin/metrics'));
 // ── Global error handler ──────────────────────────────────────

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import api from '../services/api';
@@ -53,6 +54,7 @@ const Heatmap = () => {
   const [geoLoaded, setGeoLoaded] = useState(false);
   const { theme } = useTheme();
   const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const navigate = useNavigate();
 
   const mapContainer = useRef(null);
   const mapRef = useRef(null);
@@ -66,7 +68,8 @@ const Heatmap = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const res = await api.get(`/news/heatmap?days=${days}`);
+        const query = days === 0 ? '' : `?days=${days}`;
+        const res = await api.get(`/news/heatmap${query}`);
         setData(res.data);
         dataRef.current = res.data;
       } catch (err) {
@@ -279,21 +282,35 @@ const Heatmap = () => {
       className="space-y-6"
     >
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Sentiment Heatmap</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Geographic sentiment distribution across Malaysia</p>
+          <div className="flex items-baseline gap-3 mb-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">Sentiment Heatmap</h1>
+          </div>
+          <div className="editorial-rule mb-2" />
+          <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed font-sans">Geographic sentiment distribution across Malaysian states.</p>
         </div>
-        <select
-          value={days}
-          onChange={e => setDays(Number(e.target.value))}
-          className="px-3 py-2 rounded-xl border border-[#eee] dark:border-[#333] bg-white dark:bg-[#1a1a1a] text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-        >
-          <option value={1}>Last 24 hours</option>
-          <option value={7}>Last 7 days</option>
-          <option value={14}>Last 14 days</option>
-          <option value={30}>Last 30 days</option>
-        </select>
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mr-2">Range</span>
+          {[
+            { label: '7d', value: 7 },
+            { label: '30d', value: 30 },
+            { label: '90d', value: 90 },
+            { label: 'All', value: 0 },
+          ].map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => setDays(opt.value)}
+              className={`px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.15em] border transition-colors font-sans ${
+                days === opt.value
+                  ? 'border-ink dark:border-paper text-ink dark:text-paper bg-ink/5 dark:bg-paper/10'
+                  : 'border-ink/20 dark:border-paper/20 text-ink-muted dark:text-ink-faint hover:border-ink/50 dark:hover:border-paper/50'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Map */}
@@ -301,13 +318,13 @@ const Heatmap = () => {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.1 }}
-        className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl overflow-hidden relative"
+        className="bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line overflow-hidden relative"
       >
         {loading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 dark:bg-black/40 backdrop-blur-sm rounded-2xl">
             <div className="flex items-center gap-3">
               <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-              <span className="text-sm text-gray-500 dark:text-gray-400">Loading sentiment data...</span>
+              <span className="text-sm text-ink-muted dark:text-ink-faint">Loading sentiment data...</span>
             </div>
           </div>
         )}
@@ -316,12 +333,12 @@ const Heatmap = () => {
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80 dark:bg-black/60 rounded-2xl">
             <div className="text-center p-6">
               <p className="text-sm text-red-500 font-medium">Failed to load map boundaries</p>
-              <p className="text-xs text-gray-400 mt-1">Check your internet connection</p>
+              <p className="text-xs text-ink-faint mt-1">Check your internet connection</p>
             </div>
           </div>
         )}
 
-        <div ref={mapContainer} className="w-full" style={{ height: '480px' }} />
+        <div ref={mapContainer} className="w-full h-[320px] sm:h-[480px]" />
 
         {/* Legend */}
         <div className="flex items-center justify-center gap-4 py-3 border-t border-[#eee] dark:border-[#2a2a2a] flex-wrap">
@@ -333,7 +350,7 @@ const Heatmap = () => {
           ].map(item => (
             <div key={item.label} className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: item.color }} />
-              <span className="text-xs text-gray-600 dark:text-gray-400">{item.label}</span>
+              <span className="text-xs text-gray-600 dark:text-ink-faint">{item.label}</span>
             </div>
           ))}
         </div>
@@ -348,34 +365,42 @@ const Heatmap = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-6"
+              className="bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line p-5"
             >
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{selectedState}</h2>
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-ink dark:text-paper">{selectedState}</h2>
                 <button
                   onClick={() => setSelectedState(null)}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                  className="text-ink-faint hover:text-gray-600 dark:hover:text-gray-200"
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                   </svg>
                 </button>
               </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center p-3 rounded-xl bg-gray-50 dark:bg-[#111]">
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{sd.articleCount}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Articles</p>
+              <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                <div className="text-center p-3 bg-paper dark:bg-paper-dark border border-paper-line dark:border-paper-dark-line">
+                  <p className="text-xl font-bold font-display text-ink dark:text-paper">{sd.articleCount}</p>
+                  <p className="text-[10px] text-ink-faint font-sans">Articles</p>
                 </div>
-                <div className="text-center p-3 rounded-xl bg-gray-50 dark:bg-[#111]">
-                  <p className={`text-2xl font-bold ${sd.avgSentiment > 0 ? 'text-green-500' : sd.avgSentiment < 0 ? 'text-red-500' : 'text-yellow-500'}`}>
+                <div className="text-center p-3 bg-paper dark:bg-paper-dark border border-paper-line dark:border-paper-dark-line">
+                  <p className={`text-xl font-bold font-display ${sd.avgSentiment > 0 ? 'text-green-500' : sd.avgSentiment < 0 ? 'text-red-500' : 'text-yellow-500'}`}>
                     {sd.avgSentiment !== null ? (sd.avgSentiment > 0 ? '+' : '') + sd.avgSentiment.toFixed(2) : 'N/A'}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Avg Sentiment</p>
+                  <p className="text-[10px] text-ink-faint font-sans">Avg Sentiment</p>
                 </div>
-                <div className="text-center p-3 rounded-xl bg-gray-50 dark:bg-[#111]">
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white capitalize">{sd.topTopic}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Top Topic</p>
+                <div className="text-center p-3 bg-paper dark:bg-paper-dark border border-paper-line dark:border-paper-dark-line">
+                  <p className="text-xl font-bold font-display text-ink dark:text-paper capitalize">{sd.topTopic}</p>
+                  <p className="text-[10px] text-ink-faint font-sans">Top Topic</p>
                 </div>
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={() => navigate(`/search?state=${encodeURIComponent(selectedState)}`)}
+                  className="px-4 py-2 text-[11px] font-medium uppercase tracking-[0.15em] border border-ink dark:border-paper text-ink dark:text-paper hover:bg-ink hover:text-paper dark:hover:bg-paper dark:hover:text-ink transition-colors font-sans"
+                >
+                  View Articles
+                </button>
               </div>
             </motion.div>
           );
@@ -387,17 +412,17 @@ const Heatmap = () => {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-6"
+        className="bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line p-5"
       >
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">State Summary</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-ink dark:text-paper mb-4">State Summary</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[#eee] dark:border-[#2a2a2a]">
-                <th className="text-left py-2 text-gray-500 dark:text-gray-400 font-medium">State</th>
-                <th className="text-center py-2 text-gray-500 dark:text-gray-400 font-medium">Articles</th>
-                <th className="text-center py-2 text-gray-500 dark:text-gray-400 font-medium">Sentiment</th>
-                <th className="text-center py-2 text-gray-500 dark:text-gray-400 font-medium">Top Topic</th>
+              <tr className="border-b border-paper-line dark:border-paper-dark-line">
+                <th className="text-left py-2 text-ink-muted dark:text-ink-faint font-medium">State</th>
+                <th className="text-center py-2 text-ink-muted dark:text-ink-faint font-medium">Articles</th>
+                <th className="text-center py-2 text-ink-muted dark:text-ink-faint font-medium">Sentiment</th>
+                <th className="text-center py-2 text-ink-muted dark:text-ink-faint font-medium">Top Topic</th>
               </tr>
             </thead>
             <tbody>
@@ -411,10 +436,10 @@ const Heatmap = () => {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.03 }}
                     whileHover={{ x: 3 }}
-                    className="border-b border-[#eee] dark:border-[#2a2a2a] last:border-0 hover:bg-gray-50 dark:hover:bg-[#111] cursor-pointer transition-colors"
+                    className="border-b border-b border-paper-line dark:border-paper-dark-line hover:bg-paper/50 dark:hover:bg-paper-dark/50 cursor-pointer transition-colors"
                     onClick={() => setSelectedState(d.state)}
                   >
-                    <td className="py-2.5 text-gray-900 dark:text-white font-medium">{d.state}</td>
+                    <td className="py-2.5 text-ink dark:text-paper font-medium">{d.state}</td>
                     <td className="py-2.5 text-center text-gray-600 dark:text-gray-300">{d.articleCount}</td>
                     <td className="py-2.5 text-center">
                       <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -431,7 +456,7 @@ const Heatmap = () => {
             </tbody>
           </table>
           {data.filter(d => d.articleCount > 0).length === 0 && !loading && (
-            <p className="text-center text-sm text-gray-400 py-8">No geographic data available for this period</p>
+            <p className="text-center text-sm text-ink-faint py-8">No geographic data available for this period</p>
           )}
         </div>
       </motion.div>
