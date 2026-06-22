@@ -157,16 +157,18 @@ const SourceCredibility = () => {
               </thead>
               <tbody className="divide-y divide-paper-line dark:divide-paper-dark-line">
                 <AnimatePresence>
-                  {sources.map((source, i) => (
+                  {sources.map((source, i) => {
+                    const isExpanded = selectedSource?._id === source._id;
+                    return (
+                    <React.Fragment key={source._id || source.name}>
                     <motion.tr
-                      key={source._id || source.name}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: i * 0.03 }}
                       className={`cursor-pointer hover:bg-paper-subtle/50 dark:hover:bg-paper-dark-subtle/30 transition-colors ${
                         i % 2 === 0 ? '' : 'bg-paper-subtle/50 dark:bg-paper-dark-subtle/30'
                       }`}
-                      onClick={() => setSelectedSource(selectedSource?._id === source._id ? null : source)}
+                      onClick={() => setSelectedSource(isExpanded ? null : source)}
                     >
                       <td className="px-5 py-4">
                         <p className="font-medium text-ink dark:text-paper text-sm">{source.name}</p>
@@ -201,63 +203,60 @@ const SourceCredibility = () => {
                         </span>
                       </td>
                       <td className="px-3 py-4 text-right">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-ink-muted transition-transform ${selectedSource?._id === source._id ? 'rotate-180' : ''}`}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-ink-muted transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
                           <polyline points="6 9 12 15 18 9"/>
                         </svg>
                       </td>
                     </motion.tr>
-                  ))}
+                    {isExpanded && (
+                      <motion.tr
+                        ref={detailRef}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                      >
+                        <td colSpan={6} className="p-0">
+                          <div className="border-t border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-[#1a1a1a] p-5">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                              <div className="text-center p-3 bg-paper-subtle dark:bg-paper-dark-subtle border border-paper-line dark:border-paper-dark-line">
+                                <p className="text-xs text-ink-muted mb-1">Credibility</p>
+                                <p className={`text-xl font-bold ${getScoreColor(source.credibilityScore)}`}>{source.credibilityScore}</p>
+                              </div>
+                              <div className="text-center p-3 bg-paper-subtle dark:bg-paper-dark-subtle border border-paper-line dark:border-paper-dark-line">
+                                <p className="text-xs text-ink-muted mb-1">Fact Check</p>
+                                <p className={`text-xl font-bold ${getScoreColor(source.factCheckScore)}`}>{source.factCheckScore}</p>
+                              </div>
+                              <div className="text-center p-3 bg-paper-subtle dark:bg-paper-dark-subtle border border-paper-line dark:border-paper-dark-line">
+                                <p className="text-xs text-ink-muted mb-1">Transparency</p>
+                                <p className={`text-xl font-bold ${getScoreColor(source.transparencyScore)}`}>{source.transparencyScore}</p>
+                              </div>
+                              <div className="text-center p-3 bg-paper-subtle dark:bg-paper-dark-subtle border border-paper-line dark:border-paper-dark-line">
+                                <p className="text-xs text-ink-muted mb-1">Total Articles</p>
+                                <p className="text-xl font-bold text-ink dark:text-paper">{source.totalArticles}</p>
+                              </div>
+                            </div>
+                            {source.url && (
+                              <a
+                                href={source.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 mt-3 text-xs text-accent hover:underline"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                Visit website →
+                              </a>
+                            )}
+                          </div>
+                        </td>
+                      </motion.tr>
+                    )}
+                    </React.Fragment>
+                    );
+                  })}
                 </AnimatePresence>
               </tbody>
             </table>
           </div>
-
-          {/* Expanded Detail Panels (below table) */}
-          <AnimatePresence>
-            {selectedSource && (
-              <motion.div
-                ref={detailRef}
-                key={selectedSource._id}
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-[#1a1a1a] p-5">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center p-3 bg-paper-subtle dark:bg-paper-dark-subtle border border-paper-line dark:border-paper-dark-line">
-                      <p className="text-xs text-ink-muted mb-1">Credibility</p>
-                      <p className={`text-xl font-bold ${getScoreColor(selectedSource.credibilityScore)}`}>{selectedSource.credibilityScore}</p>
-                    </div>
-                    <div className="text-center p-3 bg-paper-subtle dark:bg-paper-dark-subtle border border-paper-line dark:border-paper-dark-line">
-                      <p className="text-xs text-ink-muted mb-1">Fact Check</p>
-                      <p className={`text-xl font-bold ${getScoreColor(selectedSource.factCheckScore)}`}>{selectedSource.factCheckScore}</p>
-                    </div>
-                    <div className="text-center p-3 bg-paper-subtle dark:bg-paper-dark-subtle border border-paper-line dark:border-paper-dark-line">
-                      <p className="text-xs text-ink-muted mb-1">Transparency</p>
-                      <p className={`text-xl font-bold ${getScoreColor(selectedSource.transparencyScore)}`}>{selectedSource.transparencyScore}</p>
-                    </div>
-                    <div className="text-center p-3 bg-paper-subtle dark:bg-paper-dark-subtle border border-paper-line dark:border-paper-dark-line">
-                      <p className="text-xs text-ink-muted mb-1">Total Articles</p>
-                      <p className="text-xl font-bold text-ink dark:text-paper">{selectedSource.totalArticles}</p>
-                    </div>
-                  </div>
-                  {selectedSource.url && (
-                    <a
-                      href={selectedSource.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 mt-3 text-xs text-accent hover:underline"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      Visit website →
-                    </a>
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
       )}
     </motion.div>
   );
