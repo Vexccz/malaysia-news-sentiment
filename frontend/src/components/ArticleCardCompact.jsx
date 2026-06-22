@@ -6,7 +6,16 @@ import { useArticleAnalysis } from '../context/ArticleAnalysisContext';
 
 const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
   const [imageError, setImageError] = useState(false);
+  const [faviconError, setFaviconError] = useState(false);
   const { openArticlePanel } = useArticleAnalysis();
+
+  const getFavicon = (url) => {
+    if (!url) return null;
+    try {
+      const domain = new URL(url).hostname;
+      return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+    } catch { return null; }
+  };
 
   const handleBookmark = (e) => {
     e.stopPropagation();
@@ -70,6 +79,19 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
           {/* Header: Source + Time + Sentiment Badge */}
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+              {article.url && !faviconError ? (
+                <img 
+                  src={getFavicon(article.url)} 
+                  alt="" 
+                  className="w-4 h-4 flex-shrink-0"
+                  loading="lazy"
+                  onError={() => setFaviconError(true)}
+                />
+              ) : (
+                <span className="w-4 h-4 flex-shrink-0 bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-[8px] font-bold text-slate-500 dark:text-slate-400">
+                  {(article.source || 'U').charAt(0)}
+                </span>
+              )}
               <span className="font-bold uppercase tracking-wide">
                 {article.source || 'Unknown'}
               </span>
