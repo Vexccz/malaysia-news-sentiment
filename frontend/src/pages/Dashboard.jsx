@@ -23,12 +23,29 @@ import DashboardCustomizer from '../components/DashboardCustomizer';
 import EmptyState from '../components/EmptyState';
 import DashboardSummary from '../components/DashboardSummary';
 import OnboardingTour, { useOnboardingTour } from '../components/OnboardingTour';
+import { useFreshness } from '../context/FreshnessContext';
 
 // Lazy load chart components
 const SentimentBarChart = lazy(() => import('../components/SentimentBarChart'));
 const TrendLineChart = lazy(() => import('../components/TrendLineChart'));
 const TopSourcesChart = lazy(() => import('../components/TopSourcesChart'));
 const SentimentMap = lazy(() => import('../components/SentimentMap'));
+
+// Data freshness badge
+const FreshnessBadge = () => {
+  const { relativeTime, status } = useFreshness();
+  const colors = {
+    fresh: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400',
+    aging: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400',
+    stale: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400',
+  };
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[9px] uppercase tracking-widest font-medium ${colors[status] || colors.stale}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${status === 'fresh' ? 'bg-emerald-500' : status === 'aging' ? 'bg-amber-500' : 'bg-red-500'}`} />
+      Updated {relativeTime}
+    </span>
+  );
+};
 
 const ChartFallback = () => (
   <div className="h-48 bg-white dark:bg-[#1a1a1a] rounded-sm border border-[#eee] dark:border-[#2a2a2a] p-5 space-y-3">
@@ -175,6 +192,7 @@ const Dashboard = () => {
   const { t, lang, setLang } = useLanguage();
   const queryClient = useQueryClient();
   const socket = useSocket();
+  const { updateFreshness } = useFreshness();
   const [analysisProgress, setAnalysisProgress] = useState(null);
   const [filter, setFilter]               = useState('All');
   const [page, setPage]                 = useState(1);
@@ -287,6 +305,13 @@ const Dashboard = () => {
     queryFn: () => getRegionalData(isHistoryView ? '' : currentQuery),
     staleTime: 60000,
   });
+
+  // Update freshness when data changes
+  useEffect(() => {
+    if (dashboardData || sourcesData || regData) {
+      updateFreshness();
+    }
+  }, [dashboardData, sourcesData, regData, updateFreshness]);
 
   // States that still need manual management
   const [searchArticles, setSearchArticles] = useState([]);
@@ -725,9 +750,12 @@ const Dashboard = () => {
               {lang === 'en' ? 'BM' : 'ENG'}
             </button>
           </div>
-          <p className="text-[10px] uppercase tracking-[0.25em] text-ink-muted dark:text-ink-faint font-sans">
-            {new Date().toLocaleDateString('en-MY', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="text-[10px] uppercase tracking-[0.25em] text-ink-muted dark:text-ink-faint font-sans">
+              {new Date().toLocaleDateString('en-MY', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            </p>
+            <FreshnessBadge />
+          </div>
         </div>
         <div className="text-center">
           <h1 className="font-['Playfair_Display'] text-4xl sm:text-5xl lg:text-6xl font-bold text-ink dark:text-paper tracking-tight">

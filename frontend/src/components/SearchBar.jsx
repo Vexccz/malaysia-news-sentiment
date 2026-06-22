@@ -132,6 +132,7 @@ const SearchBar = ({ onSearch, loading }) => {
                   </svg>
                 </span>
                 <input id="news-search-input" type="text" className="filter-input" placeholder={t('searchPlaceholder')} value={query} onChange={(e) => setQuery(e.target.value)} disabled={loading} autoComplete="off" />
+                <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 bg-slate-100 dark:bg-[#333] border border-slate-200 dark:border-[#444] text-[10px] font-mono text-slate-400 dark:text-slate-500 rounded hidden md:inline-block">/</kbd>
               </div>
               <select id="page-size-select" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} disabled={loading} className="filter-select">
                 <option value={5}>5 {t('totalArticles').toLowerCase()}</option>

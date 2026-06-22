@@ -50,6 +50,14 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
     return text.slice(0, maxLength).trim() + '...';
   };
 
+  // Reading time estimate (200 words/min average)
+  const readingTime = (() => {
+    const text = [article.title, article.summary, article.description].filter(Boolean).join(' ');
+    const words = text.split(/\s+/).length;
+    const mins = Math.max(1, Math.ceil(words / 200));
+    return `${mins} min read`;
+  })();
+
   return (
     <div
       onClick={handleCardClick}
@@ -97,6 +105,8 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
               </span>
               <span className="text-slate-400">•</span>
               <span>{timeAgo(article.publishedAt || article.createdAt)}</span>
+              <span className="text-slate-400">•</span>
+              <span>{readingTime}</span>
               {article.category && (
                 <>
                   <span className="text-slate-400">•</span>
