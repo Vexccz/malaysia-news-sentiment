@@ -68,6 +68,7 @@ const ALL_SECTIONS = [
 
 const Reports = () => {
   const [topic, setTopic] = useState('');
+  const [topicB, setTopicB] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [reportType, setReportType] = useState('full');
@@ -129,6 +130,7 @@ const Reports = () => {
       const endpoint = reportType === 'topic' ? '/reports/topic' : '/api/reports/generate';
       const payload = {
         topic,
+        topicB,
         dateFrom,
         dateTo,
         template: selectedTemplate,
@@ -410,6 +412,21 @@ const Reports = () => {
               className="w-full px-3 py-2.5 border border-ink/10 dark:border-paper/10 bg-white dark:bg-[#111] text-sm text-ink dark:text-paper focus:outline-none focus:border-ink dark:focus:border-paper placeholder-ink-muted/50 dark:placeholder-ink-faint/50"
             />
           </div>
+
+          {selectedTemplate === 'comparison' && (
+          <div>
+            <label className="block text-[10px] font-medium text-ink-muted dark:text-ink-faint mb-1.5 uppercase tracking-[0.2em]">
+              Compare With (Topic B)
+            </label>
+            <input
+              type="text"
+              value={topicB}
+              onChange={e => setTopicB(e.target.value)}
+              placeholder="e.g. politics, economy"
+              className="w-full px-3 py-2.5 border border-ink/10 dark:border-paper/10 bg-white dark:bg-[#111] text-sm text-ink dark:text-paper focus:outline-none focus:border-ink dark:focus:border-paper placeholder-ink-muted/50 dark:placeholder-ink-faint/50"
+            />
+          </div>
+          )}
 
           <div>
             <label className="block text-[10px] font-medium text-ink-muted dark:text-ink-faint mb-1.5 uppercase tracking-[0.2em]">
