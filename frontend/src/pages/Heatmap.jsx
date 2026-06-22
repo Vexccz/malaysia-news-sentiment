@@ -208,6 +208,10 @@ const Heatmap = () => {
           map.setFilter('state-fills-hover', ['==', ['id'], feat.id]);
         }
 
+        // Update popup position always (cheap)
+        const popup = popupRef.current;
+        popup.setLngLat(e.lngLat);
+
         // Only rebuild popup HTML when entering a NEW state
         if (hoveredNameRef.current !== name) {
           hoveredNameRef.current = name;
@@ -215,20 +219,19 @@ const Heatmap = () => {
           const sentLabel = getSentimentLabel(sd.avgSentiment);
           const sentVal = sd.avgSentiment !== null ? (sd.avgSentiment > 0 ? '+' : '') + sd.avgSentiment.toFixed(2) : 'N/A';
 
-          popupRef.current
-            .setLngLat(e.lngLat)
-            .setHTML(`
-              <div style="font-family:system-ui;min-width:140px">
-                <div style="font-weight:700;font-size:13px;margin-bottom:4px">${name}</div>
-                <div style="font-size:11px;color:#888;margin-bottom:2px">Sentiment: <span style="color:${getSentimentColor(sd.avgSentiment)};font-weight:600">${sentVal} (${sentLabel})</span></div>
-                <div style="font-size:11px;color:#888;margin-bottom:2px">Articles: <strong>${sd.articleCount}</strong></div>
-                <div style="font-size:11px;color:#888">Top: <strong>${sd.topTopic}</strong></div>
-              </div>
-            `)
-            .addTo(map);
-        } else {
-          // Same state — just move position (cheap)
-          popupRef.current.setLngLat(e.lngLat);
+          popup.setHTML(`
+            <div style="font-family:system-ui;min-width:140px">
+              <div style="font-weight:700;font-size:13px;margin-bottom:4px">${name}</div>
+              <div style="font-size:11px;color:#888;margin-bottom:2px">Sentiment: <span style="color:${getSentimentColor(sd.avgSentiment)};font-weight:600">${sentVal} (${sentLabel})</span></div>
+              <div style="font-size:11px;color:#888;margin-bottom:2px">Articles: <strong>${sd.articleCount}</strong></div>
+              <div style="font-size:11px;color:#888">Top: <strong>${sd.topTopic}</strong></div>
+            </div>
+          `);
+
+          // Add to map only once (after first state hover)
+          if (!popup.isOpen()) {
+            popup.addTo(map);
+          }
         }
       });
 
