@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middleware/auth');
 const { sendTestEmail, isRealSmtp } = require('../services/emailService');
+const User = require('../models/User');
 
 /**
  * GET /api/v1/admin/test-email
@@ -57,6 +58,95 @@ router.get('/email-status', protect, authorize('admin'), (req, res) => {
       ? 'SMTP credentials configured. Emails will be delivered.'
       : 'No SMTP credentials. Using Ethereal test account (emails not delivered).',
   });
+});
+
+// ── User Management ──────────────────────────────────────────
+
+/**
+ * GET /api/v1/admin/users
+ * List all users with pagination and filtering.
+ */
+router.get('/users', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { page = 1, limit = 50, role, search, sort = 'createdAt', order = 'desc' } = req.query;
+    const query = {};
+    
+    if (role && role !== 'all') query.role = role;
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+      ];
+    }
+    
+    const sortObj = { [sort]: order === 'asc' ? 1 : -1 };
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const [users, total] = await Promise.all([
+      User.find(query).sort(sortObj).skip(skip).limit(parseInt(limit)).select('-password').lean(),
+      User.countDocuments(query),
+    ]);
+    
+    res.json({
+      users,
+      total,
+      page: parseInt(page),
+      pages: Math.ceil(total / parseInt(limit)),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * PUT /api/v1/admin/users/:id/role
+ * Update user role.
+ */
+router.put('/users/:id/role', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { role } = req.body;
+    if (!['user', 'admin'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role' });
+    }
+    
+    const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true }).select('-password');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    res.json({ user });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * DELETE /api/v1/admin/users/:id
+ * Delete a user.
+ */
+router.delete('/users/:id', protect, authorize('admin'), async (req, res) => {
+  try {
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    res.json({ success: true, message: 'User deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * PUT /api/v1/admin/users/:id/status
+ * Enable/disable user account.
+ */
+router.put('/users/:id/status', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { active } = req.body;
+    const user = await User.findByIdAndUpdate(req.params.id, { isActive: active }, { new: true }).select('-password');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    res.json({ user });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { getAdminStats } from '../services/api';
+import { getAdminStats, getAdminUsers, updateUserRole, deleteUser, updateUserStatus } from '../services/api';
 import toast from 'react-hot-toast';
 import ScrollToTop from '../components/ScrollToTop';
 import { useSocket } from '../context/SocketContext';
@@ -20,6 +20,13 @@ const AdminDashboard = () => {
   const [userSortField, setUserSortField] = useState('createdAt');
   const [userSortOrder, setUserSortOrder] = useState('desc');
   const [userRoleFilter, setUserRoleFilter] = useState('all');
+  const [adminUsers, setAdminUsers] = useState([]);
+  const [adminUsersLoading, setAdminUsersLoading] = useState(false);
+  const [adminUsersPage, setAdminUsersPage] = useState(1);
+  const [adminUsersTotal, setAdminUsersTotal] = useState(0);
+  const [adminUsersTotalPages, setAdminUsersTotalPages] = useState(0);
+  const [deleteConfirmUserId, setDeleteConfirmUserId] = useState(null);
+  const [processingUserId, setProcessingUserId] = useState(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -34,30 +41,76 @@ const AdminDashboard = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const filteredUsers = useMemo(() => {
-    if (!stats?.recentUsers) return [];
-    let filtered = stats.recentUsers;
-    if (userRoleFilter !== 'all') filtered = filtered.filter(u => u.role === userRoleFilter);
-    if (userSearchQuery.trim()) {
-      const query = userSearchQuery.toLowerCase();
-      filtered = filtered.filter(u => u.name?.toLowerCase().includes(query) || u.email?.toLowerCase().includes(query));
+  const loadAdminUsers = useCallback(async () => {
+    setAdminUsersLoading(true);
+    try {
+      const params = {
+        page: adminUsersPage,
+        limit: 10,
+        sortBy: userSortField,
+        sortOrder: userSortOrder,
+      };
+      if (userSearchQuery.trim()) params.search = userSearchQuery.trim();
+      if (userRoleFilter !== 'all') params.role = userRoleFilter;
+      const data = await getAdminUsers(params);
+      setAdminUsers(data.users || []);
+      setAdminUsersTotal(data.total || 0);
+      setAdminUsersTotalPages(data.totalPages || 0);
+    } catch {
+      toast.error('Failed to load users');
+    } finally {
+      setAdminUsersLoading(false);
     }
-    filtered = [...filtered].sort((a, b) => {
-      let aVal = a[userSortField];
-      let bVal = b[userSortField];
-      if (userSortField === 'analysisCount') { aVal = a.analysisCount || 0; bVal = b.analysisCount || 0; }
-      else if (userSortField === 'createdAt') { aVal = new Date(a.createdAt).getTime(); bVal = new Date(b.createdAt).getTime(); }
-      else if (userSortField === 'name' || userSortField === 'email') { aVal = (aVal || '').toLowerCase(); bVal = (bVal || '').toLowerCase(); }
-      if (aVal < bVal) return userSortOrder === 'asc' ? -1 : 1;
-      if (aVal > bVal) return userSortOrder === 'asc' ? 1 : -1;
-      return 0;
-    });
-    return filtered;
-  }, [stats?.recentUsers, userSearchQuery, userSortField, userSortOrder, userRoleFilter]);
+  }, [adminUsersPage, userSortField, userSortOrder, userSearchQuery, userRoleFilter]);
+
+  useEffect(() => {
+    if (activeTab === 'users') loadAdminUsers();
+  }, [activeTab, loadAdminUsers]);
 
   const handleSort = (field) => {
     if (userSortField === field) setUserSortOrder(userSortOrder === 'asc' ? 'desc' : 'asc');
     else { setUserSortField(field); setUserSortOrder('asc'); }
+    setAdminUsersPage(1);
+  };
+
+  const handleRoleChange = async (userId, newRole) => {
+    setProcessingUserId(userId);
+    try {
+      await updateUserRole(userId, newRole);
+      toast.success(`Role updated to ${newRole}`);
+      loadAdminUsers();
+    } catch {
+      toast.error('Failed to update role');
+    } finally {
+      setProcessingUserId(null);
+    }
+  };
+
+  const handleToggleStatus = async (userId, currentActive) => {
+    setProcessingUserId(userId);
+    try {
+      await updateUserStatus(userId, !currentActive);
+      toast.success(`User ${currentActive ? 'disabled' : 'enabled'}`);
+      loadAdminUsers();
+    } catch {
+      toast.error('Failed to update status');
+    } finally {
+      setProcessingUserId(null);
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    setProcessingUserId(userId);
+    try {
+      await deleteUser(userId);
+      toast.success('User deleted');
+      setDeleteConfirmUserId(null);
+      loadAdminUsers();
+    } catch {
+      toast.error('Failed to delete user');
+    } finally {
+      setProcessingUserId(null);
+    }
   };
 
   const SortIcon = ({ field }) => {
@@ -355,7 +408,7 @@ const AdminDashboard = () => {
               <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
                 <div className="flex items-center gap-3">
                   <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">User Management</h3>
-                  <span className="text-[10px] font-bold text-ink-faint font-sans">{stats.overview.totalUsers} Total · {filteredUsers.length} Shown</span>
+                  <span className="text-[10px] font-bold text-ink-faint font-sans">{adminUsersTotal} Total · Page {adminUsersPage} of {adminUsersTotalPages || 1}</span>
                 </div>
               </div>
 
@@ -366,8 +419,8 @@ const AdminDashboard = () => {
                     type="text"
                     placeholder="Search by name or email..."
                     value={userSearchQuery}
-                    onChange={(e) => setUserSearchQuery(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-paper-line dark:border-paper-dark-line bg-paper dark:bg-paper-dark text-ink dark:text-paper placeholder:text-ink-faint focus:outline-none focus:border-accent transition-colors font-sans"
+                    onChange={(e) => { setUserSearchQuery(e.target.value); setAdminUsersPage(1); }}
+                    className="w-full px-3 py-2 text-xs border-2 border-ink dark:border-paper bg-paper dark:bg-paper-dark text-ink dark:text-paper placeholder:text-ink-faint focus:outline-none focus:border-accent transition-colors font-sans"
                   />
                 </div>
                 <div className="flex gap-0">
@@ -375,7 +428,7 @@ const AdminDashboard = () => {
                     <React.Fragment key={role}>
                       {i > 0 && <span className="text-ink-faint mx-1.5">|</span>}
                       <button
-                        onClick={() => setUserRoleFilter(role)}
+                        onClick={() => { setUserRoleFilter(role); setAdminUsersPage(1); }}
                         className={`text-[11px] font-medium uppercase tracking-wider transition-colors font-sans px-1 ${
                           userRoleFilter === role ? 'text-ink dark:text-paper font-bold' : 'text-ink-faint hover:text-ink-muted'
                         }`}
@@ -386,7 +439,7 @@ const AdminDashboard = () => {
                   ))}
                 </div>
                 {(userSearchQuery || userRoleFilter !== 'all') && (
-                  <button onClick={() => { setUserSearchQuery(''); setUserRoleFilter('all'); }} className="text-[11px] font-bold text-red-700 dark:text-red-400 uppercase tracking-wider font-sans">
+                  <button onClick={() => { setUserSearchQuery(''); setUserRoleFilter('all'); setAdminUsersPage(1); }} className="text-[11px] font-bold text-red-700 dark:text-red-400 uppercase tracking-wider font-sans">
                     Clear
                   </button>
                 )}
@@ -397,17 +450,31 @@ const AdminDashboard = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-paper-line dark:border-paper-dark-line">
-                      {['User', 'Email', 'Role', 'Analyses', 'Joined'].map(field => (
-                        <th key={field} onClick={() => handleSort(field.toLowerCase())} className="text-left py-3 px-5 text-[10px] font-bold text-ink-muted dark:text-ink-faint uppercase tracking-wider cursor-pointer hover:text-ink dark:hover:text-paper transition-colors font-sans">
-                          <div className="flex items-center gap-1.5">{field} <SortIcon field={field.toLowerCase()} /></div>
+                      {[
+                        { label: 'User', field: 'name' },
+                        { label: 'Email', field: 'email' },
+                        { label: 'Role', field: 'role' },
+                        { label: 'Analyses', field: 'analysisCount' },
+                        { label: 'Status', field: 'isActive' },
+                        { label: 'Joined', field: 'createdAt' },
+                      ].map(col => (
+                        <th key={col.field} onClick={() => handleSort(col.field)} className="text-left py-3 px-5 text-[10px] font-bold text-ink-muted dark:text-ink-faint uppercase tracking-wider cursor-pointer hover:text-ink dark:hover:text-paper transition-colors font-sans">
+                          <div className="flex items-center gap-1.5">{col.label} <SortIcon field={col.field} /></div>
                         </th>
                       ))}
                       <th className="text-right py-3 px-5 text-[10px] font-bold text-ink-muted dark:text-ink-faint uppercase tracking-wider font-sans">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-paper-line dark:divide-paper-dark-line">
-                    {filteredUsers.length > 0 ? filteredUsers.map((u, i) => (
-                      <tr key={i} className="hover:bg-paper/50 dark:hover:bg-paper-dark/50 transition-colors">
+                    {adminUsersLoading ? (
+                      <tr>
+                        <td colSpan="7" className="py-12 text-center">
+                          <div className="w-5 h-5 border-2 border-ink border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                          <p className="text-xs text-ink-faint font-sans uppercase tracking-wider">Loading users</p>
+                        </td>
+                      </tr>
+                    ) : adminUsers.length > 0 ? adminUsers.map((u) => (
+                      <tr key={u._id} className="hover:bg-paper/50 dark:hover:bg-paper-dark/50 transition-colors">
                         <td className="py-3 px-5">
                           <span className="text-xs font-semibold text-ink dark:text-paper font-sans">{u.name}</span>
                         </td>
@@ -415,12 +482,33 @@ const AdminDashboard = () => {
                           <span className="text-[11px] text-ink-muted dark:text-ink-faint font-sans">{u.email}</span>
                         </td>
                         <td className="py-3 px-5">
-                          <span className={`text-[10px] font-bold uppercase tracking-wider font-sans ${u.role === 'admin' ? 'text-red-700 dark:text-red-400' : 'text-ink-muted dark:text-ink-faint'}`}>
-                            {u.role}
-                          </span>
+                          <select
+                            value={u.role}
+                            onChange={(e) => handleRoleChange(u._id, e.target.value)}
+                            disabled={processingUserId === u._id}
+                            className={`text-[10px] font-bold uppercase tracking-wider font-sans bg-transparent border border-ink/10 dark:border-paper/10 px-2 py-1 cursor-pointer focus:outline-none ${
+                              u.role === 'admin' ? 'text-red-700 dark:text-red-400' : 'text-ink-muted dark:text-ink-faint'
+                            }`}
+                          >
+                            <option value="user">user</option>
+                            <option value="admin">admin</option>
+                          </select>
                         </td>
                         <td className="py-3 px-5">
                           <span className="text-xs font-bold text-ink dark:text-paper font-sans">{u.analysisCount || 0}</span>
+                        </td>
+                        <td className="py-3 px-5">
+                          <button
+                            onClick={() => handleToggleStatus(u._id, u.isActive !== false)}
+                            disabled={processingUserId === u._id}
+                            className={`text-[10px] font-bold uppercase tracking-wider font-sans border border-ink dark:border-paper px-2 py-0.5 transition-colors ${
+                              u.isActive !== false
+                                ? 'text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20'
+                                : 'text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+                            }`}
+                          >
+                            {u.isActive !== false ? 'Active' : 'Disabled'}
+                          </button>
                         </td>
                         <td className="py-3 px-5">
                           <span className="text-[11px] text-ink-muted dark:text-ink-faint font-sans">
@@ -428,14 +516,36 @@ const AdminDashboard = () => {
                           </span>
                         </td>
                         <td className="py-3 px-5 text-right">
-                          <button onClick={() => toast.error('User management coming soon')} className="text-[10px] font-bold text-ink-faint hover:text-ink dark:hover:text-paper uppercase tracking-wider font-sans">
-                            Edit
-                          </button>
+                          {deleteConfirmUserId === u._id ? (
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => handleDeleteUser(u._id)}
+                                disabled={processingUserId === u._id}
+                                className="text-[10px] font-bold text-paper bg-red-700 dark:bg-red-600 px-2 py-1 uppercase tracking-wider font-sans hover:bg-red-800 dark:hover:bg-red-700 transition-colors"
+                              >
+                                Confirm
+                              </button>
+                              <button
+                                onClick={() => setDeleteConfirmUserId(null)}
+                                className="text-[10px] font-bold text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper uppercase tracking-wider font-sans"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setDeleteConfirmUserId(u._id)}
+                              disabled={processingUserId === u._id}
+                              className="text-[10px] font-bold text-red-700 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 uppercase tracking-wider font-sans transition-colors"
+                            >
+                              Delete
+                            </button>
+                          )}
                         </td>
                       </tr>
                     )) : (
                       <tr>
-                        <td colSpan="6" className="py-12 text-center">
+                        <td colSpan="7" className="py-12 text-center">
                           <p className="text-xs text-ink-faint font-sans">No users found matching your filters</p>
                         </td>
                       </tr>
@@ -444,10 +554,35 @@ const AdminDashboard = () => {
                 </table>
               </div>
 
-              {filteredUsers.length > 0 && (
+              {/* Pagination */}
+              {adminUsersTotal > 0 && (
                 <div className="px-5 py-3 border-t border-paper-line dark:border-paper-dark-line flex items-center justify-between">
-                  <span className="text-[10px] text-ink-faint font-sans">Showing {filteredUsers.length} of {stats.overview.totalUsers}</span>
-                  <span className="text-[10px] text-ink-faint font-sans">Sorted by {userSortField} ({userSortOrder})</span>
+                  <span className="text-[10px] text-ink-faint font-sans">
+                    Showing {((adminUsersPage - 1) * 10) + 1}–{Math.min(adminUsersPage * 10, adminUsersTotal)} of {adminUsersTotal}
+                  </span>
+                  <div className="flex items-center gap-0">
+                    <button
+                      onClick={() => setAdminUsersPage(p => Math.max(1, p - 1))}
+                      disabled={adminUsersPage <= 1 || adminUsersLoading}
+                      className={`text-[10px] font-bold uppercase tracking-wider font-sans px-3 py-1.5 border border-ink dark:border-paper transition-colors ${
+                        adminUsersPage <= 1 ? 'text-ink-faint opacity-40 cursor-not-allowed' : 'text-ink dark:text-paper hover:bg-ink hover:text-paper dark:hover:bg-paper dark:hover:text-ink'
+                      }`}
+                    >
+                      Prev
+                    </button>
+                    <span className="text-[10px] text-ink-muted dark:text-ink-faint font-sans px-3">
+                      {adminUsersPage} / {adminUsersTotalPages || 1}
+                    </span>
+                    <button
+                      onClick={() => setAdminUsersPage(p => Math.min(adminUsersTotalPages, p + 1))}
+                      disabled={adminUsersPage >= adminUsersTotalPages || adminUsersLoading}
+                      className={`text-[10px] font-bold uppercase tracking-wider font-sans px-3 py-1.5 border border-ink dark:border-paper transition-colors ${
+                        adminUsersPage >= adminUsersTotalPages ? 'text-ink-faint opacity-40 cursor-not-allowed' : 'text-ink dark:text-paper hover:bg-ink hover:text-paper dark:hover:bg-paper dark:hover:text-ink'
+                      }`}
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
