@@ -162,7 +162,7 @@ const Reports = () => {
       localStorage.setItem('report-history', JSON.stringify(newHistory));
     } catch (err) {
       console.error('Report generation failed:', err);
-      alert('Failed to generate report. Please try again.');
+      let errMsg = 'Failed to generate report. Please try again.'; try { if (err.response?.data instanceof Blob) { const text = await err.response.data.text(); const parsed = JSON.parse(text); errMsg = parsed.error || errMsg; } else if (err.response?.data?.error) { errMsg = err.response.data.error; } } catch(e) {} alert(errMsg);
     } finally {
       setLoading(false);
     }
@@ -470,7 +470,7 @@ const Reports = () => {
 
         <button
           onClick={handleGenerate}
-          disabled={loading || (selectedTemplate === 'custom' && customSections.length === 0)}
+          disabled={loading || (selectedTemplate === 'custom' && customSections.length === 0) || (selectedTemplate === 'comparison' && !topicB.trim())}
           className="px-5 py-2.5 text-sm font-medium border border-ink dark:border-paper text-ink dark:text-paper hover:bg-ink hover:text-paper dark:hover:bg-paper dark:hover:text-ink disabled:opacity-30 transition-all flex items-center gap-2 uppercase tracking-[0.1em]"
         >
           {loading ? (
