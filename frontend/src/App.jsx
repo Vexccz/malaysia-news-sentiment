@@ -563,13 +563,27 @@ const App = () => (
                     toastOptions={{
                       duration: 4000,
                       style: {
-                        background: 'var(--card)',
-                        color: 'var(--text-primary)',
-                        border: '1px solid var(--border)',
-                        fontFamily: "'Plus Jakarta Sans', sans-serif",
+                        background: '#fff',
+                        color: '#111',
+                        border: '2px solid #111',
+                        fontFamily: "'Playfair Display', Georgia, serif",
                         fontSize: '13px',
-                        borderRadius: '8px',
-                        boxShadow: 'var(--shadow-md)'
+                        borderRadius: '0',
+                        boxShadow: 'none',
+                        padding: '10px 16px',
+                        letterSpacing: '0.01em',
+                      },
+                      success: {
+                        iconTheme: {
+                          primary: '#111',
+                          secondary: '#fff',
+                        },
+                      },
+                      error: {
+                        iconTheme: {
+                          primary: '#111',
+                          secondary: '#fff',
+                        },
                       },
                     }}
                   />
