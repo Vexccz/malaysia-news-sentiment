@@ -740,6 +740,16 @@ const AdminDashboard = () => {
                     <div className="text-[10px] font-bold text-green-700 dark:text-green-400 uppercase tracking-widest mb-1.5 font-sans">Opportunity</div>
                     <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed font-sans">{insights.opportunity}</p>
                   </div>
+                  {insights.trend && (
+                    <div className="px-5 py-3 flex items-center gap-3">
+                      <span className={`text-[10px] font-bold uppercase tracking-widest font-sans ${
+                        insights.trend === 'Improving' ? 'text-green-600' :
+                        insights.trend === 'Declining' ? 'text-red-600' :
+                        insights.trend === 'Slightly Declining' ? 'text-amber-600' :
+                        'text-ink-muted'
+                      }`}>Trend: {insights.trend}</span>
+                    </div>
+                  )}
                   <div className="px-5 py-3">
                     <button onClick={loadInsights} className="text-xs font-medium uppercase tracking-wider text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-colors font-sans">
                       Regenerate Insights
@@ -748,7 +758,7 @@ const AdminDashboard = () => {
                 </div>
               ) : (
                 <div className="py-8 text-center">
-                  <p className="text-xs text-ink-faint mb-3 font-sans">Generate AI-powered strategic insights from recent news data</p>
+                  <p className="text-xs text-ink-faint mb-3 font-sans">Data-driven insights from article sentiment analysis</p>
                   <button onClick={loadInsights} className="px-5 py-2.5 bg-ink text-paper text-xs font-semibold uppercase tracking-wider hover:bg-accent transition-colors font-sans">
                     Generate Insights
                   </button>

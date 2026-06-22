@@ -6,7 +6,7 @@
 const mongoose = require('mongoose');
 const Article  = require('../models/Article');
 const User     = require('../models/User');
-const { getClient, performAiRequest } = require('../services/openaiService');
+
 
 const isDbConnected = () => mongoose.connection.readyState === 1;
 
@@ -100,32 +100,165 @@ const getAdminDashboardStats = async (req, res) => {
 };
 
 // ── GET /api/news/admin/insights ──────────────────────────────
+// Data-driven strategic insights from real article aggregation (no LLM needed)
 const getAdminInsights = async (req, res) => {
   try {
-    // Security #6: Graceful fallback if no AI key configured
-    if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY.includes('your_')) {
-      return res.json({
-        risk:        'AI not configured — add OPENAI_API_KEY to .env.',
-        opportunity: 'Configure AI key for strategic insights.',
-      });
+    const now   = new Date();
+    const d7    = new Date(now.getTime() - 7  * 86400000);
+    const d14   = new Date(now.getTime() - 14 * 86400000);
+
+    // 1. Find the topic with highest negative ratio this week
+    const topicRisk = await Article.aggregate([
+      { $match: { createdAt: { $gte: d7 }, topic: { $ne: 'general' } } },
+      { $group: {
+          _id: '$topic',
+          total: { $sum: 1 },
+          neg:   { $sum: { $cond: [{ $eq: ['$sentiment', 'Negative'] }, 1, 0] } },
+      }},
+      { $addFields: { negRatio: { $divide: ['$neg', '$total'] } } },
+      { $match: { total: { $gte: 2 }, negRatio: { $gte: 0.4 } } },
+      { $sort: { negRatio: -1 } },
+      { $limit: 1 },
+    ]);
+
+    // 2. Find the state with rising negative sentiment (this week vs last week)
+    const [stateThisWeek, statePrevWeek] = await Promise.all([
+      Article.aggregate([
+        { $match: { createdAt: { $gte: d7 }, stateLocation: { $nin: ['General', null, ''] } } },
+        { $group: {
+            _id: '$stateLocation',
+            total: { $sum: 1 },
+            neg:   { $sum: { $cond: [{ $eq: ['$sentiment', 'Negative'] }, 1, 0] } },
+        }},
+        { $addFields: { negRatio: { $divide: ['$neg', '$total'] } } },
+        { $match: { total: { $gte: 2 } } },
+        { $sort: { negRatio: -1 } },
+        { $limit: 3 },
+      ]),
+      Article.aggregate([
+        { $match: { createdAt: { $gte: d14, $lt: d7 }, stateLocation: { $nin: ['General', null, ''] } } },
+        { $group: {
+            _id: '$stateLocation',
+            total: { $sum: 1 },
+            neg:   { $sum: { $cond: [{ $eq: ['$sentiment', 'Negative'] }, 1, 0] } },
+        }},
+        { $addFields: { negRatio: { $divide: ['$neg', '$total'] } } },
+        { $match: { total: { $gte: 2 } } },
+      ]),
+    ]);
+
+    let stateRisk = null;
+    for (const cur of stateThisWeek) {
+      const prev = statePrevWeek.find(p => p._id === cur._id);
+      const prevRatio = prev?.negRatio || 0;
+      const delta = cur.negRatio - prevRatio;
+      if (!stateRisk || delta > stateRisk.delta) {
+        stateRisk = { state: cur._id, negRatio: cur.negRatio, delta };
+      }
     }
 
-    const recent  = await Article.find().sort({ createdAt: -1 }).limit(10)
-      .select('title sentiment topic').lean();
+    // 3. Find the topic with best positive momentum
+    const [topicPosThisWeek, topicPosPrevWeek] = await Promise.all([
+      Article.aggregate([
+        { $match: { createdAt: { $gte: d7 }, topic: { $ne: 'general' } } },
+        { $group: {
+            _id: '$topic',
+            total: { $sum: 1 },
+            pos:   { $sum: { $cond: [{ $eq: ['$sentiment', 'Positive'] }, 1, 0] } },
+        }},
+        { $addFields: { posRatio: { $divide: ['$pos', '$total'] } } },
+        { $match: { total: { $gte: 2 } } },
+        { $sort: { posRatio: -1 } },
+        { $limit: 3 },
+      ]),
+      Article.aggregate([
+        { $match: { createdAt: { $gte: d14, $lt: d7 }, topic: { $ne: 'general' } } },
+        { $group: {
+            _id: '$topic',
+            total: { $sum: 1 },
+            pos:   { $sum: { $cond: [{ $eq: ['$sentiment', 'Positive'] }, 1, 0] } },
+        }},
+        { $addFields: { posRatio: { $divide: ['$pos', '$total'] } } },
+        { $match: { total: { $gte: 2 } } },
+      ]),
+    ]);
 
-    const prompt = `Analyze these 10 news headlines from Malaysia: ${
-      recent.map(a => `[${a.sentiment}] ${a.title}`).join(' | ')
-    }. Return exactly 2 strategic points. Point 1: One Specific Crisis/Risk. Point 2: One Positive Opportunity. Keep each point under 20 words. No numbers.`;
+    let topicOpp = null;
+    for (const cur of topicPosThisWeek) {
+      const prev = topicPosPrevWeek.find(p => p._id === cur._id);
+      const prevRatio = prev?.posRatio || 0;
+      const delta = cur.posRatio - prevRatio;
+      if (!topicOpp || delta > topicOpp.delta) {
+        topicOpp = { topic: cur._id, posRatio: cur.posRatio, delta };
+      }
+    }
 
-    // Use performAiRequest which handles both Ollama and OpenAI formats
-    const model = process.env.OPENAI_MODEL || 'llama3.2';
-    const result = await performAiRequest(prompt, model, 0.3, 150);
+    // 4. Overall sentiment shift (this week vs last week)
+    const [overallThisWeek, overallPrevWeek] = await Promise.all([
+      Article.aggregate([
+        { $match: { createdAt: { $gte: d7 } } },
+        { $group: {
+            _id: null,
+            total: { $sum: 1 },
+            neg:   { $sum: { $cond: [{ $eq: ['$sentiment', 'Negative'] }, 1, 0] } },
+            pos:   { $sum: { $cond: [{ $eq: ['$sentiment', 'Positive'] }, 1, 0] } },
+        }},
+      ]),
+      Article.aggregate([
+        { $match: { createdAt: { $gte: d14, $lt: d7 } } },
+        { $group: {
+            _id: null,
+            total: { $sum: 1 },
+            neg:   { $sum: { $cond: [{ $eq: ['$sentiment', 'Negative'] }, 1, 0] } },
+            pos:   { $sum: { $cond: [{ $eq: ['$sentiment', 'Positive'] }, 1, 0] } },
+        }},
+      ]),
+    ]);
 
-    const lines = result.split('\n').filter(l => l.trim().length > 5);
+    const tw = overallThisWeek[0] || { total: 0, neg: 0, pos: 0 };
+    const pw = overallPrevWeek[0]  || { total: 0, neg: 0, pos: 0 };
+    const negShift = tw.total > 0 ? (tw.neg / tw.total) : 0;
+    const prevNeg  = pw.total > 0 ? (pw.neg / pw.total) : 0;
+    const sentimentTrend = negShift - prevNeg;
+
+    // 5. Build insight strings from real data
+    let riskText = 'System is stable — no critical negative trends detected in the past 7 days.';
+    if (topicRisk.length > 0 && stateRisk) {
+      const topicName = topicRisk[0]._id;
+      const negPct    = Math.round(topicRisk[0].negRatio * 100);
+      const stateNeg  = Math.round(stateRisk.negRatio * 100);
+      riskText = `"${topicName}" coverage is ${negPct}% negative this week. ${stateRisk.state} shows the steepest sentiment decline at ${stateNeg}% negative — monitor closely.`;
+    } else if (topicRisk.length > 0) {
+      riskText = `"${topicRisk[0]._id}" coverage is ${Math.round(topicRisk[0].negRatio * 100)}% negative this week — rising concern across multiple states.`;
+    } else if (stateRisk) {
+      riskText = `${stateRisk.state} sentiment declining (${Math.round(stateRisk.negRatio * 100)}% negative) with no dominant topic — possible regional unrest.`;
+    }
+
+    let oppText = 'Steady positive coverage across topics — no standout growth areas this week.';
+    if (topicOpp && topicOpp.posRatio > 0.5) {
+      const pct = Math.round(topicOpp.posRatio * 100);
+      oppText = `"${topicOpp.topic}" shows ${pct}% positive sentiment this week — growing public interest and favorable coverage.`;
+    }
+
+    let trendLabel = 'Stable';
+    if (sentimentTrend > 0.1)       trendLabel = 'Declining';
+    else if (sentimentTrend > 0.05) trendLabel = 'Slightly Declining';
+    else if (sentimentTrend < -0.1) trendLabel = 'Improving';
 
     res.json({
-      risk:        lines[0]?.replace(/^(Point 1:|Risk:|\d+\.)/i, '').trim() || 'No critical risks.',
-      opportunity: lines[1]?.replace(/^(Point 2:|Opportunity:|\d+\.)/i, '').trim() || 'Stable market conditions.',
+      risk:        riskText,
+      opportunity: oppText,
+      trend:       trendLabel,
+      data: {
+        topicRisk:  topicRisk[0]  || null,
+        stateRisk,
+        topicOpp:   topicOpp      || null,
+        sentimentShift: {
+          thisWeekNeg:  Math.round(negShift * 100),
+          prevWeekNeg:  Math.round(prevNeg * 100),
+          delta:        Math.round(sentimentTrend * 100),
+        },
+      },
     });
   } catch (err) {
     console.error('[AdminInsights] Error:', err.message);
