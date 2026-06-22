@@ -167,16 +167,6 @@ const ArticleDetail = () => {
     <div className="bg-paper min-h-screen">
       <div className="max-w-3xl mx-auto px-4 py-8 lg:px-0">
 
-        {/* Back */}
-        <Link
-          to="/dashboard"
-          className="inline-flex items-center gap-2 text-ink/40 hover:text-ink text-[11px] uppercase tracking-widest no-underline transition-colors mb-8"
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M19 12H5" /><polyline points="12 19 5 12 12 5" />
-          </svg>
-          Back to Dashboard
-        </Link>
 
         {/* Meta row */}
         <div className="flex flex-wrap items-center gap-3 mb-5">
