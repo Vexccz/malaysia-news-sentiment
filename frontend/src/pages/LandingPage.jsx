@@ -631,10 +631,13 @@ const LandingPage = () => {
             {features.map((f, i) => (
               <motion.div
                 key={i}
-                className="p-7 border-r border-b border-ink/10 dark:border-paper/10 group hover:bg-ink/[0.02] dark:hover:bg-paper/[0.02] transition-colors"
+                className="relative p-7 border-r border-b border-ink/10 dark:border-paper/10 group hover:bg-ink/[0.02] dark:hover:bg-paper/[0.02] transition-colors"
                 variants={staggerItem}
               >
-                <f.icon className="w-6 h-6 text-accent mb-4" strokeWidth={1.5} />
+                <span className="block font-['Playfair_Display'] text-5xl font-bold text-ink/[0.06] dark:text-paper/[0.06] leading-none mb-2 select-none">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <f.icon className="w-6 h-6 text-accent mb-3 -mt-2" strokeWidth={1.5} />
                 <p className="text-[10px] uppercase tracking-[0.2em] text-accent font-sans mb-2">{f.title}</p>
                 <h3 className="text-base font-bold text-ink dark:text-paper font-sans mb-2">{f.title}</h3>
                 <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed font-sans">{f.desc}</p>

@@ -111,7 +111,7 @@ const ArticleDetailPanel = ({ article, isOpen, onClose }) => {
                 <div className="tab-pane-premium">
                   {activeTab === 'summary' && (
                     <div className="animate-in">
-                      <span className="premium-label">AI Intelligence Summary</span>
+                      <span className="premium-label">Intelligence Summary</span>
                       <p className="premium-summary-text">{currentAnalysis?.summary}</p>
                     </div>
                   )}
@@ -188,8 +188,8 @@ const ArticleDetailPanel = ({ article, isOpen, onClose }) => {
         .detail-tabs-premium { display: flex; gap: 0; margin-bottom: 24px; border: 1px solid var(--border); }
         .detail-tab-btn { flex: 1; padding: 10px; border: none; border-right: 1px solid var(--border); background: transparent; color: var(--text-500); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; border-radius: 0; transition: all 0.2s; }
         .detail-tab-btn:last-child { border-right: none; }
-        .detail-tab-btn.active { background: #1A1A1A; color: #fff; }
-        [data-theme='dark'] .detail-tab-btn.active { background: #fff; color: #1A1A1A; }
+        .detail-tab-btn.active { background: transparent; color: var(--text-900, #111); border-bottom: 2px solid var(--text-900, #111); font-weight: 800; }
+        [data-theme='dark'] .detail-tab-btn.active { color: #fff; border-bottom-color: #fff; }
 
         .premium-summary-text { font-size: 15px; line-height: 1.8; color: var(--text-700); font-weight: 500; }
         .sentiment-matrix { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }

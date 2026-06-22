@@ -123,9 +123,9 @@ const AdvancedSearch = () => {
   };
 
   const sentimentColor = (s) => {
-    if (s === 'Positive') return 'text-green-500 bg-green-50 dark:bg-green-500/10 border-green-200 dark:border-green-500/20';
-    if (s === 'Negative') return 'text-red-500 bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20';
-    return 'text-gray-500 bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10';
+    if (s === 'Positive') return 'text-green-600 bg-transparent border-green-300 dark:border-green-500/30';
+    if (s === 'Negative') return 'text-red-600 bg-transparent border-red-300 dark:border-red-500/30';
+    return 'text-gray-600 bg-transparent border-gray-300 dark:border-white/10';
   };
 
   return (
@@ -274,13 +274,13 @@ const AdvancedSearch = () => {
                     type="date"
                     value={filters.dateFrom}
                     onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-white/5 border border-[#eee] dark:border-[#2a2a2a] text-xs text-gray-700 dark:text-gray-300"
+                    className="w-full px-3 py-2 bg-gray-50 dark:bg-white/5 border border-[#eee] dark:border-[#2a2a2a] text-xs text-gray-700 dark:text-gray-300"
                   />
                   <input
                     type="date"
                     value={filters.dateTo}
                     onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-white/5 border border-[#eee] dark:border-[#2a2a2a] text-xs text-gray-700 dark:text-gray-300"
+                    className="w-full px-3 py-2 bg-gray-50 dark:bg-white/5 border border-[#eee] dark:border-[#2a2a2a] text-xs text-gray-700 dark:text-gray-300"
                   />
                 </div>
               </div>
@@ -291,7 +291,7 @@ const AdvancedSearch = () => {
                 <select
                   value={filters.language}
                   onChange={(e) => setFilters(prev => ({ ...prev, language: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-white/5 border border-[#eee] dark:border-[#2a2a2a] text-xs text-gray-700 dark:text-gray-300"
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-white/5 border border-[#eee] dark:border-[#2a2a2a] text-xs text-gray-700 dark:text-gray-300"
                 >
                   <option value="">All Languages</option>
                   <option value="en">English</option>
@@ -328,7 +328,7 @@ const AdvancedSearch = () => {
                 <select
                   value={filters.sortBy}
                   onChange={(e) => setFilters(prev => ({ ...prev, sortBy: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-white/5 border border-[#eee] dark:border-[#2a2a2a] text-xs text-gray-700 dark:text-gray-300"
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-white/5 border border-[#eee] dark:border-[#2a2a2a] text-xs text-gray-700 dark:text-gray-300"
                 >
                   {SORT_OPTIONS.map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -345,9 +345,9 @@ const AdvancedSearch = () => {
                       <button
                         key={i}
                         onClick={() => loadSearch(s)}
-                        className="w-full text-left px-3 py-2 rounded-lg text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors truncate"
+                        className="w-full text-left px-3 py-2 text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors truncate border-b border-gray-100 dark:border-[#2a2a2a] last:border-0"
                       >
-                        🔍 {s.query || 'All articles'}
+                        {s.query || 'All articles'}
                       </button>
                     ))}
                   </div>
@@ -388,7 +388,6 @@ const AdvancedSearch = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.03 }}
-                  whileHover={{ y: -3, scale: 1.01 }}
                   className="block bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-5 hover:border-accent/30 transition-all no-underline"
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -411,7 +410,7 @@ const AdvancedSearch = () => {
                         )}
                       </div>
                     </div>
-                    <span className={`flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium border ${sentimentColor(article.sentiment)}`}>
+                    <span className={`flex-shrink-0 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider border ${sentimentColor(article.sentiment)}`}>
                       {article.sentiment}
                     </span>
                   </div>
@@ -427,11 +426,6 @@ const AdvancedSearch = () => {
               animate={{ opacity: 1, scale: 1 }}
               className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-12 text-center"
             >
-              <motion.div
-                animate={{ y: [0, -5, 0] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                className="text-4xl mb-3"
-              >🔍</motion.div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">No results found</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">Try adjusting your search query or filters</p>
             </motion.div>
@@ -444,11 +438,9 @@ const AdvancedSearch = () => {
               animate={{ opacity: 1, scale: 1 }}
               className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-12 text-center"
             >
-              <motion.div
-                animate={{ y: [0, -5, 0] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                className="text-4xl mb-3"
-              >🔎</motion.div>
+              <svg className="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+              </svg>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Start searching</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">Enter a keyword or apply filters to find articles</p>
             </motion.div>
@@ -462,7 +454,7 @@ const AdvancedSearch = () => {
                 whileTap={{ scale: 0.98 }}
                 onClick={() => performSearch(page - 1)}
                 disabled={page <= 1}
-                className="px-3 py-2 rounded-lg text-sm bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] disabled:opacity-30 hover:border-accent/30 transition-colors"
+                className="px-3 py-2 text-sm bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] disabled:opacity-30 hover:border-accent/30 transition-colors"
               >
                 ← Prev
               </motion.button>
@@ -474,7 +466,7 @@ const AdvancedSearch = () => {
                 whileTap={{ scale: 0.98 }}
                 onClick={() => performSearch(page + 1)}
                 disabled={page >= results.totalPages}
-                className="px-3 py-2 rounded-lg text-sm bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] disabled:opacity-30 hover:border-accent/30 transition-colors"
+                className="px-3 py-2 text-sm bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] disabled:opacity-30 hover:border-accent/30 transition-colors"
               >
                 Next →
               </motion.button>

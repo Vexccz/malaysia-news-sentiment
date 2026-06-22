@@ -965,7 +965,7 @@ const Dashboard = () => {
                       </Skeleton>
                     </div>
                     {/* Pie Chart - Editorial */}
-                    <div className="border border-ink/10 dark:border-paper/10 p-5">
+                    <div className="border border-ink/10 dark:border-paper/10 p-5 border-l-[3px] border-l-accent">
                       <p className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-4">Sentiment Distribution</p>
                       <InlineErrorBoundary name="Pie Chart">
                         <SentimentDonutChart distribution={chartDistribution} onSegmentClick={handlePieSegmentClick} activeFilter={filter} />
@@ -1065,28 +1065,28 @@ const Dashboard = () => {
                           animate="visible"
                         >
                           <SectionHeader title={t("charts")} />
-                          <div className={`${CARD} p-4`}>
+                          <div className={`${CARD} p-4 border-l-[3px] border-l-accent`}>
                             <Suspense fallback={<ChartFallback />}>
                               <InlineErrorBoundary name="Bar Chart">
                                 <SentimentHorizontalBar distribution={chartDistribution} />
                               </InlineErrorBoundary>
                             </Suspense>
                           </div>
-                          <div className={`${CARD} p-4`}>
+                          <div className={`${CARD} p-4 border-l-[3px] border-l-accent`}>
                             <Suspense fallback={<ChartFallback />}>
                               <InlineErrorBoundary name="Trend Chart">
                                 <SentimentAreaChart trendsData={trends} />
                               </InlineErrorBoundary>
                             </Suspense>
                           </div>
-                          <div className={`${CARD} p-4`}>
+                          <div className={`${CARD} p-4 border-l-[3px] border-l-accent`}>
                             <Suspense fallback={<ChartFallback />}>
                               <InlineErrorBoundary name="Sentiment Map">
                                 <SentimentHeatmap data={regionalData} loading={isLoading} />
                               </InlineErrorBoundary>
                             </Suspense>
                           </div>
-                          <div className={`${CARD} p-4`}>
+                          <div className={`${CARD} p-4 border-l-[3px] border-l-accent`}>
                             <Suspense fallback={<ChartFallback />}>
                               <InlineErrorBoundary name="Sources Chart">
                                 <TopSourcesHorizontal sourcesData={sources} />
@@ -1261,33 +1261,33 @@ const Dashboard = () => {
                           initial="hidden"
                           animate="visible"
                         >
-                          <div className={`${CARD} p-5 min-h-[280px] flex flex-col`}>
+                          <div className={`${CARD} p-5 min-h-[280px] flex flex-col border-l-[3px] border-l-accent`}>
                             <InlineErrorBoundary name="Pie Chart">
                               <SentimentDonutChart distribution={chartDistribution} onSegmentClick={handlePieSegmentClick} activeFilter={filter} />
                             </InlineErrorBoundary>
                           </div>
-                          <div className={`${CARD} p-5 min-h-[280px] flex flex-col`}>
+                          <div className={`${CARD} p-5 min-h-[280px] flex flex-col border-l-[3px] border-l-accent`}>
                             <Suspense fallback={<ChartFallback />}>
                               <InlineErrorBoundary name="Bar Chart">
                                 <SentimentHorizontalBar distribution={chartDistribution} />
                               </InlineErrorBoundary>
                             </Suspense>
                           </div>
-                          <div className={`${CARD} p-5 min-h-[280px] flex flex-col`}>
+                          <div className={`${CARD} p-5 min-h-[280px] flex flex-col border-l-[3px] border-l-accent`}>
                             <Suspense fallback={<ChartFallback />}>
                               <InlineErrorBoundary name="Sentiment Map">
                                 <SentimentHeatmap data={regionalData} loading={isLoading} />
                               </InlineErrorBoundary>
                             </Suspense>
                           </div>
-                          <div className={`${CARD} p-5 min-h-[280px] flex flex-col`}>
+                          <div className={`${CARD} p-5 min-h-[280px] flex flex-col border-l-[3px] border-l-accent`}>
                             <Suspense fallback={<ChartFallback />}>
                               <InlineErrorBoundary name="Trend Chart">
                                 <SentimentAreaChart trendsData={trends} />
                               </InlineErrorBoundary>
                             </Suspense>
                           </div>
-                          <div className={`col-span-2 ${CARD} p-5`}>
+                          <div className={`col-span-2 ${CARD} p-5 border-l-[3px] border-l-accent`}>
                             <Suspense fallback={<ChartFallback />}>
                               <InlineErrorBoundary name="Sources Chart">
                                 <TopSourcesHorizontal sourcesData={sources} />
@@ -1324,7 +1324,7 @@ const Dashboard = () => {
                     <div className="sticky top-6 space-y-5">
                       {widgetVisibility.wordcloud && (
                       <Skeleton name="word-cloud" loading={isLoading}>
-                        <div className={`${CARD} p-5`}>
+                        <div className={`${CARD} p-5 border-l-[3px] border-l-accent`}>
                           <InlineErrorBoundary name="Word Cloud">
                             <WordCloud words={keywords} />
                           </InlineErrorBoundary>
@@ -1332,7 +1332,7 @@ const Dashboard = () => {
                       </Skeleton>
                       )}
                       {widgetVisibility.sources && (
-                      <div className={`${CARD} p-5`}>
+                      <div className={`${CARD} p-5 border-l-[3px] border-l-accent`}>
                         <InlineErrorBoundary name="Source Credibility">
                           <SourceCredibility />
                         </InlineErrorBoundary>

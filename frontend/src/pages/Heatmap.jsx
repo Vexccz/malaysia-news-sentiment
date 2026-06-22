@@ -219,12 +219,32 @@ const Heatmap = () => {
           const sentLabel = getSentimentLabel(sd.avgSentiment);
           const sentVal = sd.avgSentiment !== null ? (sd.avgSentiment > 0 ? '+' : '') + sd.avgSentiment.toFixed(2) : 'N/A';
 
+          const sentColor = getSentimentColor(sd.avgSentiment);
+          const posPct = sd.posPct !== undefined ? sd.posPct : Math.max(0, Math.round((sd.avgSentiment > 0 ? 40 + sd.avgSentiment * 60 : 20) ));
+          const negPct = sd.negPct !== undefined ? sd.negPct : Math.max(0, Math.round((sd.avgSentiment < 0 ? 40 + Math.abs(sd.avgSentiment) * 60 : 20) ));
+          const neuPct = Math.max(0, 100 - posPct - negPct);
+
           popup.setHTML(`
-            <div style="font-family:system-ui;min-width:140px">
-              <div style="font-weight:700;font-size:13px;margin-bottom:4px">${name}</div>
-              <div style="font-size:11px;color:#888;margin-bottom:2px">Sentiment: <span style="color:${getSentimentColor(sd.avgSentiment)};font-weight:600">${sentVal} (${sentLabel})</span></div>
-              <div style="font-size:11px;color:#888;margin-bottom:2px">Articles: <strong>${sd.articleCount}</strong></div>
-              <div style="font-size:11px;color:#888">Top: <strong>${sd.topTopic}</strong></div>
+            <div style="font-family:system-ui;min-width:180px;padding:2px 0">
+              <div style="font-weight:800;font-size:15px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">${name}</div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                <span style="font-size:22px;font-weight:800;color:${sentColor}">${sentVal}</span>
+                <span style="font-size:11px;font-weight:600;text-transform:uppercase;color:${sentColor};letter-spacing:0.5px">${sentLabel}</span>
+              </div>
+              <div style="height:6px;background:#e5e7eb;border-radius:0;display:flex;overflow:hidden;margin-bottom:8px">
+                <div style="width:${posPct}%;background:#22c55e"></div>
+                <div style="width:${neuPct}%;background:#eab308"></div>
+                <div style="width:${negPct}%;background:#ef4444"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">
+                <span>${posPct}% pos</span>
+                <span>${neuPct}% neu</span>
+                <span>${negPct}% neg</span>
+              </div>
+              <div style="border-top:1px solid #e5e7eb;padding-top:6px;font-size:11px;color:#6b7280">
+                <div style="margin-bottom:2px">Articles: <strong style="color:#111">${sd.articleCount}</strong></div>
+                <div>Top: <strong style="color:#111">${sd.topTopic}</strong></div>
+              </div>
             </div>
           `);
 
@@ -477,7 +497,7 @@ const Heatmap = () => {
           background: ${isDark ? '#1a1a1a' : '#fff'};
           color: ${isDark ? '#fff' : '#111'};
           border: 1px solid ${isDark ? '#333' : '#eee'};
-          border-radius: 12px;
+          border-radius: 0;
           padding: 10px 14px;
           box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
