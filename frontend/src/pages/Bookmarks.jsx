@@ -323,20 +323,22 @@ const Bookmarks = () => {
       {/* Content */}
       {articles.length === 0 ? (
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center justify-center py-20 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center justify-center py-20 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a]"
         >
-          <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}>
-            <BookmarkX size={48} className="text-gray-300 dark:text-gray-600" />
-          </motion.div>
-          <h3 className="mt-4 text-base font-semibold text-gray-700 dark:text-gray-300">
-            {activeFolder ? 'No bookmarks in this folder' : 'No bookmarks yet'}
+          <div className="max-w-[60px] mx-auto mb-5 flex flex-col items-center gap-0.5">
+            <div className="w-full h-[2px] bg-gray-200 dark:bg-gray-700" />
+            <div className="w-full h-px bg-gray-100 dark:bg-gray-800" />
+          </div>
+          <BookmarkX size={36} className="text-gray-200 dark:text-gray-700 mb-4" />
+          <h3 className="font-['Playfair_Display'] text-xl font-bold text-gray-900 dark:text-white mb-3">
+            {activeFolder ? 'No Bookmarks Here' : 'No Bookmarks Yet'}
           </h3>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-gray-500 dark:text-gray-400 italic font-serif max-w-sm mx-auto">
             {activeFolder
-              ? 'Move articles here from your other bookmarks.'
-              : 'Start saving articles to see them here.'}
+              ? '"Move articles here from your other bookmarks."'
+              : '"Start saving articles to build your personal collection."'}
           </p>
         </motion.div>
       ) : (

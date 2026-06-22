@@ -307,16 +307,18 @@ const History = () => {
           </div>
         ) : articles.length === 0 ? (
           <div className="text-center py-20 border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
-            <div className="text-4xl mb-4 opacity-15">
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mx-auto text-ink-muted">
-                <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
-              </svg>
+            <div className="max-w-[60px] mx-auto mb-5 flex flex-col items-center gap-0.5">
+              <div className="w-full h-[2px] bg-ink/10 dark:bg-paper/10" />
+              <div className="w-full h-px bg-ink/5 dark:bg-paper/5" />
             </div>
-            <h3 className="text-base font-semibold text-ink dark:text-paper mb-1.5 font-display">
-              No matches found
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto text-ink/15 dark:text-paper/15 mb-4">
+              <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
+            </svg>
+            <h3 className="font-['Playfair_Display'] text-xl font-bold text-ink dark:text-paper mb-3">
+              No Stories Found
             </h3>
-            <p className="text-xs text-ink-faint max-w-sm mx-auto font-sans leading-relaxed">
-              Adjust your filters or try another search term to find past analyses.
+            <p className="text-sm text-ink-muted dark:text-ink-faint italic font-serif max-w-sm mx-auto">
+              "Adjust your filters or search for past analyses."
             </p>
           </div>
         ) : (

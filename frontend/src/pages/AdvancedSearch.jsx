@@ -422,27 +422,46 @@ const AdvancedSearch = () => {
           {/* Empty state */}
           {!loading && results && results.articles?.length === 0 && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-12 text-center"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] p-12 text-center"
             >
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">No results found</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Try adjusting your search query or filters</p>
+              <div className="max-w-[60px] mx-auto mb-5 flex flex-col items-center gap-0.5">
+                <div className="w-full h-[2px] bg-gray-200 dark:bg-gray-700" />
+                <div className="w-full h-px bg-gray-100 dark:bg-gray-800" />
+              </div>
+              <h3 className="font-['Playfair_Display'] text-xl font-bold text-gray-900 dark:text-white mb-3">No Stories Found</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 italic font-serif max-w-sm mx-auto mb-5">
+                "The news you seek has not yet been written."
+              </p>
+              <div className="max-w-[40px] mx-auto mb-5 h-px bg-gray-200 dark:bg-gray-700" />
+              <button
+                onClick={clearAllFilters}
+                className="px-5 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-[11px] font-bold uppercase tracking-[0.15em] hover:bg-accent transition-colors"
+              >
+                Clear Filters
+              </button>
             </motion.div>
           )}
 
           {/* Initial state */}
           {!loading && !results && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-12 text-center"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] p-12 text-center"
             >
-              <svg className="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <div className="max-w-[60px] mx-auto mb-5 flex flex-col items-center gap-0.5">
+                <div className="w-full h-[2px] bg-gray-200 dark:bg-gray-700" />
+                <div className="w-full h-px bg-gray-100 dark:bg-gray-800" />
+              </div>
+              <svg className="w-10 h-10 mx-auto mb-4 text-gray-200 dark:text-gray-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
               </svg>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Start searching</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Enter a keyword or apply filters to find articles</p>
+              <h3 className="font-['Playfair_Display'] text-xl font-bold text-gray-900 dark:text-white mb-3">Begin Your Search</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 italic font-serif max-w-sm mx-auto">
+                "Enter a keyword or apply filters to discover Malaysian news sentiment."
+              </p>
             </motion.div>
           )}
 
