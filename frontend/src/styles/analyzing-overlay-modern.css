@@ -68,7 +68,7 @@
 .spinner-ring-1 {
   inset: 0;
   border-top-color: #1A1A1A;
-  animation: spin 1.2s linear infinite;
+  animation: spinner-rotate 1.2s linear infinite;
 }
 
 .dark .spinner-ring-1 {
@@ -78,16 +78,16 @@
 .spinner-ring-2 {
   inset: 6px;
   border-right-color: #6B6A65;
-  animation: spin 1.8s linear infinite reverse;
+  animation: spinner-rotate 1.8s linear infinite reverse;
 }
 
 .spinner-ring-3 {
   inset: 12px;
   border-bottom-color: #A8A59E;
-  animation: spin 1s linear infinite;
+  animation: spinner-rotate 1s linear infinite;
 }
 
-@keyframes spin {
+@keyframes spinner-rotate {
   to { transform: rotate(360deg); }
 }
 
