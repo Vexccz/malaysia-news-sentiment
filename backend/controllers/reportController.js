@@ -326,9 +326,12 @@ function drawIntroduction(doc, stats) {
   var topic = stats.topic;
   drawHeader(doc, 'Sentiment Analysis Report \u2014 ' + (topic || 'All Topics'));
   sectionTitle(doc, '1.0', 'Introduction');
-  bodyText(doc, 'This report presents a systematic analysis of sentiment patterns within Malaysian news media coverage' + (topic ? ' pertaining to the topic of "' + topic + '"' : '') + '. The analysis encompasses ' + stats.total + ' articles collected from ' + stats.sources.length + ' distinct news sources, spanning a temporal range of ' + stats.dateRange + '.');
-  bodyText(doc, 'The Malaysian media landscape is diverse, comprising English-language outlets such as The Star and New Straits Times, Bahasa Melayu publications including Utusan Malaysia and Berita Harian, and multilingual digital platforms. Understanding sentiment trends across this heterogeneous media ecosystem provides valuable insights into public discourse and information dissemination patterns.');
-  bodyText(doc, 'The primary objectives of this analysis are threefold: (1) to quantify the overall sentiment distribution across the collected articles, (2) to identify temporal and geographic patterns in sentiment expression, and (3) to assess the reliability of automated sentiment classification through confidence score analysis.');
+  bodyText(doc, 'This report presents a systematic analysis of sentiment patterns within Malaysian news media coverage' + (topic ? ' pertaining to \u201c' + topic + '\u201d' : '') + '. The analysis encompasses ' + stats.total + ' articles from ' + stats.sources.length + ' distinct sources, spanning ' + stats.dateRange + '.');
+  bodyText(doc, 'The Malaysian media landscape is uniquely diverse, comprising English-language outlets (The Star, New Straits Times), Bahasa Melayu publications (Utusan Malaysia, Berita Harian), Chinese-language dailies, and multilingual digital platforms. This linguistic diversity presents both opportunities and challenges for automated sentiment analysis, as expression patterns differ across languages and cultural contexts.');
+  bodyText(doc, 'Sentiment analysis serves multiple purposes: gauging public discourse trends, identifying emerging issues, assessing editorial framing, and benchmarking coverage against ground-truth events. In the Malaysian context, where media freedom remains a subject of public debate, systematic monitoring provides an evidence-based approach to understanding information flows.');
+  bodyText(doc, 'The primary objectives are: (1) to quantify overall sentiment distribution and identify dominant narrative patterns, (2) to identify temporal and geographic patterns correlating with real-world events, and (3) to assess classification reliability through confidence analysis and discuss implications for data-driven decision-making.');
+}
+
 }
 
 // ─── Executive Summary ──────────────────────────────────
@@ -338,19 +341,27 @@ function drawExecutiveSummary(doc, stats, abstract) {
   sectionTitle(doc, '2.0', 'Executive Summary');
   bodyText(doc, abstract);
 
-  doc.moveDown(0.5);
-  subsectionTitle(doc, '2.1', 'Key Findings');
+  var dominantSentiment = (stats.posN >= stats.negN && stats.posN >= stats.neuN) ? 'Positive' : (stats.negN >= stats.posN && stats.negN >= stats.neuN) ? 'Negative' : 'Neutral';
+  var topSource = stats.sources.length > 0 ? stats.sources[0] : null;
+  var topState = stats.states.length > 0 ? stats.states[0] : null;
+
+  doc.moveDown(0.3);
+  subsectionTitle(doc, '2.1', 'Key Metrics');
+  bodyText(doc, 'Total articles: ' + stats.total + '. ' + stats.posN + ' positive (' + pct(stats.posN, stats.total) + '%), ' + stats.negN + ' negative (' + pct(stats.negN, stats.total) + '%), ' + stats.neuN + ' neutral (' + pct(stats.neuN, stats.total) + '%). Dominant: ' + dominantSentiment + ' (' + pct(Math.max(stats.posN, stats.negN, stats.neuN), stats.total) + '%). Confidence: ' + (stats.avgConf * 100).toFixed(1) + '%. Sources: ' + stats.sources.length + '. Regions: ' + stats.states.length + '.');
+
+  subsectionTitle(doc, '2.2', 'Principal Findings');
   var findings = [
-    'A total of ' + stats.total + ' articles were analysed, sourced from ' + stats.sources.length + ' distinct news outlets.',
-    'Sentiment distribution: ' + stats.posN + ' positive (' + pct(stats.posN, stats.total) + '%), ' + stats.negN + ' negative (' + pct(stats.negN, stats.total) + '%), and ' + stats.neuN + ' neutral (' + pct(stats.neuN, stats.total) + '%).',
-    'Geographic coverage spans ' + stats.states.length + ' states and regions across Malaysia.',
-    'The average classification confidence score is ' + (stats.avgConf * 100).toFixed(1) + '%, indicating ' + (stats.avgConf >= 0.7 ? 'reliable' : 'moderate') + ' model performance.',
-    stats.alerts.length > 0 ? stats.alerts.length + ' articles were flagged as alerts due to strong sentiment signals.' : 'No articles triggered alert thresholds during the analysis period.'
+    'Sentiment is ' + (dominantSentiment === 'Negative' ? 'dominated by negative coverage, suggesting adverse conditions or critical editorial tendency' : dominantSentiment === 'Positive' ? 'predominantly positive, reflecting favourable developments or source bias' : 'balanced, indicating healthy media plurality') + '.',
+    (topSource ? topSource.name + ' dominates (' + pct(topSource.n, stats.total) + '%)' : 'Coverage is diversified') + '; geographic focus ' + (topState ? 'on ' + topState[0] + ' (' + topState[1].n + ' articles)' : 'spans multiple regions') + '.',
+    'Classification confidence: ' + (stats.avgConf >= 0.7 ? 'high' : 'moderate') + ' (' + (stats.avgConf * 100).toFixed(1) + '%), ' + pct(stats.hiConf, stats.total) + '% high-certainty.',
+    (stats.alerts.length > 0 ? stats.alerts.length + ' alert-flagged articles.' : 'No alerts; stable period.')
   ];
   findings.forEach(function(f, i) {
     doc.fillColor(C.dark).fontSize(11).font(FONT).text((i + 1) + '.  ' + f, MARGIN_LEFT + 24, doc.y, { width: CONTENT_W - 24, lineGap: 3 });
     doc.moveDown(0.4);
   });
+}
+
 }
 
 // ─── Methodology ────────────────────────────────────────
@@ -367,6 +378,9 @@ function drawMethodology(doc, stats) {
 
   subsectionTitle(doc, '3.3', 'Geographic Classification');
   bodyText(doc, 'Geographic attribution is performed using named entity recognition (NER) to identify Malaysian states, cities, and regions mentioned within article content. Articles are assigned to their primary geographic focus rather than publication location. This approach captures the spatial dimension of news coverage, enabling regional sentiment analysis across Malaysia\u2019s thirteen states and three federal territories.');
+
+  subsectionTitle(doc, '3.4', 'Limitations and Delimitations');
+  bodyText(doc, 'Several limitations should be noted. The data collection relies on RSS feeds and web scraping, which may underrepresent outlets without RSS support or behind paywalls. The classifier performs optimally on English and Bahasa Melayu; Chinese or Tamil articles may receive lower confidence. Geographic NER may undercount articles with implicit location context. The analysis period of ' + stats.dateRange + ' may not capture longer-term cycles or seasonal patterns.');
 }
 
 // ─── Sentiment Breakdown ────────────────────────────────
@@ -404,7 +418,9 @@ function drawSourceAnalysis(doc, stats) {
   checkPage(doc, 200);
   doc.moveDown(0.5);
   subsectionTitle(doc, '4.2', 'Source Analysis');
-  bodyText(doc, 'The dataset encompasses ' + stats.sources.length + ' distinct news sources. Table 2 lists the top contributors by article volume. Source diversity is a critical factor in ensuring representativeness of the sentiment analysis, as concentration from a single outlet may introduce editorial bias.');
+  var topSource = stats.sources.length > 0 ? stats.sources[0] : null;
+  bodyText(doc, 'The dataset encompasses ' + stats.sources.length + ' distinct news sources. ' + (topSource ? topSource.name + ' leads with ' + topSource.n + ' articles (' + pct(topSource.n, stats.total) + '%)' + (stats.sources.length > 1 ? ', followed by ' + stats.sources[1].name + ' (' + stats.sources[1].n + ')' : '') + '. ' : '') + 'Source diversity is critical for representativeness; single-outlet concentration may introduce editorial bias.');
+  bodyText(doc, (topSource ? topSource.name + ' sentiment profile: ' + topSource.p + ' positive, ' + topSource.ng + ' negative, ' + topSource.nt + ' neutral. ' + (topSource.ng > topSource.p ? 'The negative skew in this dominant source warrants consideration.' : 'The balanced profile provides confidence in representativeness.') : 'Varied editorial stances across the media landscape.'));
 
   doc.fillColor(C.mid).fontSize(10).font(FONT_ITALIC).text('Table 2: Top News Sources by Article Volume', MARGIN_LEFT);
   doc.moveDown(0.3);
@@ -412,6 +428,8 @@ function drawSourceAnalysis(doc, stats) {
     return [s.name, String(s.n), { text: String(s.p), color: C.pos }, { text: String(s.ng), color: C.neg }, { text: String(s.nt), color: C.neu }];
   });
   drawTable(doc, ['Source', 'Total', 'Positive', 'Negative', 'Neutral'], srcRows, [160, 60, 77, 77, 77]);
+}
+
 }
 
 // ─── Geographic Coverage ────────────────────────────────
@@ -485,18 +503,29 @@ function drawKeyFindings(doc, stats) {
   drawHeader(doc, 'Sentiment Analysis Report \u2014 ' + (topic || 'All Topics'));
   sectionTitle(doc, '5.0', 'Key Findings');
 
+  var dominantSentiment = (stats.posN >= stats.negN && stats.posN >= stats.neuN) ? 'Positive' : (stats.negN >= stats.posN && stats.negN >= stats.neuN) ? 'Negative' : 'Neutral';
+  var topSource = stats.sources.length > 0 ? stats.sources[0] : null;
+  var topState = stats.states.length > 0 ? stats.states[0] : null;
+
+  bodyText(doc, 'The analysis of ' + stats.total + ' Malaysian news articles' + (topic ? ' related to \u201c' + topic + '\u201d' : '') + ' reveals a ' + (dominantSentiment === 'Negative' ? 'concerning' : dominantSentiment === 'Positive' ? 'favourable' : 'balanced') + ' media sentiment landscape during ' + stats.dateRange + '. The following key findings synthesise the quantitative results across sentiment, source, geographic, and confidence dimensions.');
+
+  if (topSource && topState) {
+    bodyText(doc, 'Coverage is driven by ' + topSource.name + ' (' + topSource.n + ' articles, ' + pct(topSource.n, stats.total) + '%), while geographic concentration peaks in ' + topState[0] + ' (' + topState[1].n + ' articles). ' + (stats.sources.length > 5 ? 'The diversity of ' + stats.sources.length + ' distinct sources indicates broad media interest.' : 'The limited number of ' + stats.sources.length + ' sources suggests niche coverage.'));
+  }
+
+  doc.moveDown(0.3);
+  subsectionTitle(doc, '5.1', 'Principal Findings');
+
   var findings = [
-    'A total of ' + stats.total + ' articles were analysed, sourced from ' + stats.sources.length + ' distinct news outlets.',
-    'Sentiment distribution: ' + stats.posN + ' positive (' + pct(stats.posN, stats.total) + '%), ' + stats.negN + ' negative (' + pct(stats.negN, stats.total) + '%), and ' + stats.neuN + ' neutral (' + pct(stats.neuN, stats.total) + '%).',
-    'Geographic coverage spans ' + stats.states.length + ' states and regions across Malaysia.',
-    'The average classification confidence score is ' + (stats.avgConf * 100).toFixed(1) + '%, indicating ' + (stats.avgConf >= 0.7 ? 'reliable' : 'moderate') + ' model performance.',
-    stats.alerts.length > 0 ? stats.alerts.length + ' articles were flagged as alerts due to strong sentiment signals.' : 'No articles triggered alert thresholds during the analysis period.',
-    'The dominant sentiment category is ' + (stats.posN >= stats.negN && stats.posN >= stats.neuN ? 'Positive' : stats.negN >= stats.posN && stats.negN >= stats.neuN ? 'Negative' : 'Neutral') + ', accounting for ' + pct(Math.max(stats.posN, stats.negN, stats.neuN), stats.total) + '% of all articles.',
-    'Source diversity index: ' + stats.sources.length + ' unique sources across ' + stats.states.length + ' geographic regions, providing a representative cross-section of Malaysian media coverage.'
+    'Sentiment Distribution: ' + stats.posN + ' positive (' + pct(stats.posN, stats.total) + '%), ' + stats.negN + ' negative (' + pct(stats.negN, stats.total) + '%), ' + stats.neuN + ' neutral (' + pct(stats.neuN, stats.total) + '%). ' + (dominantSentiment === 'Neutral' ? 'The predominance of neutral reporting suggests factual, balanced coverage.' : dominantSentiment === 'Negative' ? 'The prevalence of negative sentiment may reflect genuine adverse events or editorial bias towards sensationalism.' : 'The positive skew may indicate favourable developments or potential source selection bias.'),
+    'Classification Reliability: Average confidence ' + (stats.avgConf * 100).toFixed(1) + '% ' + (stats.avgConf >= 0.7 ? 'demonstrates robust classifier performance.' : 'suggests moderate performance; interpret with caution.') + ' High-confidence articles: ' + pct(stats.hiConf, stats.total) + '%.',
+    'Source Concentration: ' + stats.sources.length + ' sources. ' + (topSource && pct(topSource.n, stats.total) > 30 ? topSource.name + ' dominates (' + pct(topSource.n, stats.total) + '%); diversify coverage.' : 'Even distribution mitigates single-outlet bias.'),
+    'Geographic Reach: ' + stats.states.length + ' regions. ' + (topState ? topState[0] + ' dominates (' + topState[1].n + ' articles).' : 'Representative national coverage.'),
+    'Alert Threshold: ' + (stats.alerts.length > 0 ? stats.alerts.length + ' articles flagged for extreme sentiment.' : 'No alerts triggered; stable sentiment period.')
   ];
   findings.forEach(function(f, i) {
     doc.fillColor(C.dark).fontSize(11).font(FONT).text((i + 1) + '.  ' + f, MARGIN_LEFT + 24, doc.y, { width: CONTENT_W - 24, lineGap: 3 });
-    doc.moveDown(0.4);
+    doc.moveDown(0.5);
   });
 }
 
@@ -650,9 +679,22 @@ function drawConclusion(doc, stats) {
   var topic = stats.topic;
   drawHeader(doc, 'Sentiment Analysis Report \u2014 ' + (topic || 'All Topics'));
   sectionTitle(doc, '10.0', 'Conclusion');
-  bodyText(doc, 'This sentiment analysis of ' + stats.total + ' Malaysian news articles' + (topic ? ' related to "' + topic + '"' : '') + ' reveals ' + (stats.posN >= stats.negN && stats.posN >= stats.neuN ? 'a predominantly positive media narrative' : stats.negN >= stats.posN && stats.negN >= stats.neuN ? 'a predominantly negative media narrative' : 'a balanced media narrative') + ' during the observed period of ' + stats.dateRange + '.');
-  bodyText(doc, 'The analysis demonstrates the viability of automated sentiment classification for Malaysian news content, achieving an average confidence score of ' + (stats.avgConf * 100).toFixed(1) + '%. The dual-model approach combining domain-specific (Mesolitica NanoT5) and general-purpose (GPT-4o-mini) classifiers provides robustness against the linguistic diversity characteristic of Malaysian media.');
-  bodyText(doc, 'The geographic distribution of coverage reveals ' + (stats.states.length > 5 ? 'broad national coverage with concentration in key states' : 'focused coverage in ' + stats.states.length + ' primary regions') + ', while the temporal analysis across ' + stats.dates.length + ' days captures the dynamic nature of media sentiment. These findings contribute to the growing body of research on automated media monitoring in multilingual Southeast Asian contexts.');
+
+  var dominantSentiment = (stats.posN >= stats.negN && stats.posN >= stats.neuN) ? 'positive' : (stats.negN >= stats.posN && stats.negN >= stats.neuN) ? 'negative' : 'neutral';
+  var topSource = stats.sources.length > 0 ? stats.sources[0] : null;
+
+  subsectionTitle(doc, '10.1', 'Summary of Findings');
+  bodyText(doc, 'This sentiment analysis of ' + stats.total + ' Malaysian news articles' + (topic ? ' related to \u201c' + topic + '\u201d' : '') + ' reveals ' + (dominantSentiment === 'positive' ? 'a predominantly positive media narrative' : dominantSentiment === 'negative' ? 'a predominantly negative media narrative' : 'a balanced media narrative') + ' during ' + stats.dateRange + '. The analysis covered ' + stats.sources.length + ' sources across ' + stats.states.length + ' geographic regions.');
+  bodyText(doc, 'The distribution of ' + pct(stats.posN, stats.total) + '% positive, ' + pct(stats.negN, stats.total) + '% negative, and ' + pct(stats.neuN, stats.total) + '% neutral ' + (dominantSentiment === 'negative' ? 'suggests a media environment reflecting adverse conditions or critical editorial tendency.' : dominantSentiment === 'positive' ? 'indicates favourable developments or potential source bias.' : 'demonstrates balanced media plurality.'));
+
+  subsectionTitle(doc, '10.2', 'Implications');
+  bodyText(doc, (topSource ? 'Concentration from ' + topSource.name + ' (' + pct(topSource.n, stats.total) + '%) highlights individual outlet influence. ' : '') + 'Geographic distribution reveals ' + (stats.states.length > 5 ? 'broad but uneven national coverage.' : 'limited diversity requiring supplementation.') + ' Classification confidence of ' + (stats.avgConf * 100).toFixed(1) + '% ' + (stats.avgConf >= 0.7 ? 'validates the dual-model approach.' : 'suggests manual review for high-stakes decisions.'));
+
+  subsectionTitle(doc, '10.3', 'Limitations');
+  bodyText(doc, 'Limitations include: (1) RSS-based corpus may underrepresent non-digital outlets, (2) automated classification cannot capture sarcasm or irony, (3) geographic NER may miss implicit location references, and (4) the analysis period may not reflect longer-term cycles.');
+
+  subsectionTitle(doc, '10.4', 'Future Directions');
+  bodyText(doc, 'Future work should integrate social media platforms, conduct longitudinal multi-year analysis, implement aspect-based sentiment for issue-specific insights, and develop real-time monitoring capabilities for media practitioners and policy analysts.');
 }
 
 // ══════════════════════════════════════════════════════════
