@@ -199,22 +199,31 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
   const [actionSheetOpen, setActionSheetOpen] = useState(false);
   const [swipeHintDir, setSwipeHintDir] = useState(null);
   const [copiedToast, setCopiedToast] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const { openArticlePanel } = useArticleAnalysis();
 
-  // Motion values for swipe
+  // Track mobile state
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  // Motion values for swipe (mobile only)
   const x = useMotionValue(0);
   const swipeThreshold = 80;
 
-  // Track swipe direction for hints
+  // Track swipe direction for hints (mobile only)
   const unsubscribeX = useRef(null);
   useEffect(() => {
+    if (!isMobile) return;
     unsubscribeX.current = x.on('change', (latest) => {
       if (latest < -30) setSwipeHintDir('left');
       else if (latest > 30) setSwipeHintDir('right');
       else setSwipeHintDir(null);
     });
     return () => unsubscribeX.current?.();
-  }, [x]);
+  }, [x, isMobile]);
 
   const getFavicon = (url) => {
     try {
@@ -321,39 +330,41 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* Swipe background layers */}
-        <motion.div
-          className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none"
-          style={{
-            background: useTransform(
-              x,
-              [-120, -40, 0, 40, 120],
-              [
-                'rgba(245,158,11,0.15)',
-                'rgba(245,158,11,0.06)',
-                'transparent',
-                'rgba(16,185,129,0.06)',
-                'rgba(16,185,129,0.15)',
-              ]
-            ),
-          }}
-        >
-          <SwipeHint direction="left" visible={swipeHintDir === 'left'} />
-          <SwipeHint direction="right" visible={swipeHintDir === 'right'} />
-        </motion.div>
+        {/* Swipe background layers - mobile only */}
+        {isMobile && (
+          <motion.div
+            className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none"
+            style={{
+              background: useTransform(
+                x,
+                [-120, -40, 0, 40, 120],
+                [
+                  'rgba(245,158,11,0.15)',
+                  'rgba(245,158,11,0.06)',
+                  'transparent',
+                  'rgba(16,185,129,0.06)',
+                  'rgba(16,185,129,0.15)',
+                ]
+              ),
+            }}
+          >
+            <SwipeHint direction="left" visible={swipeHintDir === 'left'} />
+            <SwipeHint direction="right" visible={swipeHintDir === 'right'} />
+          </motion.div>
+        )}
 
         {/* Swipeable card */}
         <motion.div
-          x={x}
-          drag="x"
+          x={isMobile ? x : undefined}
+          drag={isMobile ? 'x' : false}
           dragConstraints={{ left: 0, right: 0 }}
           dragElastic={0.3}
-          onDragEnd={handleSwipeEnd}
+          onDragEnd={isMobile ? handleSwipeEnd : undefined}
           onClick={handleCardClick}
-          {...longPress}
-          style={{ x, touchAction: 'pan-y' }}
+          {...(isMobile ? longPress : {})}
+          style={isMobile ? { x, touchAction: 'pan-y' } : {}}
           className="relative z-20 bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-[#2a2a2a] rounded-xl p-4 hover:shadow-lg hover:border-slate-300 dark:hover:border-[#3a3a3a] transition-[border-color,box-shadow] cursor-pointer select-none"
-          whileTap={{ scale: 0.995 }}
+          whileTap={isMobile ? { scale: 0.995 } : {}}
         >
           <div className="flex gap-4">
             {/* Thumbnail */}
@@ -522,16 +533,18 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
         )}
       </AnimatePresence>
 
-      {/* Action Sheet */}
-      <ActionSheet
-        isOpen={actionSheetOpen}
-        onClose={() => setActionSheetOpen(false)}
-        onBookmark={handleBookmark}
-        onOpenExternal={handleOpenExternal}
-        onShare={handleShare}
-        onCopyLink={handleCopyLink}
-        isBookmarked={isBookmarked}
-      />
+      {/* Action Sheet - mobile only */}
+      {isMobile && (
+        <ActionSheet
+          isOpen={actionSheetOpen}
+          onClose={() => setActionSheetOpen(false)}
+          onBookmark={handleBookmark}
+          onOpenExternal={handleOpenExternal}
+          onShare={handleShare}
+          onCopyLink={handleCopyLink}
+          isBookmarked={isBookmarked}
+        />
+      )}
     </>
   );
 };
