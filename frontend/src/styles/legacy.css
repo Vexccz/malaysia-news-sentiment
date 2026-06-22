@@ -98,21 +98,21 @@
   --brand-bg:    rgba(245, 78, 0, 0.1);
   --brand-grad:  linear-gradient(135deg, #F54E00 0%, #FF6A2A 100%);
 
-  --pos:         #30CF79;
-  --pos-bg:      rgba(48, 207, 121, 0.1);
-  --pos-border:  rgba(48, 207, 121, 0.25);
+  --pos:         #4ADE80;
+  --pos-bg:      rgba(74, 222, 128, 0.08);
+  --pos-border:  rgba(74, 222, 128, 0.15);
 
-  --neg:         #F54E4E;
-  --neg-bg:      rgba(245, 78, 78, 0.1);
-  --neg-border:  rgba(245, 78, 78, 0.25);
+  --neg:         #FB7185;
+  --neg-bg:      rgba(251, 113, 133, 0.08);
+  --neg-border:  rgba(251, 113, 133, 0.15);
 
-  --neu:         #F7A501;
-  --neu-bg:      rgba(247, 165, 1, 0.1);
-  --neu-border:  rgba(247, 165, 1, 0.25);
+  --neu:         #FBBF24;
+  --neu-bg:      rgba(251, 191, 36, 0.08);
+  --neu-border:  rgba(251, 191, 36, 0.15);
 
-  --alert:       #F54E4E;
-  --alert-bg:    rgba(245, 78, 78, 0.08);
-  --alert-border:rgba(245, 78, 78, 0.2);
+  --alert:       #FB7185;
+  --alert-bg:    rgba(251, 113, 133, 0.06);
+  --alert-border:rgba(251, 113, 133, 0.12);
 
   --shadow-sm:   0 1px 3px rgba(0, 0, 0, 0.3);
   --shadow-md:   0 4px 16px -2px rgba(0, 0, 0, 0.4);

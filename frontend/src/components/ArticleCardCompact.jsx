@@ -53,11 +53,11 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
   return (
     <div
       onClick={handleCardClick}
-      className="group bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 hover:shadow-lg hover:border-slate-300 dark:hover:border-slate-600 transition-all cursor-pointer"
+      className="group bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-[#2a2a2a] rounded-xl p-4 hover:shadow-lg hover:border-slate-300 dark:hover:border-[#3a3a3a] transition-all cursor-pointer"
     >
       <div className="flex gap-4">
         {/* Thumbnail */}
-        <div className="flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-700">
+        <div className="flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden bg-slate-100 dark:bg-[#252525]">
           {article.urlToImage && !imageError ? (
             <img
               src={article.urlToImage}
@@ -78,7 +78,7 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
         <div className="flex-1 min-w-0">
           {/* Header: Source + Time + Sentiment Badge */}
           <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+            <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
               {article.url && !faviconError ? (
                 <img 
                   src={getFavicon(article.url)} 
@@ -88,7 +88,7 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
                   onError={() => setFaviconError(true)}
                 />
               ) : (
-                <span className="w-4 h-4 flex-shrink-0 bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-[8px] font-bold text-slate-500 dark:text-slate-400">
+                <span className="w-4 h-4 flex-shrink-0 bg-slate-200 dark:bg-[#333] flex items-center justify-center text-[8px] font-bold text-slate-500 dark:text-slate-300">
                   {(article.source || 'U').charAt(0)}
                 </span>
               )}
@@ -127,7 +127,7 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
           {/* Footer: Confidence + Actions */}
           <div className="flex items-center justify-between">
             {/* Confidence Score */}
-            <div className="text-xs text-slate-500 dark:text-slate-400">
+            <div className="text-xs text-slate-500 dark:text-slate-300">
               {article.confidence && (
                 <span className="font-medium">
                   {Math.round(article.confidence * 100)}% confidence
@@ -143,7 +143,7 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
                 className={`p-2 rounded-lg transition-colors ${
                   isBookmarked
                     ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
-                    : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400'
+                    : 'hover:bg-slate-100 dark:hover:bg-[#252525] text-slate-600 dark:text-slate-300'
                 }`}
                 title={isBookmarked ? 'Remove bookmark' : 'Bookmark'}
               >
@@ -158,7 +158,7 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
               <Link
                 to={'/articles/' + (article._id || article.id)}
                 onClick={(e) => e.stopPropagation()}
-                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition-colors"
+                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-[#252525] text-slate-600 dark:text-slate-300 transition-colors"
                 title="View full analysis"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -169,7 +169,7 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
               {/* Open External */}
               <button
                 onClick={handleOpenExternal}
-                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition-colors"
+                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-[#252525] text-slate-600 dark:text-slate-300 transition-colors"
                 title="Open article"
               >
                 <ExternalLink className="w-4 h-4" />
