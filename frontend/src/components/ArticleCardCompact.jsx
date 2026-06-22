@@ -195,7 +195,6 @@ const SwipeHint = ({ direction, visible }) => {
 const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
   const [imageError, setImageError] = useState(false);
   const [faviconError, setFaviconError] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
   const [actionSheetOpen, setActionSheetOpen] = useState(false);
   const [swipeHintDir, setSwipeHintDir] = useState(null);
   const [copiedToast, setCopiedToast] = useState(false);
@@ -313,22 +312,10 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
     return text.slice(0, maxLength).trim() + '...';
   };
 
-  // Get preview text for hover
-  const getPreviewText = () => {
-    const text = article.description || article.content || article.summary || '';
-    const cleaned = text.replace(/<[^>]*>/g, '').trim();
-    if (!cleaned) return null;
-    return cleaned.length > 100 ? cleaned.slice(0, 100).trim() + '...' : cleaned;
-  };
-
-  const previewText = getPreviewText();
-
   return (
     <>
       <div
         className="relative group"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
       >
         {/* Swipe background layers - mobile only */}
         {isMobile && (
@@ -491,31 +478,6 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
             </div>
           </div>
         </motion.div>
-
-        {/* Hover Preview Dropdown - Desktop Only */}
-        {previewText && (
-          <div
-            className={`
-              hidden md:block
-              absolute left-0 right-0 top-full z-50
-              bg-white dark:bg-[#1a1a1a]
-              border border-slate-200 dark:border-[#2a2a2a]
-              border-t-0
-              px-4 py-3
-              transition-all duration-200 ease-out
-              ${isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1 pointer-events-none'}
-            `}
-            style={{ borderRadius: 0 }}
-          >
-            <div
-              className="absolute left-0 top-0 bottom-0 w-[3px] bg-emerald-500 dark:bg-emerald-400"
-              style={{ borderRadius: 0 }}
-            />
-            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed pl-2">
-              {previewText}
-            </p>
-          </div>
-        )}
       </div>
 
       {/* "Copied!" toast */}
