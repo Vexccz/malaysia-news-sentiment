@@ -93,7 +93,7 @@ const SharedArticle = () => {
         </div>
 
         {/* Article Card */}
-        <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm overflow-hidden shadow-sm">
           {article.urlToImage && (
             <img
               src={article.urlToImage}

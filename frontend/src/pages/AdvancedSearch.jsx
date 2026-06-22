@@ -12,7 +12,7 @@ const SORT_OPTIONS = [
 ];
 
 const SkeletonCard = () => (
-  <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-5 animate-pulse">
+  <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-5 animate-pulse">
     <div className="h-4 bg-gray-200 dark:bg-white/10 rounded w-3/4 mb-3" />
     <div className="h-3 bg-gray-200 dark:bg-white/10 rounded w-full mb-2" />
     <div className="h-3 bg-gray-200 dark:bg-white/10 rounded w-2/3" />
@@ -161,13 +161,13 @@ const AdvancedSearch = () => {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search articles by title, content, or keywords..."
-            className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent/30"
+            className="w-full pl-11 pr-4 py-3.5 rounded-sm bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent/30"
           />
         </div>
         <div className="flex gap-2">
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className={`px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+          className={`px-4 py-3 rounded-sm border text-sm font-medium transition-all ${
             showFilters
               ? 'bg-accent/10 border-accent/30 text-accent'
               : 'bg-white dark:bg-[#1a1a1a] border-[#eee] dark:border-[#2a2a2a] text-gray-600 dark:text-gray-400'
@@ -179,7 +179,7 @@ const AdvancedSearch = () => {
         </button>
         <button
           onClick={saveSearch}
-          className="px-4 py-3 rounded-xl bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-accent transition-colors"
+          className="px-4 py-3 rounded-sm bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-accent transition-colors"
           title="Save search"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -246,7 +246,7 @@ const AdvancedSearch = () => {
               className="flex-shrink-0 space-y-5 overflow-hidden md:w-[260px]"
             >
               {/* Sentiment */}
-              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-4">
+              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-4">
                 <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Sentiment</h3>
                 <div className="space-y-2">
                   {SENTIMENTS.map(s => (
@@ -267,7 +267,7 @@ const AdvancedSearch = () => {
               </div>
 
               {/* Date Range */}
-              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-4">
+              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-4">
                 <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Date Range</h3>
                 <div className="space-y-2">
                   <input
@@ -286,7 +286,7 @@ const AdvancedSearch = () => {
               </div>
 
               {/* Language */}
-              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-4">
+              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-4">
                 <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Language</h3>
                 <select
                   value={filters.language}
@@ -307,7 +307,7 @@ const AdvancedSearch = () => {
               </div>
 
               {/* Confidence */}
-              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-4">
+              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-4">
                 <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
                   Min Confidence: {Math.round(filters.minConfidence * 100)}%
                 </h3>
@@ -323,7 +323,7 @@ const AdvancedSearch = () => {
               </div>
 
               {/* Sort */}
-              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-4">
+              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-4">
                 <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Sort By</h3>
                 <select
                   value={filters.sortBy}
@@ -338,7 +338,7 @@ const AdvancedSearch = () => {
 
               {/* Saved Searches */}
               {savedSearches.length > 0 && (
-                <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-4">
+                <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-4">
                   <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Saved Searches</h3>
                   <div className="space-y-1.5">
                     {savedSearches.slice(0, 5).map((s, i) => (
@@ -389,7 +389,7 @@ const AdvancedSearch = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.03 }}
                   whileHover={{ y: -3, scale: 1.01 }}
-                  className="block bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-5 hover:border-accent/30 hover:shadow-lg transition-all no-underline"
+                  className="block bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-5 hover:border-accent/30 transition-all no-underline"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
@@ -425,7 +425,7 @@ const AdvancedSearch = () => {
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-12 text-center"
+              className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-12 text-center"
             >
               <motion.div
                 animate={{ y: [0, -5, 0] }}
@@ -442,7 +442,7 @@ const AdvancedSearch = () => {
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-12 text-center"
+              className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-12 text-center"
             >
               <motion.div
                 animate={{ y: [0, -5, 0] }}

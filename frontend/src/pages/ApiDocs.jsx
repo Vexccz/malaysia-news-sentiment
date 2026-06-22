@@ -34,7 +34,7 @@ const CodeBlock = ({ code, language = 'json' }) => {
 
   return (
     <div className="relative group">
-      <pre className="bg-gray-900 dark:bg-black/50 text-gray-100 rounded-xl p-4 text-xs overflow-x-auto font-mono leading-relaxed border border-gray-800 dark:border-gray-700">
+      <pre className="bg-gray-900 dark:bg-black/50 text-gray-100 rounded-sm p-4 text-xs overflow-x-auto font-mono leading-relaxed border border-gray-800 dark:border-gray-700">
         <code>{text}</code>
       </pre>
       <button
@@ -1009,8 +1009,8 @@ const Sidebar = ({ activeSection, mobileMenuOpen = false, setMobileMenuOpen = ()
   const categoryItems = SECTION_ROUTES.slice(4);
 
   return (
-    <nav className={`w-60 shrink-0 sticky top-[4.5rem] self-start max-h-[calc(100vh-5rem)] overflow-y-auto pr-2 transition-transform duration-300 ${mobileMenuOpen ? 'md:translate-x-0 fixed left-0 top-0 bottom-0 z-50 translate-x-0 bg-[#fafaf9] dark:bg-[#0f0f0f] pt-6 px-4 shadow-2xl' : 'md:block hidden'}`}>
-      <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-4 space-y-1">
+    <nav className={`w-60 shrink-0 sticky top-[4.5rem] self-start max-h-[calc(100vh-5rem)] overflow-y-auto pr-2 transition-transform duration-300 ${mobileMenuOpen ? 'md:translate-x-0 fixed left-0 top-0 bottom-0 z-50 translate-x-0 bg-[#fafaf9] dark:bg-[#0f0f0f] pt-6 px-4 border-r border-[#eee] dark:border-[#2a2a2a]' : 'md:block hidden'}`}>
+      <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-4 space-y-1">
         {/* Logo/Title */}
         <div className="px-3 pb-3 mb-2 border-b border-[#eee] dark:border-[#2a2a2a]">
           <p className="text-xs font-bold text-gray-900 dark:text-white">API Reference</p>
@@ -1088,7 +1088,7 @@ const EndpointCard = ({ endpoint, isPublic, defaultExpanded = false }) => {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white dark:bg-[#1a1a1a] border-2 border-[#eee] dark:border-[#2a2a2a] rounded-xl overflow-hidden hover:border-accent/40 hover:shadow-xl transition-all duration-300"
+      className="bg-white dark:bg-[#1a1a1a] border-2 border-[#eee] dark:border-[#2a2a2a] rounded-sm overflow-hidden hover:border-accent/40 transition-all duration-300"
     >
       <button
         onClick={() => setExpanded(!expanded)}
@@ -1203,7 +1203,7 @@ const OverviewPage = () => {
         </p>
 
         {/* Getting Started */}
-        <div className="mt-6 bg-gradient-to-r from-accent/5 to-purple-500/5 border border-accent/20 rounded-xl p-5">
+        <div className="mt-6 bg-accent/5 border border-accent/20 rounded-sm p-5">
           <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Quick Start</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
             <div className="space-y-1">
@@ -1235,7 +1235,7 @@ const OverviewPage = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 + i * 0.05 }}
-            className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-xl p-4"
+            className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-4"
           >
             <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">{stat.label}</p>
             <p className={`text-sm font-medium text-gray-900 dark:text-white ${stat.mono ? 'font-mono text-xs break-all' : ''}`}>{stat.value}</p>
@@ -1244,7 +1244,7 @@ const OverviewPage = () => {
       </div>
 
       {/* Rate Limiting */}
-      <div className="bg-yellow-50 dark:bg-yellow-500/5 border border-yellow-200 dark:border-yellow-500/20 rounded-2xl p-5">
+      <div className="bg-yellow-50 dark:bg-yellow-500/5 border border-yellow-200 dark:border-yellow-500/20 rounded-sm p-5">
         <h3 className="text-sm font-semibold text-yellow-800 dark:text-yellow-400 mb-2">Rate Limiting</h3>
         <ul className="text-xs text-yellow-700 dark:text-yellow-400/80 space-y-1">
           <li>• Without auth: <strong>100 requests/hour</strong> per IP</li>
@@ -1263,7 +1263,7 @@ const OverviewPage = () => {
             <Link
               key={cat.id}
               to={`/api-docs/${cat.id}`}
-              className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-xl p-4 hover:shadow-md hover:border-accent/30 transition-all group"
+              className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-4 hover:border-accent/30 transition-all group"
             >
               <div className="flex items-center gap-3">
                 <span className="text-xl">{cat.icon}</span>
@@ -1294,7 +1294,7 @@ const OverviewPage = () => {
 // ─── Authentication Page ─────────────────────────────────────────────────────
 const AuthenticationPage = () => (
   <div id="authentication" className="space-y-6">
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-6 space-y-4">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-6 space-y-4">
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
         Authentication
       </h1>
@@ -1317,7 +1317,7 @@ const AuthenticationPage = () => (
           <span className="text-gray-500">Admin role JWT</span>
         </div>
       </div>
-      <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-4 space-y-2">
+      <div className="bg-gray-50 dark:bg-white/5 rounded-sm p-4 space-y-2">
         <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300">Token Lifecycle</h4>
         <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
           <li>• Tokens expire after <strong>7 days</strong></li>
@@ -1333,7 +1333,7 @@ const AuthenticationPage = () => (
 // ─── Errors Page ─────────────────────────────────────────────────────────────
 const ErrorsPage = () => (
   <div id="errors" className="space-y-6">
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-6 space-y-4">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-6 space-y-4">
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
         Error Codes
       </h1>
@@ -1341,7 +1341,7 @@ const ErrorsPage = () => (
         All errors follow a consistent JSON format with an error message and optional details.
       </p>
       <CodeBlock code={`{\n  "error": "Validation failed",\n  "message": "Text parameter is required and must be at least 5 characters",\n  "statusCode": 400\n}`} />
-      <div className="border border-[#eee] dark:border-[#2a2a2a] rounded-xl overflow-hidden">
+      <div className="border border-[#eee] dark:border-[#2a2a2a] rounded-sm overflow-hidden">
         <table className="w-full text-xs">
           <thead>
             <tr className="bg-gray-50 dark:bg-white/5">
@@ -1377,7 +1377,7 @@ const ErrorsPage = () => (
 // ─── Real-time Page ──────────────────────────────────────────────────────────
 const RealtimePage = () => (
   <div id="realtime" className="space-y-6">
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-6 space-y-4">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-6 space-y-4">
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
         Real-time Updates (SSE)
       </h1>
@@ -1388,7 +1388,7 @@ const RealtimePage = () => (
         <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300">JavaScript Example</h4>
         <CodeBlock code={`const eventSource = new EventSource('${API_BASE}/feed/stream');\n\neventSource.addEventListener('article', (event) => {\n  const article = JSON.parse(event.data);\n  console.log('New article:', article.title, article.sentiment);\n});\n\neventSource.addEventListener('heartbeat', (event) => {\n  // Connection keep-alive\n});\n\neventSource.onerror = () => {\n  // Auto-reconnects by default\n  console.log('Connection lost, reconnecting...');\n};`} language="javascript" />
       </div>
-      <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-4 space-y-2">
+      <div className="bg-gray-50 dark:bg-white/5 rounded-sm p-4 space-y-2">
         <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300">Event Types</h4>
         <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
           <li>• <code className="text-accent">article</code> — New article analyzed (includes full article data)</li>
@@ -1396,7 +1396,7 @@ const RealtimePage = () => (
           <li>• <code className="text-accent">error</code> — Stream error notification</li>
         </ul>
       </div>
-      <div className="bg-blue-50 dark:bg-blue-500/5 border border-blue-200 dark:border-blue-500/20 rounded-xl p-4">
+      <div className="bg-blue-50 dark:bg-blue-500/5 border border-blue-200 dark:border-blue-500/20 rounded-sm p-4">
         <p className="text-xs text-blue-700 dark:text-blue-400">
           <strong>Note:</strong> SSE connections auto-reconnect on disconnect. No authentication required for the public stream. Average latency from article ingestion to stream delivery is ~2 seconds.
         </p>
@@ -1444,7 +1444,7 @@ const CategoryPage = ({ category }) => {
             placeholder={`Search ${category.title} endpoints...`}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#eee] dark:border-[#2a2a2a] bg-white dark:bg-[#1a1a1a] text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all"
+            className="w-full pl-10 pr-4 py-2.5 rounded-sm border border-[#eee] dark:border-[#2a2a2a] bg-white dark:bg-[#1a1a1a] text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all"
           />
         </div>
       )}
@@ -1508,7 +1508,7 @@ const ApiDocs = () => {
   return (
     <div className="min-h-screen bg-[#fafaf9] dark:bg-[#0f0f0f] transition-colors">
       {/* Standalone Navbar */}
-      <nav className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-[#0f0f0f]/80 border-b border-[#eee] dark:border-[#2a2a2a]">
+      <nav className="sticky top-0 z-50 bg-white dark:bg-[#0f0f0f] border-b border-[#eee] dark:border-[#2a2a2a]">
         <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-white hover:text-accent transition-colors">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
@@ -1525,7 +1525,7 @@ const ApiDocs = () => {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        className="md:hidden fixed bottom-6 right-6 z-50 w-14 h-14 bg-accent text-white rounded-full shadow-lg flex items-center justify-center hover:bg-accent/90 transition-all active:scale-95"
+        className="md:hidden fixed bottom-6 right-6 z-50 w-14 h-14 bg-accent text-white rounded-full border-2 border-accent flex items-center justify-center hover:bg-accent/90 transition-all active:scale-95"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           {mobileMenuOpen ? (
@@ -1539,7 +1539,7 @@ const ApiDocs = () => {
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
         <div
-          className="md:hidden fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
+          className="md:hidden fixed inset-0 bg-black/50 z-40"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}

@@ -18,7 +18,7 @@ import AnalyzingOverlay from '../components/AnalyzingOverlay';
 import usePullToRefresh from '../hooks/usePullToRefresh';
 import useSwipeTabs from '../hooks/useSwipeTabs';
 import { hapticImpact } from '../utils/haptics';
-import { Search, Clock, ArrowLeft, Sparkles, FileDown, Printer, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Brain, Download, Settings2, Globe, GripVertical } from 'lucide-react';
+import { Search, Clock, ArrowLeft, FileDown, Printer, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Brain, Download, Settings2, Globe, GripVertical } from 'lucide-react';
 import DashboardCustomizer from '../components/DashboardCustomizer';
 import EmptyState from '../components/EmptyState';
 import DashboardSummary from '../components/DashboardSummary';
@@ -31,7 +31,7 @@ const TopSourcesChart = lazy(() => import('../components/TopSourcesChart'));
 const SentimentMap = lazy(() => import('../components/SentimentMap'));
 
 const ChartFallback = () => (
-  <div className="h-48 bg-white dark:bg-[#1a1a1a] rounded-2xl border border-[#eee] dark:border-[#2a2a2a] p-5 space-y-3">
+  <div className="h-48 bg-white dark:bg-[#1a1a1a] rounded-sm border border-[#eee] dark:border-[#2a2a2a] p-5 space-y-3">
     <div className="flex items-center gap-2">
       <div className="h-3 w-3 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />
       <div className="h-3 w-32 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />
@@ -54,11 +54,11 @@ const DashboardSkeleton = () => (
       <div className="h-4 w-64 rounded bg-gray-200 dark:bg-gray-700" />
     </div>
     {/* Search bar skeleton */}
-    <div className="h-12 rounded-2xl bg-gray-200 dark:bg-gray-700" />
+    <div className="h-12 rounded-sm bg-gray-200 dark:bg-gray-700" />
     {/* KPI row skeleton */}
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {[1,2,3,4].map(i => (
-        <div key={i} className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-5 space-y-2">
+        <div key={i} className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-5 space-y-2">
           <div className="h-3 w-16 rounded bg-gray-200 dark:bg-gray-700" />
           <div className="h-8 w-12 rounded bg-gray-200 dark:bg-gray-700" />
           <div className="h-3 w-20 rounded bg-gray-200 dark:bg-gray-700" />
@@ -68,7 +68,7 @@ const DashboardSkeleton = () => (
     {/* Charts skeleton */}
     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
       {[1,2].map(i => (
-        <div key={i} className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-5 space-y-3">
+        <div key={i} className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-5 space-y-3">
           <div className="flex items-center gap-2">
             <div className="h-3 w-3 rounded bg-gray-200 dark:bg-gray-700" />
             <div className="h-3 w-28 rounded bg-gray-200 dark:bg-gray-700" />
@@ -80,7 +80,7 @@ const DashboardSkeleton = () => (
     {/* Article cards skeleton */}
     <div className="space-y-3">
       {[1,2,3].map(i => (
-        <div key={i} className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-4 flex gap-4">
+        <div key={i} className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-4 flex gap-4">
           <div className="w-20 h-20 rounded-xl bg-gray-200 dark:bg-gray-700 shrink-0" />
           <div className="flex-1 space-y-2 py-1">
             <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-gray-700" />
@@ -493,28 +493,22 @@ const Dashboard = () => {
       label: t('totalArticles'), 
       value: counts.total, 
       color: 'text-white', 
-      gradient: 'from-blue-500 via-blue-600 to-blue-700',
       sub: 'articles analyzed', 
       hero: true,
-      icon: '📊',
       trend: periodComparison.total,
     },
     { 
       label: t('positive'), 
       value: counts.positive, 
       color: 'text-white', 
-      gradient: 'from-emerald-500 via-emerald-600 to-emerald-700',
       sub: `${counts.total ? Math.round(counts.positive / counts.total * 100) : 0}% of total`,
-      icon: '✅',
       trend: periodComparison.positive,
     },
     { 
       label: t('negative'), 
       value: counts.negative, 
       color: 'text-white', 
-      gradient: 'from-red-500 via-red-600 to-red-700',
       sub: `${counts.total ? Math.round(counts.negative / counts.total * 100) : 0}% of total`,
-      icon: '⚠️',
       trend: periodComparison.negative,
       trendInverted: true,
     },
@@ -522,9 +516,7 @@ const Dashboard = () => {
       label: t('neutral'), 
       value: counts.neutral, 
       color: 'text-white', 
-      gradient: 'from-amber-500 via-amber-600 to-amber-700',
       sub: `${counts.total ? Math.round(counts.neutral / counts.total * 100) : 0}% of total`,
-      icon: '➖',
       trend: periodComparison.neutral,
     },
   ];
@@ -829,7 +821,7 @@ const Dashboard = () => {
                       <Settings2 size={14} />
                     </button>
                     <button onClick={handleManualForecast} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="AI Forecast">
-                      <Sparkles size={14} />
+                      <BarChart3 size={14} />
                     </button>
                     <ExportPPT articles={articles} distribution={distribution} sources={sources} query={currentQuery} />
                     <button onClick={handleDownloadPDF} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="Download PDF">
@@ -1437,7 +1429,7 @@ const Dashboard = () => {
           )}
         </AnimatePresence>
         <motion.button
-          className={`w-11 h-11 rounded-full ${CARD} shadow-lg flex items-center justify-center text-gray-600 dark:text-gray-300`}
+          className={`w-11 h-11 rounded-full ${CARD} flex items-center justify-center text-gray-600 dark:text-gray-300`}
           onClick={() => { hapticImpact('Light'); setShowExportSheet(true); }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -1457,13 +1449,13 @@ const Dashboard = () => {
         </AnimatePresence>
 
         <motion.button
-          className="w-12 h-12 rounded-full bg-blue-600 shadow-lg shadow-blue-600/20 flex items-center justify-center text-white"
+          className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white"
           onClick={() => { hapticImpact('Medium'); handleManualForecast(); }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           aria-label="AI Forecast"
         >
-          <Sparkles size={20} />
+          <BarChart3 size={20} />
         </motion.button>
       </div>
 
@@ -1494,25 +1486,25 @@ const Dashboard = () => {
               <div className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-4" />
               <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4">Export Options</h3>
               <div className="space-y-2">
-                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-left" onClick={() => { document.querySelector('.export-ppt-trigger')?.click(); setShowExportSheet(false); }}>
+                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-sm hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-left" onClick={() => { document.querySelector('.export-ppt-trigger')?.click(); setShowExportSheet(false); }}>
                   <div className="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-500">
                     <Printer size={18} />
                   </div>
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Export PPTX</span>
                 </button>
-                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-left" onClick={() => { handlePrint(); setShowExportSheet(false); }}>
+                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-sm hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-left" onClick={() => { handlePrint(); setShowExportSheet(false); }}>
                   <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-500">
                     <Printer size={18} />
                   </div>
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Print Report</span>
                 </button>
-                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-left" onClick={() => { handleExport(); setShowExportSheet(false); }}>
+                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-sm hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-left" onClick={() => { handleExport(); setShowExportSheet(false); }}>
                   <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-500">
                     <FileDown size={18} />
                   </div>
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Export CSV</span>
                 </button>
-                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-left" onClick={() => { handleDownloadPDF(); setShowExportSheet(false); }}>
+                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-sm hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-left" onClick={() => { handleDownloadPDF(); setShowExportSheet(false); }}>
                   <div className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center text-red-500">
                     <FileDown size={18} />
                   </div>

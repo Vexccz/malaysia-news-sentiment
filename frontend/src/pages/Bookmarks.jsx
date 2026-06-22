@@ -153,7 +153,7 @@ const Bookmarks = () => {
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-28 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl animate-pulse" />
+            <div key={i} className="h-28 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm animate-pulse" />
           ))}
         </div>
       </div>
@@ -325,7 +325,7 @@ const Bookmarks = () => {
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center justify-center py-20 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl"
+          className="flex flex-col items-center justify-center py-20 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm"
         >
           <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}>
             <BookmarkX size={48} className="text-gray-300 dark:text-gray-600" />
@@ -363,7 +363,7 @@ const Bookmarks = () => {
                       e.stopPropagation();
                       setMovingArticleId(movingArticleId === artId ? null : artId);
                     }}
-                    className="flex items-center gap-1 px-2 py-1 text-[10px] uppercase tracking-[0.2em] font-sans border border-ink/10 dark:border-paper/10 text-ink-muted dark:text-ink-faint hover:border-ink/30 dark:hover:border-paper/30 hover:text-ink dark:hover:text-paper bg-white/90 dark:bg-[#1a1a1a]/90 backdrop-blur-sm transition-colors"
+                    className="flex items-center gap-1 px-2 py-1 text-[10px] uppercase tracking-[0.2em] font-sans border border-ink/10 dark:border-paper/10 text-ink-muted dark:text-ink-faint hover:border-ink/30 dark:hover:border-paper/30 hover:text-ink dark:hover:text-paper bg-white/90 dark:bg-[#1a1a1a]/90 transition-colors"
                   >
                     <Folder size={10} />
                     <span className="hidden sm:inline">Move</span>
@@ -378,7 +378,7 @@ const Bookmarks = () => {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -4 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-[#1a1a1a] border border-ink/10 dark:border-paper/10 shadow-lg z-20"
+                        className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-[#1a1a1a] border border-ink/10 dark:border-paper/10 z-20"
                       >
                         <button
                           onClick={() => handleMoveToFolder(artId, null)}

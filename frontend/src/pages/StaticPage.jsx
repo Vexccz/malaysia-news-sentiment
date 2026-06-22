@@ -48,7 +48,7 @@ const PAGES = {
 // ── Navbar ──
 const Navbar = ({ isDark, toggleTheme, navigate }) => (
   <motion.nav
-    className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-[#0f0f0f]/80 border-b border-[#eee] dark:border-[#2a2a2a]"
+    className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-[#0f0f0f]/80 border-b border-[#eee] dark:border-[#2a2a2a]"
     initial={{ y: -80 }} animate={{ y: 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
   >
     <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -153,7 +153,7 @@ const StaticPage = () => {
             {page.sections.map((sec, i) => (
               <motion.div
                 key={i}
-                className="p-6 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl"
+                className="p-6 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm"
                 variants={staggerItem}
               >
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">{sec.heading}</h2>

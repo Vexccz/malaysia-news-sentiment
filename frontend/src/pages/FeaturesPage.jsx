@@ -34,7 +34,7 @@ const AnimatedSection = ({ children, className, variants = fadeInUp }) => {
 // ── Navbar ──
 const Navbar = ({ isDark, toggleTheme, navigate }) => (
   <motion.nav
-    className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-[#0f0f0f]/80 border-b border-[#eee] dark:border-[#2a2a2a]"
+    className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-[#0f0f0f] border-b border-[#eee] dark:border-[#2a2a2a]"
     initial={{ y: -80 }} animate={{ y: 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
   >
     <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -133,7 +133,7 @@ const FeaturesPage = () => {
 
       {/* ─── HERO ─── */}
       <motion.header className="relative pt-32 pb-16 px-6 text-center" initial="hidden" animate="visible" variants={staggerContainer}>
-        <div className="absolute inset-0 bg-gradient-to-b from-blue-50/50 to-transparent dark:from-blue-950/20 dark:to-transparent" />
+        <div className="absolute inset-0 bg-blue-50/30 dark:bg-blue-950/10" />
         <div className="relative max-w-4xl mx-auto">
           <motion.div variants={staggerItem} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-accent/10 text-accent text-sm font-medium mb-6">
             <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
@@ -155,7 +155,7 @@ const FeaturesPage = () => {
           {features.map((f, i) => (
             <motion.div
               key={i}
-              className="p-6 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl hover:border-accent/50 transition-all group"
+              className="p-6 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm hover:border-accent/50 transition-all group"
               variants={staggerItem}
               whileHover={{ y: -6, transition: { duration: 0.2 } }}
             >
@@ -171,7 +171,7 @@ const FeaturesPage = () => {
       <AnimatedSection className="py-20 px-6" variants={fadeInUp}>
         <div className="max-w-3xl mx-auto text-center">
           <motion.div
-            className="p-12 bg-gradient-to-br from-accent/5 to-secondary/5 border border-accent/20 rounded-3xl"
+            className="p-12 bg-accent/5 border border-accent/20 rounded-sm"
             whileInView={{ opacity: 1, scale: 1 }}
             initial={{ opacity: 0, scale: 0.95 }}
             viewport={{ once: true }}
@@ -180,7 +180,7 @@ const FeaturesPage = () => {
             <p className="text-gray-500 dark:text-gray-400 mb-8">Start analyzing Malaysian news sentiment for free. No credit card required.</p>
             <motion.button
               onClick={() => navigate('/register')}
-              className="px-8 py-3.5 text-base font-semibold text-white bg-accent rounded-xl shadow-lg shadow-accent/25 hover:shadow-accent/40 transition-all"
+              className="px-8 py-3.5 text-base font-semibold text-white bg-accent rounded-sm transition-all"
               whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
             >
               Start Free <ArrowRight className="inline w-4 h-4 ml-1" />

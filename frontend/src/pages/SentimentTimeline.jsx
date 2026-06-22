@@ -13,7 +13,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   const data = payload[0]?.payload;
   return (
-    <div className="p-3 rounded-lg bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#333] shadow-lg text-xs">
+    <div className="p-3 rounded-lg bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#333] text-xs">
       <p className="font-semibold text-gray-900 dark:text-white mb-1">{label}</p>
       <div className="space-y-0.5">
         <p className="text-gray-600 dark:text-gray-300">Score: <span className="font-mono font-medium">{data?.avgSentiment?.toFixed(3)}</span></p>

@@ -36,7 +36,7 @@ const VerifyEmailPage = () => {
         initial={{ opacity: 0, y: 20, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.5 }}
-        className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-2xl p-10 text-center max-w-sm w-full shadow-xl shadow-black/5"
+        className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-10 text-center max-w-sm w-full shadow-black/5"
       >
         {status === 'verifying' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>

@@ -250,7 +250,7 @@ const Navbar = ({ isDark, toggleTheme, navigate }) => {
   return (
     <>
       <motion.nav
-        className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-paper/90 dark:bg-paper-dark/90 border-b-2 border-ink dark:border-paper"
+        className="fixed top-0 left-0 right-0 z-50 bg-paper/90 dark:bg-paper-dark/90 border-b-2 border-ink dark:border-paper"
         initial={{ y: -80 }} animate={{ y: 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
       >
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">

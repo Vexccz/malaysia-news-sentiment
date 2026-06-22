@@ -563,7 +563,7 @@ export default function EntityGraphPage() {
         <div className="relative w-full sm:w-auto">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
-            className="pl-8 pr-3 py-2 text-sm bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-xl outline-none focus:border-blue-500 dark:focus:border-blue-500 transition-colors w-full sm:w-52 text-gray-900 dark:text-white placeholder:text-gray-400"
+            className="pl-8 pr-3 py-2 text-sm bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm outline-none focus:border-blue-500 dark:focus:border-blue-500 transition-colors w-full sm:w-52 text-gray-900 dark:text-white placeholder:text-gray-400"
             placeholder="Search entities..."
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -572,7 +572,7 @@ export default function EntityGraphPage() {
         </div>
 
         {/* Type Filter */}
-        <div className="flex gap-1 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-xl p-0.5">
+        <div className="flex gap-1 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-0.5">
           {['', 'politicians', 'parties', 'organizations', 'locations'].map(t => (
             <button
               key={t}
@@ -589,7 +589,7 @@ export default function EntityGraphPage() {
         </div>
 
         {/* Time Filter */}
-        <div className="flex gap-1 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-xl p-0.5">
+        <div className="flex gap-1 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-0.5">
           {[{ k: '', l: 'All Time' }, { k: '24h', l: '24H' }, { k: '7d', l: '7D' }, { k: '30d', l: '30D' }].map(o => (
             <button
               key={o.k}
@@ -617,7 +617,7 @@ export default function EntityGraphPage() {
         <div className="flex gap-3 text-[11px] text-gray-500 dark:text-gray-400">
           {Object.entries(SENTIMENT_COLORS).map(([k, v]) => (
             <span key={k} className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ background: v, boxShadow: `0 0 6px ${v}` }} />{k}
+              <span className="w-2.5 h-2.5 rounded-full" style={{ background: v }} />{k}
             </span>
           ))}
         </div>
@@ -712,7 +712,7 @@ export default function EntityGraphPage() {
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: 'auto', opacity: 1 }}
           exit={{ height: 0, opacity: 0 }}
-          className="flex flex-wrap items-center gap-4 mb-3 px-4 py-2.5 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-xl"
+          className="flex flex-wrap items-center gap-4 mb-3 px-4 py-2.5 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm"
         >
           <div className="flex items-center gap-2 flex-1 min-w-[200px]">
             <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap">Link Distance</label>
@@ -753,7 +753,7 @@ export default function EntityGraphPage() {
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: 'auto', opacity: 1 }}
           exit={{ height: 0, opacity: 0 }}
-          className="flex items-center gap-3 mb-3 px-4 py-2.5 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-xl"
+          className="flex items-center gap-3 mb-3 px-4 py-2.5 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm"
         >
           <TrendingUp size={14} className="text-cyan-500 flex-shrink-0" />
           <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap">Reveal Progress</label>
@@ -797,9 +797,9 @@ export default function EntityGraphPage() {
       )}
 
       {/* Graph + Sidebar Container */}
-      <div className="flex-1 flex flex-col md:flex-row rounded-2xl overflow-hidden border border-[#eee] dark:border-[#2a2a2a] bg-[#fafaf9] dark:bg-[#0f0f0f] relative min-h-[300px] md:min-h-[400px]">
-        {/* Background gradient */}
-        {isDark && <div className="absolute inset-0 pointer-events-none z-0" style={{ background: 'radial-gradient(ellipse at 30% 40%, rgba(99,102,241,0.06) 0%, transparent 60%), radial-gradient(ellipse at 70% 60%, rgba(16,185,129,0.04) 0%, transparent 50%)' }} />}
+      <div className="flex-1 flex flex-col md:flex-row rounded-sm overflow-hidden border border-[#eee] dark:border-[#2a2a2a] bg-[#fafaf9] dark:bg-[#0f0f0f] relative min-h-[300px] md:min-h-[400px]">
+        {/* Background fill */}
+        {isDark && <div className="absolute inset-0 pointer-events-none z-0 bg-[#0f0f0f]" />}
 
         {/* Mobile List View */}
         {isMobile && viewMode === 'list' && !loading && data.nodes.length > 0 && (
@@ -814,7 +814,7 @@ export default function EntityGraphPage() {
                     key={node.id}
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-xl p-3 cursor-pointer hover:border-blue-300 dark:hover:border-blue-500/30 transition-colors"
+                    className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-3 cursor-pointer hover:border-blue-300 dark:hover:border-blue-500/30 transition-colors"
                     onClick={() => handleNodeClick(node.id)}
                   >
                     <div className="flex items-center justify-between">
@@ -828,7 +828,7 @@ export default function EntityGraphPage() {
                     </div>
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full" style={{ background: SENTIMENT_COLORS[node.sentiment] || SENTIMENT_COLORS.Neutral, boxShadow: `0 0 6px ${SENTIMENT_COLORS[node.sentiment] || SENTIMENT_COLORS.Neutral}` }} />
+                        <span className="w-2 h-2 rounded-full" style={{ background: SENTIMENT_COLORS[node.sentiment] || SENTIMENT_COLORS.Neutral }} />
                         <span className="text-[11px] text-gray-500 dark:text-gray-400">{node.sentiment}</span>
                       </div>
                       <span className="text-[11px] text-gray-400 dark:text-gray-500">{connectedCount} connection{connectedCount !== 1 ? 's' : ''}</span>
@@ -874,7 +874,7 @@ export default function EntityGraphPage() {
               animate={{ width: isMobile ? '100%' : 340, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-              className="border-l border-[#eee] dark:border-[#2a2a2a] bg-white/97 dark:bg-[#111]/97 backdrop-blur-xl overflow-y-auto overflow-x-hidden z-[2] p-5"
+              className="border-l border-[#eee] dark:border-[#2a2a2a] bg-white dark:bg-[#111] overflow-y-auto overflow-x-hidden z-[2] p-5"
             >
               {/* Close button */}
               <button
@@ -915,7 +915,7 @@ export default function EntityGraphPage() {
                             animate={{ width: `${detail.totalMentions ? (v / detail.totalMentions * 100) : 0}%` }}
                             transition={{ duration: 0.6, ease: 'easeOut' }}
                             className="h-full rounded-full"
-                            style={{ background: SENTIMENT_COLORS[k], boxShadow: `0 0 8px ${SENTIMENT_GLOW[k]}` }}
+                            style={{ background: SENTIMENT_COLORS[k] }}
                           />
                         </div>
                         <span className="text-[11px] font-semibold text-gray-900 dark:text-white w-6 text-right">{v}</span>

@@ -132,7 +132,7 @@ const LoginPage = () => {
 
       {/* Right side - Editorial Visual */}
       <div className="hidden lg:flex lg:w-[55%] bg-zinc-50 dark:bg-zinc-900 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-zinc-500/5 dark:from-red-500/10 dark:to-zinc-500/10" />
+        <div className="absolute inset-0 bg-red-50/30 dark:bg-red-950/10" />
         
         {/* Decorative lines */}
         <div className="absolute top-0 left-0 right-0 h-px bg-zinc-200 dark:bg-zinc-800" />
