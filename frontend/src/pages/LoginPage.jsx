@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
 const LoginPage = () => {
-  const { login } = useAuth();
+  const { login, guestLogin } = useAuth();
   const navigate = useNavigate();
   const { theme } = useTheme();
   const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -13,6 +13,7 @@ const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [guestLoading, setGuestLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
@@ -27,6 +28,18 @@ const LoginPage = () => {
       setError(err.response?.data?.error || 'Invalid credentials');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGuest = async () => {
+    setGuestLoading(true);
+    try {
+      await guestLogin();
+      navigate('/dashboard');
+    } catch (err) {
+      setError('Guest login failed. Please try again.');
+    } finally {
+      setGuestLoading(false);
     }
   };
 
@@ -127,6 +140,20 @@ const LoginPage = () => {
               Create account
             </Link>
           </p>
+
+          {/* Guest login */}
+          <div className="mt-4 text-center">
+            <button
+              onClick={handleGuest}
+              disabled={guestLoading}
+              className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 underline underline-offset-2 transition-colors disabled:opacity-50"
+            >
+              {guestLoading ? 'Entering...' : 'Continue as Guest'}
+            </button>
+            <p className="mt-1 text-[11px] text-zinc-400 dark:text-zinc-500">
+              Guest mode has limited features
+            </p>
+          </div>
         </motion.div>
       </div>
 
