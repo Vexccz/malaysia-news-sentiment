@@ -131,6 +131,8 @@ const FILTER_OPTIONS = [
   { key: 'Alerts',   label: '🔴 Alerts', isAlert: true },
 ];
 
+const ALL_SOURCES = 'ALL_SOURCES';
+
 const calcDistribution = (arts) => ({
   Positive: arts.filter(a => (a.sentiment || 'Neutral') === 'Positive').length,
   Negative: arts.filter(a => (a.sentiment || 'Neutral') === 'Negative').length,
@@ -195,6 +197,7 @@ const Dashboard = () => {
   const { updateFreshness } = useFreshness();
   const [analysisProgress, setAnalysisProgress] = useState(null);
   const [filter, setFilter]               = useState('All');
+  const [sourceFilter, setSourceFilter]     = useState(ALL_SOURCES);
   const [page, setPage]                 = useState(1);
   const LIMIT                           = 10;
   const [timeframe, setTimeframe]         = useState('');
@@ -322,6 +325,7 @@ const Dashboard = () => {
   const [forecast, setForecast]           = useState(null);
   const [forecastLoading, setForecastLoading] = useState(false);
   const [manualError, setManualError]     = useState('');
+  const [noResultsQuery, setNoResultsQuery] = useState(null);
   const [showExportSheet, setShowExportSheet] = useState(false);
 
   // Back gesture handling for export sheet
@@ -432,10 +436,11 @@ const Dashboard = () => {
       
       if (fetched.length === 0) {
         toast.error('No articles found.', { id: searchToast });
+        setNoResultsQuery(latest ? null : query);
         setIsHistoryView(true);
         return;
       }
-
+      setNoResultsQuery(null);
       setSearchArticles(fetched);
       setSearchDistribution(data.sentimentDistribution || calcDistribution(fetched));
       toast.success(`Analyzed ${fetched.length} articles!`, { id: searchToast });
@@ -497,11 +502,24 @@ const Dashboard = () => {
     { id: 5, title: 'Inflation concerns', sentiment: 'Negative', publishedAt: new Date().toISOString(), url: 'https://example.com/5', urlToImage: null, source: { name: 'Test' } },
   ] : articles;
 
+  // Extract unique sources for the source filter dropdown
+  const uniqueSources = useMemo(() => {
+    const data = articles.length === 0 ? mockArticles : articles;
+    const names = [...new Set(data.map(a => a.source || 'Unknown').filter(Boolean))].sort();
+    return names;
+  }, [articles, mockArticles]);
+
   const filteredArticles = useMemo(() => {
     const data = articles.length === 0 ? mockArticles : articles;
-    if (filter === 'All' || filter === 'all') return data;
-    return data.filter(a => a.sentiment === filter);
-  }, [articles, filter]);
+    let result = data;
+    if (filter !== 'All' && filter !== 'all') {
+      result = result.filter(a => a.sentiment === filter);
+    }
+    if (sourceFilter !== ALL_SOURCES) {
+      result = result.filter(a => (a.source || 'Unknown') === sourceFilter);
+    }
+    return result;
+  }, [articles, filter, sourceFilter, mockArticles]);
 
 
 
@@ -771,7 +789,7 @@ const Dashboard = () => {
         </div>
       </motion.div>
 
-      <SearchBarClean onSearch={handleSearch} loading={searchLoading} />
+      <SearchBarClean onSearch={handleSearch} loading={searchLoading} noResultsQuery={noResultsQuery} />
 
       {/* Dashboard Summary Banner */}
       <DashboardSummary distribution={distribution} keywords={keywords} articles={articles} />
@@ -842,6 +860,20 @@ const Dashboard = () => {
                         </button>
                       ))}
                     </div>
+                  )}
+                  {/* Source filter dropdown */}
+                  {uniqueSources.length > 1 && (
+                    <select
+                      value={sourceFilter}
+                      onChange={(e) => setSourceFilter(e.target.value)}
+                      className="filter-select text-[11px] uppercase tracking-wider font-medium text-ink dark:text-paper bg-transparent border border-gray-200 dark:border-[#2a2a2a] px-2 py-1 cursor-pointer focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-600"
+                      title="Filter by source"
+                    >
+                      <option value={ALL_SOURCES}>ALL SOURCES</option>
+                      {uniqueSources.map(src => (
+                        <option key={src} value={src}>{src.toUpperCase()}</option>
+                      ))}
+                    </select>
                   )}
                   {/* Desktop action buttons - icon-only for cleanliness */}
                   <div className="hidden md:flex items-center gap-1 border-l border-gray-200 dark:border-[#2a2a2a] pl-2 ml-1">
