@@ -130,6 +130,25 @@ h3 { font-weight: 600; }
   --neg-bg: rgba(232, 164, 120, 0.1);
 }
 
+/* Dark mode placeholder contrast fix */
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #6B6A65 !important;
+  opacity: 1;
+}
+
+/* Dark mode focus visible */
+.dark *:focus-visible {
+  outline: 2px solid rgba(232, 164, 120, 0.5);
+  outline-offset: 2px;
+}
+
+/* Dark mode selection */
+.dark ::selection {
+  background: rgba(232, 164, 120, 0.3);
+  color: #F5F3EE;
+}
+
 /* Gradient mesh float animation */
 @keyframes float {
   0%, 100% { transform: translate(0, 0) scale(1); }

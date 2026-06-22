@@ -667,7 +667,7 @@ const Dashboard = () => {
             draggable
             onDragStart={(e) => handleDragStart(e, widgetKey)}
             onDragEnd={handleDragEnd}
-            className="cursor-grab active:cursor-grabbing text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors"
+            className="cursor-grab active:cursor-grabbing text-gray-300 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400 transition-colors"
             title="Drag to reorder"
           >
             <GripVertical size={14} />

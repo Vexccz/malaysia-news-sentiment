@@ -331,7 +331,7 @@ const Bookmarks = () => {
             <div className="w-full h-[2px] bg-gray-200 dark:bg-gray-700" />
             <div className="w-full h-px bg-gray-100 dark:bg-gray-800" />
           </div>
-          <BookmarkX size={36} className="text-gray-200 dark:text-gray-700 mb-4" />
+          <BookmarkX size={36} className="text-gray-200 dark:text-gray-600 mb-4" />
           <h3 className="font-['Playfair_Display'] text-xl font-bold text-gray-900 dark:text-white mb-3">
             {activeFolder ? 'No Bookmarks Here' : 'No Bookmarks Yet'}
           </h3>

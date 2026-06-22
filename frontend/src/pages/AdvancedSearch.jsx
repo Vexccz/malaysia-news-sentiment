@@ -455,7 +455,7 @@ const AdvancedSearch = () => {
                 <div className="w-full h-[2px] bg-gray-200 dark:bg-gray-700" />
                 <div className="w-full h-px bg-gray-100 dark:bg-gray-800" />
               </div>
-              <svg className="w-10 h-10 mx-auto mb-4 text-gray-200 dark:text-gray-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="w-10 h-10 mx-auto mb-4 text-gray-200 dark:text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
               </svg>
               <h3 className="font-['Playfair_Display'] text-xl font-bold text-gray-900 dark:text-white mb-3">Begin Your Search</h3>
