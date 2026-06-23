@@ -481,7 +481,10 @@ const Dashboard = () => {
   // Extract unique sources for the source filter dropdown
   const uniqueSources = useMemo(() => {
     const data = articles.length === 0 ? mockArticles : articles;
-    const names = [...new Set(data.map(a => a.source || 'Unknown').filter(Boolean))].sort();
+    const names = [...new Set(data.map(a => {
+      const s = a.source;
+      return typeof s === 'object' ? s?.name : s;
+    }).filter(Boolean))].sort();
     return names;
   }, [articles, mockArticles]);
 
@@ -492,7 +495,11 @@ const Dashboard = () => {
       result = result.filter(a => a.sentiment === filter);
     }
     if (sourceFilter !== ALL_SOURCES) {
-      result = result.filter(a => (a.source || 'Unknown') === sourceFilter);
+      result = result.filter(a => {
+        const s = a.source;
+        const name = typeof s === 'object' ? s?.name : s;
+        return name === sourceFilter;
+      });
     }
     return result;
   }, [articles, filter, sourceFilter, mockArticles]);
