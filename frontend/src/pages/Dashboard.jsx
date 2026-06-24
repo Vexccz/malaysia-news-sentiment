@@ -112,128 +112,16 @@ const SentimentMarkInline = ({ sentiment }) => {
 };
 /* ─── Inline: Analytics ────────────────────────────────────────────── */
 const AnalyticsInline = () => {
-  const [analytics, setAnalytics] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await api.get("/analytics/advanced");
-        if (!cancelled) setAnalytics(res.data?.data || res.data);
-      } catch (err) {
-        console.error('Analytics fetch failed:', err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
-
-  if (loading) {
-    return (
-      <div className={`${CARD} p-5 animate-pulse space-y-4`}>
-        <div className="h-4 w-40 bg-gray-200 dark:bg-gray-700 rounded" />
-        <div className="h-20 bg-gray-100 dark:bg-gray-800 rounded" />
-        <div className="h-20 bg-gray-100 dark:bg-gray-800 rounded" />
-      </div>
-    );
-  }
-
-  if (!analytics) {
-    return (
-      <div className={`${CARD} p-8 text-center`}>
-        <Activity size={24} className="mx-auto mb-2 text-ink-faint" />
-        <p className="text-sm text-ink-faint">Analytics data will appear once articles are analyzed.</p>
-      </div>
-    );
-  }
-
-  const bias = analytics.sourceBias || [];
-  const keywords = analytics.wordTrends?.words || [];
-  // Compute sentiment overview from sourceBias
-  const overview = bias.reduce((acc, src) => {
-    acc.Positive = (acc.Positive || 0) + (src.positive || 0);
-    acc.Negative = (acc.Negative || 0) + (src.negative || 0);
-    acc.Neutral = (acc.Neutral || 0) + (src.neutral || 0);
-    return acc;
-  }, {});
-
   return (
-    <div className="space-y-5">
-      {/* Sentiment Overview */}
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: 'Positive', count: overview.Positive || 0, color: 'text-green-700 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-500/10' },
-          { label: 'Negative', count: overview.Negative || 0, color: 'text-red-700 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-500/10' },
-          { label: 'Neutral',  count: overview.Neutral || 0,  color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-50 dark:bg-gray-500/10' },
-        ].map(item => (
-          <div key={item.label} className={`${CARD} p-4 text-center`}>
-            <div className={`text-2xl font-bold font-display ${item.color}`}>{item.count}</div>
-            <div className="text-[10px] uppercase tracking-wider text-ink-muted mt-1 font-semibold">{item.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Top Keywords */}
-      {keywords.length > 0 && (() => {
-        const timeData = analytics.wordTrends?.data || [];
-        const wordFreqs = keywords.map(w => ({
-          word: w,
-          total: timeData.reduce((sum, d) => sum + (d[w] || 0), 0)
-        })).filter(w => w.total > 0).sort((a, b) => b.total - a.total).slice(0, 12);
-        const maxFreq = wordFreqs[0]?.total || 1;
-        if (wordFreqs.length === 0) return null;
-        return (
-          <div className={`${CARD} p-5`}>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-4">Top Keywords</h3>
-            <div className="space-y-2">
-              {wordFreqs.map((kw, i) => (
-                <div key={kw.word} className="flex items-center gap-3">
-                  <span className="text-[11px] font-medium text-ink dark:text-paper w-24 truncate">{kw.word}</span>
-                  <div className="flex-1 h-4 bg-gray-100 dark:bg-gray-800 rounded-sm overflow-hidden">
-                    <div
-                      className="h-full bg-ink/70 dark:bg-paper/60 rounded-sm transition-all duration-500"
-                      style={{ width: `${(kw.total / maxFreq) * 100}%` }}
-                    />
-                  </div>
-                  <span className="text-[10px] font-semibold text-ink-muted tabular-nums w-8 text-right">{kw.total}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })()}
-      {/* Topic Clusters */}
-      {analytics.topicClusters?.length > 0 && (
-        <div className={`${CARD} p-5`}>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-1">Topic Clusters</h3>
-          <p className="text-[10px] text-ink-faint mb-4">Grouped themes across analyzed articles</p>
-          <div className="flex flex-wrap gap-2">
-            {analytics.topicClusters.slice(0, 20).map((tc, i) => {
-              const size = Math.min(28, Math.max(11, 11 + (tc.count || tc.size || 1) * 0.8));
-              return (
-                <span
-                  key={i}
-                  className="inline-flex items-center px-2.5 py-1 border border-paper-line dark:border-paper-dark-line text-ink dark:text-paper font-medium"
-                  style={{ fontSize: `${size * 0.38}px` }}
-                >
-                  {tc.label || tc.topic || tc.name}
-                  {(tc.count || tc.size) && (
-                    <span className="ml-1.5 text-[9px] text-ink-faint">{tc.count || tc.size}</span>
-                  )}
-                </span>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-
+    <div className={`${CARD} p-8 text-center`}>
+      <Activity size={24} className="mx-auto mb-2 text-ink-faint" />
+      <p className="text-sm text-ink-muted mb-2">Advanced analytics have moved to the Admin Dashboard.</p>
+      <a href="/admin" className="text-xs font-semibold uppercase tracking-wider text-accent hover:underline">
+        Go to Admin Dashboard
+      </a>
     </div>
   );
 };
-
 /* ─── Inline: Community ────────────────────────────────────────────── */
 const CommunityInline = () => {
   const [shared, setShared] = useState([]);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { getAdminStats, getAdminUsers, updateUserRole, deleteUser, updateUserStatus } from '../services/api';
+import api, { getAdminStats, getAdminUsers, updateUserRole, deleteUser, updateUserStatus } from '../services/api';
 import toast from 'react-hot-toast';
 import ScrollToTop from '../components/ScrollToTop';
 import { useSocket } from '../context/SocketContext';
@@ -26,6 +26,8 @@ const AdminDashboard = () => {
   const [adminUsersTotal, setAdminUsersTotal] = useState(0);
   const [adminUsersTotalPages, setAdminUsersTotalPages] = useState(0);
   const [deleteConfirmUserId, setDeleteConfirmUserId] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [processingUserId, setProcessingUserId] = useState(null);
 
   const loadData = useCallback(async () => {
@@ -154,7 +156,21 @@ const AdminDashboard = () => {
     socket.on('system_stats_updated', (data) => {
       setStats(prev => prev ? { ...prev, overview: { ...prev.overview, totalArticles: prev.overview.totalArticles + (data.count || 0), totalUnique: prev.overview.totalUnique + (data.count || 0) } } : prev);
     });
-    return () => { socket.off('user_activity'); socket.off('system_stats_updated'); };
+    const loadAnalytics = async () => {
+    setAnalyticsLoading(true);
+    try {
+      const res = await api.get('/analytics/advanced');
+      setAnalytics(res.data?.data || res.data);
+    } catch (err) {
+      console.error('Analytics fetch failed:', err);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  };
+
+  const CARD = 'bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700/50 rounded-sm';
+
+  return () => { socket.off('user_activity'); socket.off('system_stats_updated'); };
   }, [socket]);
 
   if (loading) {
@@ -181,7 +197,7 @@ const AdminDashboard = () => {
   const sentimentData = stats.sentiment || { Positive: 0, Negative: 0, Neutral: 0 };
   const totalSentiment = sentimentData.Positive + sentimentData.Negative + sentimentData.Neutral || 1;
 
-  const TABS = ['overview', 'users', 'content', 'api', 'insights'];
+  const TABS = ['overview', 'users', 'content', 'api', 'insights', 'analytics'];
 
   return (
     <div className="relative">
@@ -216,7 +232,7 @@ const AdminDashboard = () => {
               className={`text-xs font-medium uppercase tracking-wider transition-colors font-sans px-1 capitalize ${
                 activeTab === tab ? 'text-ink dark:text-paper font-bold' : 'text-ink-faint hover:text-ink-muted'
               }`}
-              onClick={() => { setActiveTab(tab); if (tab === 'insights' && !insights) loadInsights(); if (tab === 'api') loadMetrics(); }}
+              onClick={() => { setActiveTab(tab); if (tab === 'insights' && !insights) loadInsights(); if (tab === 'api') loadMetrics(); if (tab === 'analytics' && !analytics) loadAnalytics(); }}
             >
               {tab === 'api' ? 'API Metrics' : tab}
             </button>
@@ -765,6 +781,117 @@ const AdminDashboard = () => {
                 </div>
               )}
             </div>
+          </motion.div>
+        )}
+
+        {activeTab === 'analytics' && (
+          <motion.div key="analytics" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+            {analyticsLoading ? (
+              <div className="py-10 text-center">
+                <div className="w-6 h-6 border-2 border-ink border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-xs text-ink-faint font-sans uppercase tracking-wider">Loading analytics</p>
+              </div>
+            ) : analytics ? (
+              <div className="space-y-5">
+                {/* Sentiment Overview */}
+                {(() => {
+                  const bias = analytics.sourceBias || [];
+                  const overview = bias.reduce((acc, src) => {
+                    acc.Positive = (acc.Positive || 0) + (src.positive || 0);
+                    acc.Negative = (acc.Negative || 0) + (src.negative || 0);
+                    acc.Neutral = (acc.Neutral || 0) + (src.neutral || 0);
+                    return acc;
+                  }, {});
+                  return (
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { label: 'Positive', count: overview.Positive || 0, color: 'text-green-700 dark:text-green-400' },
+                        { label: 'Negative', count: overview.Negative || 0, color: 'text-red-700 dark:text-red-400' },
+                        { label: 'Neutral',  count: overview.Neutral || 0,  color: 'text-gray-600 dark:text-gray-400' },
+                      ].map(item => (
+                        <div key={item.label} className={`${CARD} p-4 text-center`}>
+                          <div className={`text-2xl font-bold font-display ${item.color}`}>{item.count}</div>
+                          <div className="text-[10px] uppercase tracking-wider text-ink-muted mt-1 font-semibold">{item.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+
+                {/* Top Keywords */}
+                {(() => {
+                  const keywords = analytics.wordTrends?.words || [];
+                  const timeData = analytics.wordTrends?.data || [];
+                  const wordFreqs = keywords.map(w => ({
+                    word: w,
+                    total: timeData.reduce((sum, d) => sum + (d[w] || 0), 0)
+                  })).filter(w => w.total > 0).sort((a, b) => b.total - a.total).slice(0, 12);
+                  const maxFreq = wordFreqs[0]?.total || 1;
+                  if (wordFreqs.length === 0) return null;
+                  return (
+                    <div className={`${CARD} overflow-hidden`}>
+                      <div className="px-5 pt-5 pb-3 border-b border-gray-100 dark:border-gray-800">
+                        <h3 className="text-xs font-semibold uppercase tracking-widest text-ink-muted">Top Keywords</h3>
+                      </div>
+                      <div className="divide-y divide-gray-50 dark:divide-gray-800/50">
+                        {wordFreqs.map((kw, i) => (
+                          <div key={kw.word} className="px-5 py-2.5 flex items-center gap-4 hover:bg-gray-50/50 dark:hover:bg-white/[0.02] transition-colors">
+                            <span className="text-[10px] font-mono text-ink-faint w-4 text-right tabular-nums">{i + 1}</span>
+                            <span className="text-[11px] font-medium text-ink dark:text-paper w-24 truncate">{kw.word}</span>
+                            <div className="flex-1 h-[6px] bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: (kw.total / maxFreq * 100) + '%' }}
+                                transition={{ duration: 0.6, delay: i * 0.03 }}
+                                className="h-full bg-ink/60 dark:bg-paper/50 rounded-full"
+                              />
+                            </div>
+                            <span className="text-[10px] font-mono text-ink-muted tabular-nums w-8 text-right">{kw.total}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Topic Clusters */}
+                {analytics.topicClusters?.length > 0 && (
+                  <div className={`${CARD} overflow-hidden`}>
+                    <div className="px-5 pt-5 pb-3 border-b border-gray-100 dark:border-gray-800">
+                      <h3 className="text-xs font-semibold uppercase tracking-widest text-ink-muted">Topic Clusters</h3>
+                      <p className="text-[10px] text-ink-faint mt-0.5">Grouped themes across analyzed articles</p>
+                    </div>
+                    <div className="px-5 py-4 flex flex-wrap gap-2">
+                      {analytics.topicClusters.slice(0, 20).map((tc, i) => {
+                        const size = Math.min(28, Math.max(11, 11 + (tc.count || tc.size || 1) * 0.8));
+                        return (
+                          <motion.span
+                            key={i}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: i * 0.03 }}
+                            className="inline-flex items-center px-2.5 py-1 border border-gray-200 dark:border-gray-700 text-ink dark:text-paper font-medium rounded-sm"
+                            style={{ fontSize: `${size * 0.38}px` }}
+                          >
+                            {tc.label || tc.topic || tc.name}
+                            {(tc.count || tc.size) && (
+                              <span className="ml-1.5 text-[9px] text-ink-faint font-mono">{tc.count || tc.size}</span>
+                            )}
+                          </motion.span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="py-8 text-center">
+                <p className="text-xs text-ink-faint mb-3 font-sans">Advanced analytics from article sentiment analysis</p>
+                <button onClick={loadAnalytics} className="px-5 py-2.5 bg-ink text-paper text-xs font-semibold uppercase tracking-wider hover:bg-accent transition-colors font-sans">
+                  Load Analytics
+                </button>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
