@@ -144,19 +144,7 @@ const AdminDashboard = () => {
     finally { setInsightsLoading(false); }
   };
 
-  useEffect(() => {
-    if (!socket) return;
-    socket.on('user_activity', (data) => {
-      setStats(prev => {
-        if (!prev) return prev;
-        const updatedUsers = prev.recentUsers.map(u => u._id === data.userId ? { ...u, analysisCount: data.analysisCount } : u);
-        return { ...prev, recentUsers: updatedUsers };
-      });
-    });
-    socket.on('system_stats_updated', (data) => {
-      setStats(prev => prev ? { ...prev, overview: { ...prev.overview, totalArticles: prev.overview.totalArticles + (data.count || 0), totalUnique: prev.overview.totalUnique + (data.count || 0) } } : prev);
-    });
-    const loadAnalytics = async () => {
+  const loadAnalytics = async () => {
     setAnalyticsLoading(true);
     try {
       const res = await api.get('/analytics/advanced');
@@ -170,6 +158,19 @@ const AdminDashboard = () => {
 
   const CARD = 'bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700/50 rounded-sm';
 
+
+  useEffect(() => {
+    if (!socket) return;
+    socket.on('user_activity', (data) => {
+      setStats(prev => {
+        if (!prev) return prev;
+        const updatedUsers = prev.recentUsers.map(u => u._id === data.userId ? { ...u, analysisCount: data.analysisCount } : u);
+        return { ...prev, recentUsers: updatedUsers };
+      });
+    });
+    socket.on('system_stats_updated', (data) => {
+      setStats(prev => prev ? { ...prev, overview: { ...prev.overview, totalArticles: prev.overview.totalArticles + (data.count || 0), totalUnique: prev.overview.totalUnique + (data.count || 0) } } : prev);
+    });
   return () => { socket.off('user_activity'); socket.off('system_stats_updated'); };
   }, [socket]);
 
