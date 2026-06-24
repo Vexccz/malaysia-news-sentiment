@@ -10,18 +10,18 @@ const RANGE_OPTIONS = [
   { label: '90D', value: 90 },
 ];
 
-const CustomTooltip = ({ active, payload, label }) => {
+const CustomTooltip = ({ active, payload, label, t }) => {
   if (!active || !payload?.length) return null;
   const data = payload[0]?.payload;
   return (
     <div className="p-3 rounded-lg bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#333] text-xs">
       <p className="font-semibold text-gray-900 dark:text-white mb-1">{label}</p>
       <div className="space-y-0.5">
-        <p className="text-gray-600 dark:text-gray-300">Score: <span className="font-mono font-medium">{data?.avgSentiment?.toFixed(3)}</span></p>
-        <p className="text-green-600">Positive: {data?.positiveCount}</p>
-        <p className="text-red-500">Negative: {data?.negativeCount}</p>
-        <p className="text-gray-500">Neutral: {data?.neutralCount}</p>
-        <p className="font-medium text-gray-700 dark:text-gray-200">Total: {data?.totalArticles}</p>
+        <p className="text-gray-600 dark:text-gray-300">{t('score')}: <span className="font-mono font-medium">{data?.avgSentiment?.toFixed(3)}</span></p>
+        <p className="text-green-600">{t('positive')}: {data?.positiveCount}</p>
+        <p className="text-red-500">{t('negative')}: {data?.negativeCount}</p>
+        <p className="text-gray-500">{t('neutral')}: {data?.neutralCount}</p>
+        <p className="font-medium text-gray-700 dark:text-gray-200">{t('total')}: {data?.totalArticles}</p>
       </div>
     </div>
   );
@@ -75,10 +75,10 @@ const SentimentTimeline = () => {
       {/* Header */}
       <div className="border-b-2 border-gray-900 dark:border-white pb-3">
         <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight uppercase">
-          Timeline
+          {t('timeline')}
         </h1>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 tracking-wide">
-          Sentiment trends over time
+          {t('timelineDesc')}
         </p>
       </div>
 
@@ -88,7 +88,7 @@ const SentimentTimeline = () => {
           type="text"
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
-          placeholder="Topic (e.g. economy, Anwar, flood)..."
+          placeholder={t('topicPlaceholder')}
           className="flex-1 min-w-[200px] px-4 py-2.5 border border-gray-200 dark:border-[#333] bg-white dark:bg-[#111] text-sm text-gray-900 dark:text-white rounded-lg placeholder-gray-400 focus:outline-none focus:border-gray-400 dark:focus:border-gray-500"
         />
         <div className="flex items-center gap-1 border border-gray-200 dark:border-[#333] rounded-lg p-0.5">
@@ -112,7 +112,7 @@ const SentimentTimeline = () => {
           disabled={loading}
           className="px-5 py-2.5 text-sm font-medium bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 disabled:opacity-40 transition-all"
         >
-          {loading ? 'Loading...' : 'Analyze'}
+          {loading ? `${t('loading')}...` : t('analyzeBtn')}
         </button>
       </form>
 
@@ -126,7 +126,7 @@ const SentimentTimeline = () => {
       {/* Empty state */}
       {!loading && searched && timeline.length === 0 && (
         <div className="py-12 text-center">
-          <p className="text-sm text-gray-400">No data found for this topic and time range</p>
+          <p className="text-sm text-gray-400">{t('noDataForTopic')}</p>
         </div>
       )}
 
@@ -137,11 +137,11 @@ const SentimentTimeline = () => {
           {summary && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <p className="text-[10px] text-gray-400 uppercase tracking-wider">Articles</p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wider">{t('articles')}</p>
                 <p className="text-xl font-bold text-gray-900 dark:text-white font-mono">{summary.totalArticles}</p>
               </div>
               <div>
-                <p className="text-[10px] text-gray-400 uppercase tracking-wider">Avg Sentiment</p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wider">{t('avgSentiment')}</p>
                 <p className={`text-xl font-bold font-mono ${
                   summary.avgSentiment > 0.1 ? 'text-green-600 dark:text-green-400' :
                   summary.avgSentiment < -0.1 ? 'text-red-600 dark:text-red-400' :
@@ -151,7 +151,7 @@ const SentimentTimeline = () => {
                 </p>
               </div>
               <div>
-                <p className="text-[10px] text-gray-400 uppercase tracking-wider">Trend</p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wider">{t('trend')}</p>
                 <p className={`text-xl font-bold ${
                   summary.trend === 'improving' ? 'text-green-600 dark:text-green-400' :
                   summary.trend === 'declining' ? 'text-red-600 dark:text-red-400' :
@@ -161,13 +161,13 @@ const SentimentTimeline = () => {
                 </p>
               </div>
               <div>
-                <p className="text-[10px] text-gray-400 uppercase tracking-wider">Peak</p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wider">{t('peak')}</p>
                 <p className="text-sm font-mono text-gray-900 dark:text-white">
                   {summary.peakPositiveDate || 'N/A'}
                 </p>
                 {summary.peakNegativeDate && (
                   <p className="text-xs font-mono text-red-500 mt-0.5">
-                    Low: {summary.peakNegativeDate}
+                    {t('low')}: {summary.peakNegativeDate}
                   </p>
                 )}
               </div>
@@ -177,7 +177,7 @@ const SentimentTimeline = () => {
           {/* Sentiment line chart */}
           <div className="border-t border-gray-200 dark:border-[#2a2a2a] pt-5">
             <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wide mb-4">
-              Sentiment Score
+              {t('sentimentScore')}
             </h3>
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={timeline} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
@@ -192,7 +192,7 @@ const SentimentTimeline = () => {
                   tick={{ fontSize: 10, fill: '#999' }}
                   tickFormatter={(v) => v.toFixed(1)}
                 />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip t={t} />} />
                 <ReferenceLine y={0} stroke="#ccc" strokeDasharray="3 3" />
                 <Line
                   type="monotone"
@@ -213,7 +213,7 @@ const SentimentTimeline = () => {
           {/* Volume area chart */}
           <div className="border-t border-gray-200 dark:border-[#2a2a2a] pt-5">
             <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wide mb-4">
-              Volume
+              {t('volume')}
             </h3>
             <ResponsiveContainer width="100%" height={180}>
               <AreaChart data={timeline} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
@@ -224,16 +224,16 @@ const SentimentTimeline = () => {
                   tickFormatter={(d) => d.slice(5)}
                 />
                 <YAxis tick={{ fontSize: 10, fill: '#999' }} />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip t={t} />} />
                 <Area type="monotone" dataKey="positiveCount" stackId="1" stroke="#22c55e" fill="#22c55e" fillOpacity={0.25} isAnimationActive={true} animationDuration={1500} animationEasing="ease-out" />
                 <Area type="monotone" dataKey="neutralCount" stackId="1" stroke="#9ca3af" fill="#9ca3af" fillOpacity={0.15} isAnimationActive={true} animationDuration={1500} animationEasing="ease-out" />
                 <Area type="monotone" dataKey="negativeCount" stackId="1" stroke="#ef4444" fill="#ef4444" fillOpacity={0.25} isAnimationActive={true} animationDuration={1500} animationEasing="ease-out" />
               </AreaChart>
             </ResponsiveContainer>
             <div className="flex items-center gap-4 mt-2 text-[10px] text-gray-400 uppercase tracking-wider">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 bg-green-500 rounded-sm" /> Positive</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 bg-gray-400 rounded-sm" /> Neutral</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 bg-red-500 rounded-sm" /> Negative</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 bg-green-500 rounded-sm" /> {t('positive')}</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 bg-gray-400 rounded-sm" /> {t('neutral')}</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 bg-red-500 rounded-sm" /> {t('negative')}</span>
             </div>
           </div>
 
@@ -241,7 +241,7 @@ const SentimentTimeline = () => {
           {spikes.length > 0 && (
             <div className="border-t border-gray-200 dark:border-[#2a2a2a] pt-5">
               <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wide mb-3">
-                Notable Shifts
+                {t('notableShifts')}
               </h3>
               <div className="space-y-1.5">
                 {spikes.map((spike) => (
@@ -252,7 +252,7 @@ const SentimentTimeline = () => {
                     }`}>
                       {spike.avgSentiment > 0 ? '+' : ''}{spike.avgSentiment.toFixed(2)}
                     </span>
-                    <span className="text-gray-400">{spike.totalArticles} articles</span>
+                    <span className="text-gray-400">{spike.totalArticles} {t('articles')}</span>
                   </div>
                 ))}
               </div>

@@ -87,7 +87,7 @@ const StatCard = ({ label, value, sub }) => (
 );
 
 /* ── Sentiment Bar ───────────────────────────────────────────── */
-const SentimentBar = ({ dist }) => {
+const SentimentBar = ({ dist, t }) => {
   const total = (dist.Positive || 0) + (dist.Negative || 0) + (dist.Neutral || 0) || 1;
   const pcts = {
     pos: ((dist.Positive || 0) / total) * 100,
@@ -96,28 +96,28 @@ const SentimentBar = ({ dist }) => {
   };
   return (
     <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card p-4">
-      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans block mb-3">SENTIMENT DISTRIBUTION — 24H</span>
+      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans block mb-3">{t('sentimentDist24h')}</span>
       <div className="flex h-5 w-full overflow-hidden mb-2.5">
         <motion.div initial={{ width: 0 }} animate={{ width: `${pcts.pos}%` }} transition={{ duration: 0.8 }} className="bg-green-500" />
         <motion.div initial={{ width: 0 }} animate={{ width: `${pcts.neu}%` }} transition={{ duration: 0.8, delay: 0.1 }} className="bg-gray-400" />
         <motion.div initial={{ width: 0 }} animate={{ width: `${pcts.neg}%` }} transition={{ duration: 0.8, delay: 0.2 }} className="bg-red-500" />
       </div>
       <div className="flex justify-between text-[10px] font-sans">
-        <span className="text-green-700 dark:text-green-400 font-semibold">{dist.Positive || 0} Positive ({pcts.pos.toFixed(1)}%)</span>
-        <span className="text-gray-500 dark:text-gray-400 font-semibold">{dist.Neutral || 0} Neutral ({pcts.neu.toFixed(1)}%)</span>
-        <span className="text-red-700 dark:text-red-400 font-semibold">{dist.Negative || 0} Negative ({pcts.neg.toFixed(1)}%)</span>
+        <span className="text-green-700 dark:text-green-400 font-semibold">{dist.Positive || 0} {t('positive')} ({pcts.pos.toFixed(1)}%)</span>
+        <span className="text-gray-500 dark:text-gray-400 font-semibold">{dist.Neutral || 0} {t('neutral')} ({pcts.neu.toFixed(1)}%)</span>
+        <span className="text-red-700 dark:text-red-400 font-semibold">{dist.Negative || 0} {t('negative')} ({pcts.neg.toFixed(1)}%)</span>
       </div>
     </div>
   );
 };
 
 /* ── Hourly Chart ────────────────────────────────────────────── */
-const HourlyChart = ({ breakdown }) => {
+const HourlyChart = ({ breakdown, t }) => {
   if (!breakdown?.length) return null;
   const maxCount = Math.max(...breakdown.map(h => h.count), 1);
   return (
     <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card p-4">
-      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans block mb-3">HOURLY ACTIVITY — 24H</span>
+      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans block mb-3">{t('hourlyActivity24h')}</span>
       <div className="flex items-end gap-px h-16">
         {Array.from({ length: 24 }, (_, i) => {
           const bucket = breakdown.find(h => h.hour === i);
@@ -130,7 +130,7 @@ const HourlyChart = ({ breakdown }) => {
               animate={{ height: `${Math.max(height, 3)}%` }}
               transition={{ duration: 0.5, delay: i * 0.02 }}
               className="flex-1 bg-ink/70 dark:bg-paper/70 relative group cursor-default"
-              title={`${i}:00 — ${count} articles`}
+              title={`${i}:00 — ${count} ${t('articles')}`}
             >
               <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[8px] font-sans text-ink-faint opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                 {count}
@@ -369,13 +369,13 @@ const LiveFeed = () => {
   const tickerArticles = articles.slice(0, 15);
 
   const filterOptions = [
-    { key: 'all', label: 'All' },
-    { key: 'Positive', label: 'Positive' },
-    { key: 'Negative', label: 'Negative' },
-    { key: 'Neutral', label: 'Neutral' },
+    { key: 'all', label: t('all') },
+    { key: 'Positive', label: t('positive') },
+    { key: 'Negative', label: t('negative') },
+    { key: 'Neutral', label: t('neutral') },
   ];
   const langOptions = [
-    { key: 'all', label: 'All' },
+    { key: 'all', label: t('all') },
     { key: 'en', label: 'EN' },
     { key: 'ms', label: 'BM' },
   ];
@@ -402,17 +402,17 @@ const LiveFeed = () => {
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-baseline gap-3">
             <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">
-              Live Feed
+              {t('liveFeed')}
             </h1>
             <ConnectionBadge status={connectionStatus} />
           </div>
           <span className="text-[10px] text-ink-faint font-sans">
-            {lastUpdate ? `Updated ${timeAgo(lastUpdate)}` : 'Connecting...'} · Auto-refresh 60s
+            {lastUpdate ? `${t('updatedAgo')} ${timeAgo(lastUpdate)}` : `${t('connecting')}`} · {t('autoRefresh60s')}
           </span>
         </div>
         <div className="editorial-rule mb-3" />
         <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed max-w-xl font-sans">
-          Real-time sentiment analysis of breaking news across Malaysian media sources.
+          {t('liveFeedDesc')}
         </p>
       </div>
 
@@ -421,16 +421,16 @@ const LiveFeed = () => {
 
       {/* ── Stats Grid ───────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">
-        <StatCard label="Articles / Hour" value={stats?.articlesPerHour ?? '—'} sub="Last 60 minutes" />
-        <StatCard label="Today" value={stats?.totalToday ?? '—'} sub="Articles collected" />
-        <StatCard label="Active Sources" value={stats?.activeSources ?? '—'} sub="Unique publishers 24h" />
-        <StatCard label="Alerts" value={articles.filter(a => a.isAlert).length} sub="Active alerts" />
+        <StatCard label={t('articlesPerHour')} value={stats?.articlesPerHour ?? '—'} sub={t('last60Minutes')} />
+        <StatCard label={t('today')} value={stats?.totalToday ?? '—'} sub={t('articlesCollected')} />
+        <StatCard label={t('activeSources')} value={stats?.activeSources ?? '—'} sub={t('uniquePublishers24h')} />
+        <StatCard label={t('alerts')} value={articles.filter(a => a.isAlert).length} sub={t('activeAlerts')} />
       </div>
 
       {/* ── Sentiment Distribution + Hourly ──────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-        {stats?.sentimentDistribution && <SentimentBar dist={stats.sentimentDistribution} />}
-        {stats?.hourlyBreakdown?.length > 0 && <HourlyChart breakdown={stats.hourlyBreakdown} />}
+        {stats?.sentimentDistribution && <SentimentBar dist={stats.sentimentDistribution} t={t} />}
+        {stats?.hourlyBreakdown?.length > 0 && <HourlyChart breakdown={stats.hourlyBreakdown} t={t} />}
       </div>
 
       {/* ── Filters ──────────────────────────────────────── */}
@@ -483,7 +483,7 @@ const LiveFeed = () => {
             onClick={showNewArticles}
             className="w-full py-2.5 border-l-3 border-accent bg-accent/5 dark:bg-accent/10 text-accent text-xs font-semibold uppercase tracking-wider hover:bg-accent/10 transition-colors font-sans mb-4"
           >
-            {newCount} new article{newCount > 1 ? 's' : ''} — tap to view
+            {newCount} {t('newArticlesTap')}
           </motion.button>
         )}
       </AnimatePresence>
@@ -491,15 +491,15 @@ const LiveFeed = () => {
       {/* ── Articles list ────────────────────────────────── */}
       <div ref={containerRef} className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
         <div className="px-5 py-2.5 border-b border-paper-line dark:border-paper-dark-line flex items-center justify-between">
-          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">INCOMING ARTICLES</span>
-          <span className="text-[10px] text-ink-faint font-sans">{filteredArticles.length} articles</span>
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">{t('incomingArticles')}</span>
+          <span className="text-[10px] text-ink-faint font-sans">{filteredArticles.length} {t('articles')}</span>
         </div>
         <div className="max-h-[600px] overflow-y-auto">
           <AnimatePresence initial={false}>
             {filteredArticles.length === 0 ? (
               <div className="text-center py-20">
-                <p className="text-sm text-ink-faint font-sans">No articles found</p>
-                <p className="text-xs text-ink-faint mt-1 font-sans">Try adjusting your filters</p>
+                <p className="text-sm text-ink-faint font-sans">{t('noArticlesYet')}</p>
+                <p className="text-xs text-ink-faint mt-1 font-sans">{t('tryAdjustFilters')}</p>
               </div>
             ) : (
               filteredArticles.map((article) => (

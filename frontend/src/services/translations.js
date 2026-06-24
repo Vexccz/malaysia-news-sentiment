@@ -518,6 +518,36 @@ export const translations = {
     failedUpdateStatus: 'Failed to update status',
     userDeleted: 'User deleted',
     failedDeleteUser: 'Failed to delete user',
+    // Tab names
+    daily: 'Daily',
+    weekly: 'Weekly',
+    monthly: 'Monthly',
+    schedule: 'Schedule',
+    email: 'Email',
+    // Digest extras
+    noScheduledDigests: 'No scheduled digests yet',
+    createScheduleDesc: 'Create a schedule to receive automated digest summaries',
+    via: 'via',
+    // EntityGraph extras
+    listView: 'List View',
+    graphView: 'Graph View',
+    clickFirstNode: 'Click first node...',
+    selectedLabel: 'Selected:',
+    clickSecondNode: 'Click second node',
+    pathLabel: 'Path:',
+    nodesLabel: 'nodes',
+    noPathFound: 'no path found',
+    // Forecast extras
+    upward: 'Upward',
+    downward: 'Downward',
+    stable: 'Stable',
+    veryPositive: 'Very Positive',
+    veryNegative: 'Very Negative',
+    actual: 'Actual',
+    predicted: 'Predicted',
+    forecastTopicPlaceholder: 'e.g. economy, politics, education',
+    // Sentiment timeline tooltip
+    score: 'Score',
   },
   ms: {
     // Nav
@@ -773,5 +803,35 @@ export const translations = {
     peakReadingTime: 'Waktu Pembacaan Puncak',
     recentSearches: 'Carian Terkini',
     activityBreakdown: 'Pecahan Aktiviti',
+    // Tab names
+    daily: 'Harian',
+    weekly: 'Mingguan',
+    monthly: 'Bulanan',
+    schedule: 'Jadual',
+    email: 'E-mel',
+    // Digest extras
+    noScheduledDigests: 'Tiada jadual ringkasan lagi',
+    createScheduleDesc: 'Cipta jadual untuk menerima ringkasan automatik',
+    via: 'melalui',
+    // EntityGraph extras
+    listView: 'Paparan Senarai',
+    graphView: 'Paparan Graf',
+    clickFirstNode: 'Klik nod pertama...',
+    selectedLabel: 'Dipilih:',
+    clickSecondNode: 'Klik nod kedua',
+    pathLabel: 'Laluan:',
+    nodesLabel: 'nod',
+    noPathFound: 'tiada laluan ditemui',
+    // Forecast extras
+    upward: 'Meningkat',
+    downward: 'Menurun',
+    stable: 'Stabil',
+    veryPositive: 'Sangat Positif',
+    veryNegative: 'Sangat Negatif',
+    actual: 'Sebenar',
+    predicted: 'Diramal',
+    forecastTopicPlaceholder: 'cth: ekonomi, politik, pendidikan',
+    // Sentiment timeline tooltip
+    score: 'Skor',
   }
 };
