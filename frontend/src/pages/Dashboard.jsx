@@ -328,8 +328,8 @@ const AnalyticsInline = () => {
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await api.get('/analytics/advanced');
-        if (!cancelled) setAnalytics(data);
+        const res = await api.get("/analytics/advanced");
+        if (!cancelled) setAnalytics(res.data?.data || res.data);
       } catch (err) {
         console.error('Analytics fetch failed:', err);
       } finally {
