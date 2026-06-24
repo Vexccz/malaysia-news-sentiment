@@ -178,15 +178,22 @@ const AnalyticsInline = () => {
       {/* Source Bias Analysis */}
       {bias.length > 0 && (
         <div className={`${CARD} p-5`}>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-4">Source Bias Analysis</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-1">Source Bias Analysis</h3>
+          <p className="text-[10px] text-ink-faint mb-4">Sentiment distribution across news publishers</p>
           <div className="space-y-3">
-            {bias.map(src => {
+            {bias.slice(0, 10).map(src => {
               const srcTotal = (src.positive || 0) + (src.negative || 0) + (src.neutral || 0) || 1;
+              const posPct = ((src.positive || 0) / srcTotal * 100).toFixed(0);
+              const negPct = ((src.negative || 0) / srcTotal * 100).toFixed(0);
               return (
                 <div key={src.source} className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{src.source}</span>
-                    <span className="text-[10px] text-ink-faint">{srcTotal} articles</span>
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-ink dark:text-paper">{src.source}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] text-green-600 dark:text-green-400 font-medium">{posPct}%</span>
+                      <span className="text-[9px] text-red-600 dark:text-red-400 font-medium">{negPct}%</span>
+                      <span className="text-[10px] text-ink-faint tabular-nums">{srcTotal}</span>
+                    </div>
                   </div>
                   <div className="flex h-2 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800">
                     <div className="bg-green-500" style={{ width: `${((src.positive || 0) / srcTotal) * 100}%` }} />
@@ -197,33 +204,97 @@ const AnalyticsInline = () => {
               );
             })}
           </div>
+          {/* Legend */}
+          <div className="flex items-center gap-4 mt-4 pt-3 border-t border-paper-line dark:border-paper-dark-line">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-green-500" />
+              <span className="text-[9px] text-ink-faint uppercase tracking-wider">Positive</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-red-500" />
+              <span className="text-[9px] text-ink-faint uppercase tracking-wider">Negative</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-gray-400" />
+              <span className="text-[9px] text-ink-faint uppercase tracking-wider">Neutral</span>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Top Keywords */}
-      {keywords.length > 0 && (
-        <div className={`${CARD} p-5`}>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-4">Top Keywords</h3>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-paper-line dark:border-paper-dark-line">
-                <th className="text-left text-[10px] uppercase tracking-wider text-ink-faint font-semibold pb-2">Word</th>
-                <th className="text-right text-[10px] uppercase tracking-wider text-ink-faint font-semibold pb-2">Freq</th>
-                <th className="text-right text-[10px] uppercase tracking-wider text-ink-faint font-semibold pb-2">Sentiment</th>
-              </tr>
-            </thead>
-            <tbody>
-              {keywords.slice(0, 15).map(kw => (
-                <tr key={kw.word || kw.text} className="border-b border-paper-line/50 dark:border-paper-dark-line/50 last:border-0">
-                  <td className="py-2 font-medium text-ink dark:text-paper">{kw.word || kw.text}</td>
-                  <td className="py-2 text-right text-ink-muted">{kw.frequency || kw.count || 0}</td>
-                  <td className="py-2 text-right">
-                    <SentimentMarkInline sentiment={kw.sentiment} />
-                  </td>
-                </tr>
+      {keywords.length > 0 && (() => {
+        const timeData = analytics.wordTrends?.data || [];
+        const wordFreqs = keywords.map(w => ({
+          word: w,
+          total: timeData.reduce((sum, d) => sum + (d[w] || 0), 0)
+        })).filter(w => w.total > 0).sort((a, b) => b.total - a.total).slice(0, 12);
+        const maxFreq = wordFreqs[0]?.total || 1;
+        if (wordFreqs.length === 0) return null;
+        return (
+          <div className={`${CARD} p-5`}>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-4">Top Keywords</h3>
+            <div className="space-y-2">
+              {wordFreqs.map((kw, i) => (
+                <div key={kw.word} className="flex items-center gap-3">
+                  <span className="text-[11px] font-medium text-ink dark:text-paper w-24 truncate">{kw.word}</span>
+                  <div className="flex-1 h-4 bg-gray-100 dark:bg-gray-800 rounded-sm overflow-hidden">
+                    <div
+                      className="h-full bg-ink/70 dark:bg-paper/60 rounded-sm transition-all duration-500"
+                      style={{ width: `${(kw.total / maxFreq) * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] font-semibold text-ink-muted tabular-nums w-8 text-right">{kw.total}</span>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </div>
+        );
+      })()}
+      {/* Topic Clusters */}
+      {analytics.topicClusters?.length > 0 && (
+        <div className={`${CARD} p-5`}>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-1">Topic Clusters</h3>
+          <p className="text-[10px] text-ink-faint mb-4">Grouped themes across analyzed articles</p>
+          <div className="flex flex-wrap gap-2">
+            {analytics.topicClusters.slice(0, 20).map((tc, i) => {
+              const size = Math.min(28, Math.max(11, 11 + (tc.count || tc.size || 1) * 0.8));
+              return (
+                <span
+                  key={i}
+                  className="inline-flex items-center px-2.5 py-1 border border-paper-line dark:border-paper-dark-line text-ink dark:text-paper font-medium"
+                  style={{ fontSize: `${size * 0.38}px` }}
+                >
+                  {tc.label || tc.topic || tc.name}
+                  {(tc.count || tc.size) && (
+                    <span className="ml-1.5 text-[9px] text-ink-faint">{tc.count || tc.size}</span>
+                  )}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Source Reliability */}
+      {analytics.sourceReliability?.length > 0 && (
+        <div className={`${CARD} p-5`}>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-1">Source Reliability</h3>
+          <p className="text-[10px] text-ink-faint mb-4">Confidence scores by publisher</p>
+          <div className="space-y-2">
+            {analytics.sourceReliability.slice(0, 8).map(sr => (
+              <div key={sr.source || sr._id} className="flex items-center gap-3">
+                <span className="text-[11px] font-medium text-ink dark:text-paper w-28 truncate">{sr.source || sr._id}</span>
+                <div className="flex-1 h-3 bg-gray-100 dark:bg-gray-800 rounded-sm overflow-hidden">
+                  <div
+                    className={`h-full rounded-sm ${(sr.avgConfidence || sr.score || 0) > 0.7 ? 'bg-green-500' : (sr.avgConfidence || sr.score || 0) > 0.5 ? 'bg-amber-500' : 'bg-red-500'}`}
+                    style={{ width: `${((sr.avgConfidence || sr.score || 0) * 100)}%` }}
+                  />
+                </div>
+                <span className="text-[10px] font-semibold text-ink-muted tabular-nums w-10 text-right">{((sr.avgConfidence || sr.score || 0) * 100).toFixed(0)}%</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
