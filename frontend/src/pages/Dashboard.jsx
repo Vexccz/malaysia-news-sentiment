@@ -328,7 +328,7 @@ const AnalyticsInline = () => {
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await api.get('/analytics/dashboard');
+        const { data } = await api.get('/analytics/advanced');
         if (!cancelled) setAnalytics(data);
       } catch (err) {
         console.error('Analytics fetch failed:', err);
@@ -445,7 +445,7 @@ const CommunityInline = () => {
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await api.get('/collaboration/shared');
+        const { data } = await api.get('/collab/shared');
         if (!cancelled) setShared(data.articles || data || []);
       } catch (err) {
         console.error('Community fetch failed:', err);
