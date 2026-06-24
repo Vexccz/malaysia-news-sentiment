@@ -1,41 +1,16 @@
 import { Link } from 'react-router-dom';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import SentimentBadge from './SentimentBadge';
 import SentimentSparkline from './SentimentSparkline';
 import AlertBadge from './AlertBadge';
 import ShareButton from './ShareButton';
 import { useArticleAnalysis } from '../context/ArticleAnalysisContext';
 import { useSocket } from '../context/SocketContext';
+import { useLanguage } from '../context/LanguageContext';
+import { formatRelativeTime, formatAbsoluteDate } from '../utils/dateFormat';
+import { translateArticle } from '../services/translateService';
 import { hapticImpact } from '../utils/haptics';
 import toast from 'react-hot-toast';
-
-const formatDate = (dateStr) => {
-  if (!dateStr) return '';
-  return new Date(dateStr).toLocaleDateString('en-MY', {
-    day: 'numeric', month: 'short', year: 'numeric',
-  });
-};
-// Activity 1.3: Helper functions optimized with useMemo at call site
-const formatRelativeTime = (dateStr) => {
-  if (!dateStr) return '';
-  const now = new Date();
-  const date = new Date(dateStr);
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-  const diffWeeks = Math.floor(diffDays / 7);
-  
-  if (diffMins < 1) return 'just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  if (diffWeeks < 4) return `${diffWeeks}w ago`;
-  return formatDate(dateStr);
-};
-
-// Activity 1.2: Sentiment border now uses CSS classes instead of inline styles
-// This improves maintainability and allows theming via CSS variables
 
 const getFaviconUrl = (url) => {
   if (!url) return null;
@@ -47,12 +22,12 @@ const getFaviconUrl = (url) => {
   }
 };
 
-const deriveSourceLabel = (source, url) => {
+const deriveSourceLabel = (source, url, lang, t) => {
   if (source && source !== 'Unknown' && source !== 'Source' && source !== 'Media Source') {
     return source;
   }
 
-  if (!url) return 'News Source';
+  if (!url) return t('newsSource') || 'News Source';
 
   try {
     const host = new URL(url).hostname.replace(/^www\./, '');
@@ -62,15 +37,20 @@ const deriveSourceLabel = (source, url) => {
       .map(part => part.charAt(0).toUpperCase() + part.slice(1))
       .join(' ');
   } catch {
-    return 'News Source';
+    return t('newsSource') || 'News Source';
   }
 };
 
 const ArticleCard = ({ article, onPreview, onDelete, onBookmark, isBookmarked }) => {
   const { openArticlePanel } = useArticleAnalysis();
   const socket = useSocket();
+  const { lang, t } = useLanguage();
   const [localViewCount, setLocalViewCount] = useState(article.viewCount || article.views || 0);
   const [localBookmarkCount, setLocalBookmarkCount] = useState(article.bookmarksCount || 0);
+
+  // Translation state
+  const [translated, setTranslated] = useState(null);
+  const [isTranslating, setIsTranslating] = useState(false);
 
   useEffect(() => {
     if (!socket) return;
@@ -100,17 +80,17 @@ const ArticleCard = ({ article, onPreview, onDelete, onBookmark, isBookmarked })
 
   const { 
     id, _id, title, description, source, url, urlToImage, 
-    publishedAt, topic, sentiment, reason, confidence, isAlert 
+    publishedAt, topic, sentiment, reason, confidence, isAlert
   } = article;
 
   const articleId = _id || id;
-  const sourceLabel = deriveSourceLabel(source, url);
+  const sourceLabel = deriveSourceLabel(source, url, lang, t);
 
   const handlePreview = (e) => {
-    // If user clicks the direct link or delete/bookmark btn, don't open preview
     if (e.target.closest('.art-external-link')) return;
     if (e.target.closest('.art-delete-btn')) return;
     if (e.target.closest('.art-bookmark-btn')) return;
+    if (e.target.closest('.art-translate-btn')) return;
     
     e.preventDefault();
     if (onPreview) {
@@ -127,11 +107,10 @@ const ArticleCard = ({ article, onPreview, onDelete, onBookmark, isBookmarked })
 
   const handleBookmark = (e) => {
     e.stopPropagation();
-    hapticImpact('Light'); // #10 haptic on bookmark
+    hapticImpact('Light');
     if (onBookmark && articleId) onBookmark(articleId);
   };
 
-  // #9 Share article via Web Share API
   const handleShare = async (e) => {
     e.stopPropagation();
     const shareData = { title: title, text: description?.slice(0, 100) || title, url: url };
@@ -140,14 +119,44 @@ const ArticleCard = ({ article, onPreview, onDelete, onBookmark, isBookmarked })
     } else {
       try {
         await navigator.clipboard.writeText(url);
-        toast.success('Link copied!');
+        toast.success(t('linkCopied') || 'Link copied!');
       } catch {}
     }
   };
 
-  // Activity 1.3: Memoize favicon and relative time to prevent unnecessary recalculations
+  // Translate button handler
+  const handleTranslate = useCallback(async (e) => {
+    e.stopPropagation();
+
+    // If already translated, toggle back to original
+    if (translated) {
+      setTranslated(null);
+      return;
+    }
+
+    setIsTranslating(true);
+    try {
+      const targetLang = lang === 'ms' ? 'en' : 'ms'; // Translate to the OTHER language
+      const result = await translateArticle(article, targetLang);
+      setTranslated({ ...result, lang: targetLang });
+    } catch {
+      toast.error(t('translateError') || 'Translation failed');
+    } finally {
+      setIsTranslating(false);
+    }
+  }, [translated, lang, article, t]);
+
+  // Clear translation when language changes
+  useEffect(() => {
+    setTranslated(null);
+  }, [lang]);
+
   const faviconUrl = useMemo(() => getFaviconUrl(url), [url]);
-  const relativeTime = useMemo(() => formatRelativeTime(publishedAt), [publishedAt]);
+  const relativeTime = useMemo(() => formatRelativeTime(publishedAt, lang, true), [publishedAt, lang]);
+
+  // Use translated content if available
+  const displayTitle = translated?.title || title;
+  const displayDescription = translated?.description || description;
 
   return (
     <div
@@ -158,7 +167,7 @@ const ArticleCard = ({ article, onPreview, onDelete, onBookmark, isBookmarked })
       style={{ cursor: 'pointer' }}
       data-sentiment-border={sentiment}
     >
-      {/* Thumbnail - #6 lazy loading with blur placeholder */}
+      {/* Thumbnail */}
       <div className="art-thumb-container">
         {urlToImage ? (
           <img 
@@ -175,7 +184,6 @@ const ArticleCard = ({ article, onPreview, onDelete, onBookmark, isBookmarked })
           />
         ) : null}
         
-        {/* Placeholder (Hidden by default if img exists) */}
         <div className="art-thumb-ph" style={{ display: urlToImage ? 'none' : 'flex' }}>
           <div className="art-ph-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -195,13 +203,18 @@ const ArticleCard = ({ article, onPreview, onDelete, onBookmark, isBookmarked })
           )}
           <span className="art-source">{sourceLabel}</span>
           <span className="art-sep">·</span>
-          <span className="art-date" title={formatDate(publishedAt)}>{relativeTime}</span>
+          <span className="art-date" title={formatAbsoluteDate(publishedAt, lang)}>{relativeTime}</span>
           {topic && <span className="art-topic">#{topic}</span>}
           {isAlert && <AlertBadge />}
+          {translated && (
+            <span style={{ fontSize: 9, color: 'var(--accent)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              {t('translated') || 'Translated'}
+            </span>
+          )}
         </div>
 
-        <h3 className="art-title">{title}</h3>
-        {description && <p className="art-desc">{description.slice(0, 160)}{description.length > 160 ? '...' : ''}</p>}
+        <h3 className="art-title">{displayTitle}</h3>
+        {displayDescription && <p className="art-desc">{displayDescription.slice(0, 160)}{displayDescription.length > 160 ? '...' : ''}</p>}
 
         <div className="art-footer">
           <div className="art-footer-left">
@@ -217,7 +230,7 @@ const ArticleCard = ({ article, onPreview, onDelete, onBookmark, isBookmarked })
                     style={{ width: `${Math.round(confidence * 100)}%`, background: `var(--${sentiment.toLowerCase()})` }}
                   />
                 </div>
-                <span className="art-conf-text">{Math.round(confidence * 100)}% confidence</span>
+                <span className="art-conf-text">{Math.round(confidence * 100)}% {t('confidence') || 'confidence'}</span>
               </div>
             )}
           </div>
@@ -247,16 +260,41 @@ const ArticleCard = ({ article, onPreview, onDelete, onBookmark, isBookmarked })
                 {localBookmarkCount}
              </div>
 
-             {/* #9 Share button */}
              <span onClick={(e) => e.stopPropagation()}>
                <ShareButton articleId={articleId} title={title} sentiment={sentiment} />
              </span>
+
+             {/* Translate button */}
+             <button
+               className="art-translate-btn"
+               onClick={handleTranslate}
+               disabled={isTranslating}
+               title={translated ? (t('showOriginal') || 'Show Original') : (t('translate') || 'Translate')}
+               style={{
+                 background: 'none', border: 'none', padding: 4, cursor: 'pointer',
+                 color: translated ? 'var(--accent)' : 'var(--text-400)',
+                 transition: 'all 0.2s ease',
+                 display: 'flex', alignItems: 'center', justifyContent: 'center',
+                 opacity: isTranslating ? 0.5 : 1,
+               }}
+             >
+               {isTranslating ? (
+                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin">
+                   <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                 </svg>
+               ) : (
+                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                   <path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/>
+                   <path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>
+                 </svg>
+               )}
+             </button>
 
              {onBookmark && (
                <button 
                 className={`art-bookmark-btn ${isBookmarked ? 'active' : ''}`}
                 onClick={handleBookmark}
-                title={isBookmarked ? "Remove bookmark" : "Add to bookmarks"}
+                title={isBookmarked ? t('removeBookmark') : t('addToBookmarks')}
                 style={{
                   background: 'none', border: 'none', padding: 4, cursor: 'pointer',
                   color: isBookmarked ? '#f59e0b' : 'var(--text-400)',
@@ -274,7 +312,7 @@ const ArticleCard = ({ article, onPreview, onDelete, onBookmark, isBookmarked })
                <button 
                  className="art-delete-btn"
                  onClick={handleDelete}
-                 title="Delete permanently"
+                 title={t('deletePermanently')}
                >
                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                    <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
@@ -285,14 +323,14 @@ const ArticleCard = ({ article, onPreview, onDelete, onBookmark, isBookmarked })
               <Link
               to={'/articles/' + articleId}
               className="art-external-link"
-              title="View full analysis"
+              title={t('viewFullAnalysis')}
               onClick={(e) => e.stopPropagation()}
               style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textDecoration: 'none', padding: '2px 6px' }}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
               </svg>
-              Details
+              {t('details') || 'Details'}
             </Link>
 
             <a 
@@ -300,7 +338,7 @@ const ArticleCard = ({ article, onPreview, onDelete, onBookmark, isBookmarked })
               target="_blank" 
               rel="noopener noreferrer" 
               className="art-external-link"
-              title="Open original source"
+              title={t('openOriginalSource')}
               onClick={(e) => e.stopPropagation()}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

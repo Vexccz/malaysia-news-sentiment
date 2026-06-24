@@ -10,9 +10,11 @@ export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
     const newSocket = io(SOCKET_URL, {
       withCredentials: true,
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
+      auth: token ? { token } : {},
     });
 
     setSocket(newSocket);

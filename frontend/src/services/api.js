@@ -375,6 +375,14 @@ export const getAdminStats = async () => {
 };
 
 /**
+ * Get real-time monitor stats
+ */
+export const getMonitorStats = async () => {
+  const response = await api.get('/monitor/stats');
+  return response.data;
+};
+
+/**
  * Get strategic AI insights (Risks/Opportunities) (#Meltwater Style)
  */
 export const getAdminInsights = async () => {

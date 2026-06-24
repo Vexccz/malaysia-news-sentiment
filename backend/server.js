@@ -174,6 +174,9 @@ app.use('/api/v1', require('./routes/shareRoutes'));
 app.use('/api/v1/user', require('./routes/userRoutes'));
 app.use('/api/v1/admin', require('./routes/adminRoutes'));
 app.use('/api/v1/bookmarks', require('./routes/bookmarkRoutes'));
+app.use('/api/v1/monitor', require('./routes/monitorRoutes'));
+
+app.use('/api/v1/analytics', require('./routes/analyticsRoutes'));
 
 // ── Backward compatibility — old routes redirect to v1 ───────
 app.use('/api/auth', authLimiter, require('./routes/authRoutes'));
@@ -192,6 +195,8 @@ app.use('/api', require('./routes/shareRoutes'));
 app.use('/api/user', require('./routes/userRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/bookmarks', require('./routes/bookmarkRoutes'));
+app.use('/api/monitor', require('./routes/monitorRoutes'));
+app.use('/api/analytics', require('./routes/analyticsRoutes'));
 // Metrics backward compat
 app.get('/api/admin/metrics', protect, authorize('admin'), (req, res) => res.redirect('/api/v1/admin/metrics'));
 // ── Global error handler ──────────────────────────────────────
@@ -259,6 +264,10 @@ io.on('connection', (socket) => {
 const { scheduleNewsletter } = require('./services/newsletterService');
 
 server.listen(PORT, () => {
+  // Start monitor broadcast (Socket.IO push every 5 min)
+  const { startMonitorBroadcast } = require('./controllers/monitorController');
+  startMonitorBroadcast(io);
+
   console.log(`✅ Server running on http://localhost:${PORT}`);
   console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log('   Real-time: Socket.io Enabled');
