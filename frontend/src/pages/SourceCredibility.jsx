@@ -34,8 +34,7 @@ const SourceCredibility = () => {
   const [sortOrder, setSortOrder] = useState('desc');
   const [biasFilter, setBiasFilter] = useState('all');
   const [selectedSource, setSelectedSource] = useState(null);
-  const [malaysiaOnly, setMalaysiaOnly] = useState(true);
-
+  
   useEffect(() => {
     fetchData();
   }, [sortBy, sortOrder, biasFilter]);
@@ -75,11 +74,12 @@ const SourceCredibility = () => {
     'NST', 'New Straits Times', 'Bernama', 'Harian Metro', 'Utusan',
     'Malay Mail', 'The Edge', 'Sinar Harian', 'Berita Harian', 'my',
     'Unknown',
+    'CNA',
   ]);
   const rawBias = analytics?.sourceBias || [];
-  const bias = malaysiaOnly ? rawBias.filter(s => MALAYSIA_SOURCES.has(s.source)) : rawBias;
+  const bias = rawBias.filter(s => MALAYSIA_SOURCES.has(s.source));
   const rawReliability = analytics?.sourceReliability || [];
-  const reliability = malaysiaOnly ? rawReliability.filter(s => MALAYSIA_SOURCES.has(s.source)) : rawReliability;
+  const reliability = rawReliability.filter(s => MALAYSIA_SOURCES.has(s.source));
 
   if (loading) {
     return (
@@ -131,20 +131,6 @@ const SourceCredibility = () => {
           </div>
         );
       })()}
-
-      {/* Malaysia Only Toggle */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => setMalaysiaOnly(!malaysiaOnly)}
-          className={`px-3 py-1.5 text-xs font-medium transition-all border ${
-            malaysiaOnly
-              ? 'bg-ink dark:bg-paper text-paper dark:text-ink border-ink dark:border-paper'
-              : 'bg-paper-card dark:bg-[#1a1a1a] border-paper-line dark:border-paper-dark-line text-ink-muted'
-          }`}
-        >
-          {malaysiaOnly ? 'Malaysia Only' : 'All Sources'}
-        </button>
-      </div>
 
       {/* Source Bias Analysis */}
       {bias.length > 0 && (
