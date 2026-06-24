@@ -19,7 +19,7 @@ import AnalyzingOverlay from '../components/AnalyzingOverlay';
 import usePullToRefresh from '../hooks/usePullToRefresh';
 import useSwipeTabs from '../hooks/useSwipeTabs';
 import { hapticImpact } from '../utils/haptics';
-import { Search, Clock, ArrowLeft, FileDown, Printer, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Brain, Download, Settings2, Globe, GripVertical } from 'lucide-react';
+import { Search, Clock, ArrowLeft, Sparkles, FileDown, Printer, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Brain, Download, Settings2, Globe, GripVertical, Radio, Activity, Users } from 'lucide-react';
 import DashboardCustomizer from '../components/DashboardCustomizer';
 import EmptyState from '../components/EmptyState';
 import DashboardSummary from '../components/DashboardSummary';
@@ -98,6 +98,406 @@ import SourceCredibility from '../components/SourceCredibility';
 import ExportPPT from '../components/ExportPPT';
 import { InlineErrorBoundary } from '../components/ErrorBoundary';
 import { Skeleton } from 'boneyard-js/react';
+
+/* ─── Inline: LiveFeed (from LiveFeed.jsx) ────────────────────────── */
+const _timeAgo = (date) => {
+  const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  return `${Math.floor(seconds / 86400)}d ago`;
+};
+
+const SentimentMarkInline = ({ sentiment }) => {
+  const map = {
+    Positive: { symbol: '+', color: 'text-green-700 dark:text-green-400' },
+    Negative: { symbol: '−', color: 'text-red-700 dark:text-red-400' },
+    Neutral:  { symbol: '~', color: 'text-gray-500 dark:text-gray-400' },
+  };
+  const m = map[sentiment] || map.Neutral;
+  return <span className={`inline-block text-xs font-bold ${m.color} mr-1`}>{m.symbol}</span>;
+};
+
+const LiveFeedInline = () => {
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
+  const [langFilter, setLangFilter] = useState('all');
+  const [newCount, setNewCount] = useState(0);
+  const [newArticleIds, setNewArticleIds] = useState(new Set());
+  const [sseConnected, setSseConnected] = useState(false);
+  const containerRef = useRef(null);
+  const eventSourceRef = useRef(null);
+
+  const fetchArticles = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = {};
+      if (filter !== 'all') params.sentiment = filter;
+      if (langFilter !== 'all') params.language = langFilter;
+      const { data } = await api.get('/feed/live', { params });
+      setArticles(data.articles || []);
+      setNewCount(0);
+      setNewArticleIds(new Set());
+    } catch (err) {
+      console.error('Failed to fetch feed:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [filter, langFilter]);
+
+  useEffect(() => { fetchArticles(); }, [fetchArticles]);
+
+  useEffect(() => {
+    const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5001/api/v1';
+    const url = `${API_BASE}/feed/stream`;
+    let reconnectTimer = null;
+    let cancelled = false;
+    const connect = () => {
+      if (cancelled) return;
+      const es = new EventSource(url);
+      eventSourceRef.current = es;
+      es.onopen = () => setSseConnected(true);
+      es.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'new_articles' && data.articles?.length > 0) {
+            setArticles(prev => {
+              const existingUrls = new Set(prev.map(a => a.url));
+              const genuinelyNew = data.articles.filter(a => !existingUrls.has(a.url));
+              if (genuinelyNew.length === 0) return prev;
+              const newIds = new Set(genuinelyNew.map(a => a._id || a.url));
+              setNewArticleIds(prev => new Set([...prev, ...newIds]));
+              setNewCount(prev => prev + genuinelyNew.length);
+              return [...genuinelyNew, ...prev].slice(0, 100);
+            });
+          }
+        } catch (e) { /* ignore */ }
+      };
+      es.onerror = () => {
+        setSseConnected(false);
+        es.close();
+        if (!cancelled) reconnectTimer = setTimeout(connect, 5000);
+      };
+    };
+    connect();
+    return () => {
+      cancelled = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (eventSourceRef.current) eventSourceRef.current.close();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (newArticleIds.size === 0) return;
+    const timer = setTimeout(() => setNewArticleIds(new Set()), 5000);
+    return () => clearTimeout(timer);
+  }, [newArticleIds]);
+
+  const showNewArticles = () => {
+    setNewCount(0);
+    if (containerRef.current) containerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const filteredArticles = articles.filter(a => {
+    if (filter !== 'all' && a.sentiment !== filter) return false;
+    if (langFilter !== 'all') {
+      const artLang = a.language === 'ms' ? 'ms' : 'en';
+      if (artLang !== langFilter) return false;
+    }
+    return true;
+  });
+
+  const filterOptions = [
+    { key: 'all', label: 'All' },
+    { key: 'Positive', label: 'Positive' },
+    { key: 'Negative', label: 'Negative' },
+    { key: 'Neutral', label: 'Neutral' },
+  ];
+  const langOptions = [
+    { key: 'all', label: 'All' },
+    { key: 'en', label: 'EN' },
+    { key: 'ms', label: 'BM' },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* Status + filters */}
+      <div className={`flex items-center justify-between px-4 py-2.5 gap-4 flex-wrap ${CARD}`}>
+        <span className={`flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest ${
+          sseConnected ? 'text-green-700 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'
+        }`}>
+          <span className={`inline-block w-1.5 h-1.5 rounded-full ${sseConnected ? 'bg-green-600' : 'bg-yellow-500'}`} />
+          {sseConnected ? 'Live' : 'Reconnecting'}
+        </span>
+        <div className="flex items-center gap-2 flex-wrap">
+          {filterOptions.map(s => (
+            <button key={s.key} onClick={() => setFilter(s.key)}
+              className={`text-[11px] font-medium uppercase tracking-wider transition-colors px-1 ${
+                filter === s.key ? 'text-ink dark:text-paper font-bold' : 'text-ink-faint hover:text-ink-muted'
+              }`}>{s.label}</button>
+          ))}
+          <span className="text-ink-faint">·</span>
+          {langOptions.map(l => (
+            <button key={l.key} onClick={() => setLangFilter(l.key)}
+              className={`text-[11px] font-medium uppercase tracking-wider transition-colors px-1 ${
+                langFilter === l.key ? 'text-ink dark:text-paper font-bold' : 'text-ink-faint hover:text-ink-muted'
+              }`}>{l.label}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* New articles banner */}
+      <AnimatePresence>
+        {newCount > 0 && (
+          <motion.button
+            initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            onClick={showNewArticles}
+            className="w-full py-2.5 border-l-3 border-accent bg-accent/5 dark:bg-accent/10 text-accent text-xs font-semibold uppercase tracking-wider hover:bg-accent/10 transition-colors"
+          >
+            {newCount} new article{newCount > 1 ? 's' : ''} — tap to view
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* Articles list */}
+      <div ref={containerRef} className={`${CARD}`}>
+        {loading ? (
+          <div className="divide-y divide-paper-line dark:divide-paper-dark-line">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="px-5 py-4 animate-pulse">
+                <div className="h-3.5 bg-gray-200 dark:bg-gray-700 w-3/4 mb-2.5" />
+                <div className="h-3 bg-gray-100 dark:bg-gray-800 w-full mb-2" />
+                <div className="flex gap-2">
+                  <div className="h-2.5 w-12 bg-gray-200 dark:bg-gray-700" />
+                  <div className="h-2.5 w-8 bg-gray-200 dark:bg-gray-700" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredArticles.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-sm text-ink-faint">No articles found</p>
+            <p className="text-xs text-ink-faint mt-1">Try adjusting your filters</p>
+          </div>
+        ) : (
+          filteredArticles.map(article => (
+            <a key={article._id || article.url} href={article.url} target="_blank" rel="noopener noreferrer"
+              className={`block no-underline border-b border-paper-line dark:border-paper-dark-line last:border-b-0 px-5 py-4 transition-colors hover:bg-paper/50 dark:hover:bg-paper-dark/50 ${
+                newArticleIds.has(article._id || article.url) ? 'bg-accent/5 dark:bg-accent/10' : ''
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 pt-0.5"><SentimentMarkInline sentiment={article.sentiment} /></div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-semibold text-ink dark:text-paper leading-snug line-clamp-2 mb-1">{article.title}</h3>
+                  {article.description && (
+                    <p className="text-xs text-ink-muted dark:text-ink-faint line-clamp-2 mb-2 leading-relaxed">{article.description}</p>
+                  )}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted dark:text-ink-faint">{article.source}</span>
+                    <span className="text-ink-faint">·</span>
+                    <span className="text-[10px] text-ink-faint">{_timeAgo(article.publishedAt)}</span>
+                    {article.language && (
+                      <>
+                        <span className="text-ink-faint">·</span>
+                        <span className="text-[10px] font-medium text-ink-faint uppercase">{article.language === 'ms' ? 'BM' : 'EN'}</span>
+                      </>
+                    )}
+                    {article.isAlert && (
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-red-700 dark:text-red-400 ml-auto">Alert</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </a>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* ─── Inline: Analytics ────────────────────────────────────────────── */
+const AnalyticsInline = () => {
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await api.get('/analytics/dashboard');
+        if (!cancelled) setAnalytics(data);
+      } catch (err) {
+        console.error('Analytics fetch failed:', err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className={`${CARD} p-5 animate-pulse space-y-4`}>
+        <div className="h-4 w-40 bg-gray-200 dark:bg-gray-700 rounded" />
+        <div className="h-20 bg-gray-100 dark:bg-gray-800 rounded" />
+        <div className="h-20 bg-gray-100 dark:bg-gray-800 rounded" />
+      </div>
+    );
+  }
+
+  if (!analytics) {
+    return (
+      <div className={`${CARD} p-8 text-center`}>
+        <Activity size={24} className="mx-auto mb-2 text-ink-faint" />
+        <p className="text-sm text-ink-faint">Analytics data will appear once articles are analyzed.</p>
+      </div>
+    );
+  }
+
+  const { sentimentOverview, sourceBias, topKeywords } = analytics;
+  const overview = sentimentOverview || {};
+  const bias = sourceBias || [];
+  const keywords = topKeywords || [];
+
+  const total = (overview.positive || 0) + (overview.negative || 0) + (overview.neutral || 0);
+
+  return (
+    <div className="space-y-5">
+      {/* Sentiment Overview */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: 'Positive', count: overview.positive || 0, color: 'text-green-700 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-500/10' },
+          { label: 'Negative', count: overview.negative || 0, color: 'text-red-700 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-500/10' },
+          { label: 'Neutral',  count: overview.neutral || 0,  color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-50 dark:bg-gray-500/10' },
+        ].map(item => (
+          <div key={item.label} className={`${CARD} p-4 text-center`}>
+            <div className={`text-2xl font-bold font-display ${item.color}`}>{item.count}</div>
+            <div className="text-[10px] uppercase tracking-wider text-ink-muted mt-1 font-semibold">{item.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Source Bias Analysis */}
+      {bias.length > 0 && (
+        <div className={`${CARD} p-5`}>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-4">Source Bias Analysis</h3>
+          <div className="space-y-3">
+            {bias.map(src => {
+              const srcTotal = (src.positive || 0) + (src.negative || 0) + (src.neutral || 0) || 1;
+              return (
+                <div key={src.source} className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{src.source}</span>
+                    <span className="text-[10px] text-ink-faint">{srcTotal} articles</span>
+                  </div>
+                  <div className="flex h-2 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800">
+                    <div className="bg-green-500" style={{ width: `${((src.positive || 0) / srcTotal) * 100}%` }} />
+                    <div className="bg-red-500" style={{ width: `${((src.negative || 0) / srcTotal) * 100}%` }} />
+                    <div className="bg-gray-400" style={{ width: `${((src.neutral || 0) / srcTotal) * 100}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Top Keywords */}
+      {keywords.length > 0 && (
+        <div className={`${CARD} p-5`}>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-4">Top Keywords</h3>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-paper-line dark:border-paper-dark-line">
+                <th className="text-left text-[10px] uppercase tracking-wider text-ink-faint font-semibold pb-2">Word</th>
+                <th className="text-right text-[10px] uppercase tracking-wider text-ink-faint font-semibold pb-2">Freq</th>
+                <th className="text-right text-[10px] uppercase tracking-wider text-ink-faint font-semibold pb-2">Sentiment</th>
+              </tr>
+            </thead>
+            <tbody>
+              {keywords.slice(0, 15).map(kw => (
+                <tr key={kw.word || kw.text} className="border-b border-paper-line/50 dark:border-paper-dark-line/50 last:border-0">
+                  <td className="py-2 font-medium text-ink dark:text-paper">{kw.word || kw.text}</td>
+                  <td className="py-2 text-right text-ink-muted">{kw.frequency || kw.count || 0}</td>
+                  <td className="py-2 text-right">
+                    <SentimentMarkInline sentiment={kw.sentiment} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ─── Inline: Community ────────────────────────────────────────────── */
+const CommunityInline = () => {
+  const [shared, setShared] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await api.get('/collaboration/shared');
+        if (!cancelled) setShared(data.articles || data || []);
+      } catch (err) {
+        console.error('Community fetch failed:', err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className={`${CARD} p-5 animate-pulse space-y-3`}>
+        <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+        <div className="h-14 bg-gray-100 dark:bg-gray-800 rounded" />
+        <div className="h-14 bg-gray-100 dark:bg-gray-800 rounded" />
+      </div>
+    );
+  }
+
+  if (!shared.length) {
+    return (
+      <div className={`${CARD} p-8 text-center`}>
+        <Users size={24} className="mx-auto mb-2 text-ink-faint" />
+        <p className="text-sm text-ink-faint">No shared articles yet.</p>
+        <p className="text-xs text-ink-faint mt-1">Share articles with your team to see them here.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {shared.map(article => (
+        <div key={article._id || article.url} className={`${CARD} p-4 flex items-start gap-3`}>
+          <div className="flex-shrink-0 pt-0.5"><SentimentMarkInline sentiment={article.sentiment} /></div>
+          <div className="flex-1 min-w-0">
+            <h4 className="text-sm font-semibold text-ink dark:text-paper leading-snug line-clamp-2 mb-1">{article.title}</h4>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted dark:text-ink-faint">{article.source}</span>
+              {article.comments !== undefined && (
+                <>
+                  <span className="text-ink-faint">·</span>
+                  <span className="text-[10px] text-ink-faint">{article.comments} comment{article.comments !== 1 ? 's' : ''}</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
 import { 
   fetchAndAnalyzeNews, getDashboardInit, getTopSources,
   generateDigest, generateForecast, getRegionalData, getHistory
@@ -240,7 +640,7 @@ const Dashboard = () => {
   const { pullDistance, isRefreshing, onTouchStart: pullTouchStart, onTouchMove: pullTouchMove, onTouchEnd: pullTouchEnd } = usePullToRefresh(handlePullRefresh);
 
   // Swipe between tabs
-  const MOBILE_TABS = ['overview', 'charts', 'ai'];
+  const MOBILE_TABS = ['overview', 'charts', 'live', 'analytics', 'community', 'ai'];
   const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipeTabs(MOBILE_TABS, mobileTab, setMobileTab);
 
   // FAB label tooltip on first visit
@@ -891,6 +1291,9 @@ const Dashboard = () => {
                   {[
                     { key: 'overview', label: 'Overview', icon: <BarChart3 size={12} /> },
                     { key: 'charts', label: 'Charts', icon: <TrendingUp size={12} /> },
+                    { key: 'live', label: 'Live', icon: <Radio size={12} /> },
+                    { key: 'analytics', label: 'Analytics', icon: <Activity size={12} /> },
+                    { key: 'community', label: 'Community', icon: <Users size={12} /> },
                     { key: 'ai', label: 'AI Insights', icon: <Brain size={12} /> },
                   ].map(tab => (
                     <button
@@ -1130,6 +1533,63 @@ const Dashboard = () => {
                         </motion.div>
                       </Skeleton>
                     )}
+                  </div>
+                  </motion.div>
+                )}
+
+                {mobileTab === 'live' && (
+                  <motion.div
+                    key="live"
+                    custom={slideDirection}
+                    variants={slideVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                  >
+                  <div className="space-y-5">
+                    <SectionHeader title="Live Feed" />
+                    <InlineErrorBoundary name="Live Feed">
+                      <LiveFeedInline />
+                    </InlineErrorBoundary>
+                  </div>
+                  </motion.div>
+                )}
+
+                {mobileTab === 'analytics' && (
+                  <motion.div
+                    key="analytics"
+                    custom={slideDirection}
+                    variants={slideVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                  >
+                  <div className="space-y-5">
+                    <SectionHeader title="Advanced Analytics" />
+                    <InlineErrorBoundary name="Analytics">
+                      <AnalyticsInline />
+                    </InlineErrorBoundary>
+                  </div>
+                  </motion.div>
+                )}
+
+                {mobileTab === 'community' && (
+                  <motion.div
+                    key="community"
+                    custom={slideDirection}
+                    variants={slideVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                  >
+                  <div className="space-y-5">
+                    <SectionHeader title="Community" />
+                    <InlineErrorBoundary name="Community">
+                      <CommunityInline />
+                    </InlineErrorBoundary>
                   </div>
                   </motion.div>
                 )}
@@ -1438,6 +1898,30 @@ const Dashboard = () => {
                   )}
                 </div>
                 )}
+
+                {/* Live Feed Section */}
+                <div className="mt-10">
+                  <SectionHeader title="LIVE FEED" />
+                  <InlineErrorBoundary name="Live Feed">
+                    <LiveFeedInline />
+                  </InlineErrorBoundary>
+                </div>
+
+                {/* Advanced Analytics Section */}
+                <div className="mt-10">
+                  <SectionHeader title="ADVANCED ANALYTICS" />
+                  <InlineErrorBoundary name="Analytics">
+                    <AnalyticsInline />
+                  </InlineErrorBoundary>
+                </div>
+
+                {/* Community Section */}
+                <div className="mt-10">
+                  <SectionHeader title="COMMUNITY" />
+                  <InlineErrorBoundary name="Community">
+                    <CommunityInline />
+                  </InlineErrorBoundary>
+                </div>
               </>
             )}
           </>
