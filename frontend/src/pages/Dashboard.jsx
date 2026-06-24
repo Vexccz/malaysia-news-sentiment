@@ -175,53 +175,6 @@ const AnalyticsInline = () => {
         ))}
       </div>
 
-      {/* Source Bias Analysis */}
-      {bias.length > 0 && (
-        <div className={`${CARD} p-5`}>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-1">Source Bias Analysis</h3>
-          <p className="text-[10px] text-ink-faint mb-4">Sentiment distribution across news publishers</p>
-          <div className="space-y-3">
-            {bias.slice(0, 10).map(src => {
-              const srcTotal = (src.positive || 0) + (src.negative || 0) + (src.neutral || 0) || 1;
-              const posPct = ((src.positive || 0) / srcTotal * 100).toFixed(0);
-              const negPct = ((src.negative || 0) / srcTotal * 100).toFixed(0);
-              return (
-                <div key={src.source} className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-ink dark:text-paper">{src.source}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[9px] text-green-600 dark:text-green-400 font-medium">{posPct}%</span>
-                      <span className="text-[9px] text-red-600 dark:text-red-400 font-medium">{negPct}%</span>
-                      <span className="text-[10px] text-ink-faint tabular-nums">{srcTotal}</span>
-                    </div>
-                  </div>
-                  <div className="flex h-2 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800">
-                    <div className="bg-green-500" style={{ width: `${((src.positive || 0) / srcTotal) * 100}%` }} />
-                    <div className="bg-red-500" style={{ width: `${((src.negative || 0) / srcTotal) * 100}%` }} />
-                    <div className="bg-gray-400" style={{ width: `${((src.neutral || 0) / srcTotal) * 100}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          {/* Legend */}
-          <div className="flex items-center gap-4 mt-4 pt-3 border-t border-paper-line dark:border-paper-dark-line">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-green-500" />
-              <span className="text-[9px] text-ink-faint uppercase tracking-wider">Positive</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-red-500" />
-              <span className="text-[9px] text-ink-faint uppercase tracking-wider">Negative</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-gray-400" />
-              <span className="text-[9px] text-ink-faint uppercase tracking-wider">Neutral</span>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Top Keywords */}
       {keywords.length > 0 && (() => {
         const timeData = analytics.wordTrends?.data || [];
@@ -276,27 +229,7 @@ const AnalyticsInline = () => {
         </div>
       )}
 
-      {/* Source Reliability */}
-      {analytics.sourceReliability?.length > 0 && (
-        <div className={`${CARD} p-5`}>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-1">Source Reliability</h3>
-          <p className="text-[10px] text-ink-faint mb-4">Confidence scores by publisher</p>
-          <div className="space-y-2">
-            {analytics.sourceReliability.slice(0, 8).map(sr => (
-              <div key={sr.source || sr._id} className="flex items-center gap-3">
-                <span className="text-[11px] font-medium text-ink dark:text-paper w-28 truncate">{sr.source || sr._id}</span>
-                <div className="flex-1 h-3 bg-gray-100 dark:bg-gray-800 rounded-sm overflow-hidden">
-                  <div
-                    className={`h-full rounded-sm ${(sr.avgConfidence || sr.score || 0) > 0.7 ? 'bg-green-500' : (sr.avgConfidence || sr.score || 0) > 0.5 ? 'bg-amber-500' : 'bg-red-500'}`}
-                    style={{ width: `${((sr.avgConfidence || sr.score || 0) * 100)}%` }}
-                  />
-                </div>
-                <span className="text-[10px] font-semibold text-ink-muted tabular-nums w-10 text-right">{((sr.avgConfidence || sr.score || 0) * 100).toFixed(0)}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+
     </div>
   );
 };

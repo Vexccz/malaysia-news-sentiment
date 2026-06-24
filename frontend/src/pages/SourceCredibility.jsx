@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import api from '../services/api';
-import { TableSkeleton } from '../components/Skeletons';
 
 const biasColors = {
   left: 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400',
@@ -10,6 +9,8 @@ const biasColors = {
   right: 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400',
   unknown: 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400',
 };
+
+const CARD = 'bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700/50 rounded-sm';
 
 const getScoreColor = (score) => {
   if (score >= 75) return 'text-green-600 dark:text-green-400';
@@ -27,31 +28,30 @@ const getBarColor = (score) => {
 
 const SourceCredibility = () => {
   const [sources, setSources] = useState([]);
+  const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState('credibilityScore');
   const [sortOrder, setSortOrder] = useState('desc');
   const [biasFilter, setBiasFilter] = useState('all');
   const [selectedSource, setSelectedSource] = useState(null);
-  const detailRef = useRef(null);
 
   useEffect(() => {
-    fetchSources();
+    fetchData();
   }, [sortBy, sortOrder, biasFilter]);
 
-  // Auto-scroll to detail panel when source selected
-  useEffect(() => {
-    if (selectedSource && detailRef.current) {
-      detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  }, [selectedSource]);
-
-  const fetchSources = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/credibility', {
-        params: { sort: sortBy, order: sortOrder, bias: biasFilter },
-      });
-      setSources(data.sources || []);
+      const [credRes, analyticsRes] = await Promise.all([
+        api.get('/credibility', {
+          params: { sort: sortBy, order: sortOrder, bias: biasFilter },
+        }),
+        api.get('/analytics/advanced').catch(() => null),
+      ]);
+      setSources(credRes.data.sources || []);
+      if (analyticsRes) {
+        setAnalytics(analyticsRes.data?.data || analyticsRes.data);
+      }
     } catch (err) {
       toast.error('Failed to load sources');
     } finally {
@@ -68,14 +68,14 @@ const SourceCredibility = () => {
     }
   };
 
+  // Derived analytics data
+  const bias = analytics?.sourceBias || [];
+  const reliability = analytics?.sourceReliability || [];
+
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div className="space-y-2">
-          <div className="h-8 w-48 bg-ink/5 dark:bg-paper/5 animate-pulse" />
-          <div className="h-4 w-64 bg-ink/5 dark:bg-paper/5 animate-pulse" />
-        </div>
-        <TableSkeleton rows={6} cols={5} />
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin w-8 h-8 border-2 border-ink dark:border-paper border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -91,8 +91,133 @@ const SourceCredibility = () => {
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">Source Credibility</h1>
         <div className="editorial-rule mt-2" />
-        <p className="text-sm text-ink-muted mt-2">Credibility scores and bias ratings for Malaysian news sources</p>
+        <p className="text-sm text-ink-muted mt-2">Credibility scores, bias ratings, and sentiment analysis for news sources</p>
       </motion.div>
+
+      {/* Sentiment Overview */}
+      {bias.length > 0 && (() => {
+        const overview = bias.reduce((acc, src) => {
+          acc.Positive = (acc.Positive || 0) + (src.positive || 0);
+          acc.Negative = (acc.Negative || 0) + (src.negative || 0);
+          acc.Neutral = (acc.Neutral || 0) + (src.neutral || 0);
+          return acc;
+        }, {});
+        return (
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: 'Positive', count: overview.Positive || 0, color: 'text-green-700 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-500/10' },
+              { label: 'Negative', count: overview.Negative || 0, color: 'text-red-700 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-500/10' },
+              { label: 'Neutral',  count: overview.Neutral || 0,  color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-50 dark:bg-gray-500/10' },
+            ].map(item => (
+              <motion.div
+                key={item.label}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`${CARD} p-4 text-center`}
+              >
+                <div className={`text-2xl font-bold font-display ${item.color}`}>{item.count}</div>
+                <div className="text-[10px] uppercase tracking-wider text-ink-muted mt-1 font-semibold">{item.label}</div>
+              </motion.div>
+            ))}
+          </div>
+        );
+      })()}
+
+      {/* Source Bias Analysis */}
+      {bias.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`${CARD} p-5`}
+        >
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-1">Source Bias Analysis</h3>
+          <p className="text-[10px] text-ink-faint mb-4">Sentiment distribution across news publishers</p>
+          <div className="space-y-3">
+            {bias.slice(0, 12).map((src, i) => {
+              const srcTotal = (src.positive || 0) + (src.negative || 0) + (src.neutral || 0) || 1;
+              const posPct = ((src.positive || 0) / srcTotal * 100).toFixed(0);
+              const negPct = ((src.negative || 0) / srcTotal * 100).toFixed(0);
+              return (
+                <motion.div
+                  key={src.source}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className="space-y-1"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-ink dark:text-paper">{src.source}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] text-green-600 dark:text-green-400 font-medium">{posPct}%</span>
+                      <span className="text-[9px] text-red-600 dark:text-red-400 font-medium">{negPct}%</span>
+                      <span className="text-[10px] text-ink-faint tabular-nums">{srcTotal}</span>
+                    </div>
+                  </div>
+                  <div className="flex h-2 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800">
+                    <div className="bg-green-500 transition-all duration-700" style={{ width: `${((src.positive || 0) / srcTotal) * 100}%` }} />
+                    <div className="bg-red-500 transition-all duration-700" style={{ width: `${((src.negative || 0) / srcTotal) * 100}%` }} />
+                    <div className="bg-gray-400 transition-all duration-700" style={{ width: `${((src.neutral || 0) / srcTotal) * 100}%` }} />
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+          <div className="flex items-center gap-4 mt-4 pt-3 border-t border-paper-line dark:border-paper-dark-line">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-green-500" />
+              <span className="text-[9px] text-ink-faint uppercase tracking-wider">Positive</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-red-500" />
+              <span className="text-[9px] text-ink-faint uppercase tracking-wider">Negative</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-gray-400" />
+              <span className="text-[9px] text-ink-faint uppercase tracking-wider">Neutral</span>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Source Reliability */}
+      {reliability.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`${CARD} p-5`}
+        >
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-1">Source Reliability</h3>
+          <p className="text-[10px] text-ink-faint mb-4">Confidence scores by publisher</p>
+          <div className="space-y-2">
+            {reliability.slice(0, 10).map((sr, i) => {
+              const conf = sr.avgConfidence || sr.score || 0;
+              const pct = (conf * 100).toFixed(0);
+              return (
+                <motion.div
+                  key={sr.source || sr._id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="flex items-center gap-3"
+                >
+                  <span className="text-[11px] font-medium text-ink dark:text-paper w-32 truncate">{sr.source || sr._id}</span>
+                  <div className="flex-1 h-3 bg-gray-100 dark:bg-gray-800 rounded-sm overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${pct}%` }}
+                      transition={{ duration: 0.8, delay: i * 0.05 }}
+                      className={`h-full rounded-sm ${conf > 0.7 ? 'bg-green-500' : conf > 0.5 ? 'bg-amber-500' : 'bg-red-500'}`}
+                    />
+                  </div>
+                  <span className={`text-[10px] font-semibold tabular-nums w-10 text-right ${conf > 0.7 ? 'text-green-600' : conf > 0.5 ? 'text-amber-600' : 'text-red-600'}`}>
+                    {pct}%
+                  </span>
+                </motion.div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
 
       {/* Filters */}
       <motion.div
@@ -145,35 +270,33 @@ const SourceCredibility = () => {
               <thead className="bg-paper-subtle dark:bg-paper-dark-subtle">
                 <tr className="text-xs font-medium text-ink-muted uppercase tracking-wider">
                   <th className="text-left px-5 py-3 cursor-pointer hover:text-ink dark:hover:text-paper" onClick={() => toggleSort('name')}>
-                    Source {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
+                    Source {sortBy === 'name' && (sortOrder === 'asc' ? '\u2191' : '\u2193')}
                   </th>
                   <th className="text-center px-3 py-3 cursor-pointer hover:text-ink dark:hover:text-paper" onClick={() => toggleSort('credibilityScore')}>
-                    Credibility {sortBy === 'credibilityScore' && (sortOrder === 'asc' ? '↑' : '↓')}
+                    Credibility {sortBy === 'credibilityScore' && (sortOrder === 'asc' ? '\u2191' : '\u2193')}
                   </th>
                   <th className="text-center px-3 py-3">Bias</th>
                   <th className="text-center px-3 py-3 cursor-pointer hover:text-ink dark:hover:text-paper" onClick={() => toggleSort('factCheckScore')}>
-                    Fact Check {sortBy === 'factCheckScore' && (sortOrder === 'asc' ? '↑' : '↓')}
+                    Fact Check {sortBy === 'factCheckScore' && (sortOrder === 'asc' ? '\u2191' : '\u2193')}
                   </th>
                   <th className="text-center px-3 py-3 cursor-pointer hover:text-ink dark:hover:text-paper" onClick={() => toggleSort('transparencyScore')}>
-                    Transparency {sortBy === 'transparencyScore' && (sortOrder === 'asc' ? '↑' : '↓')}
+                    Transparency {sortBy === 'transparencyScore' && (sortOrder === 'asc' ? '\u2191' : '\u2193')}
                   </th>
                   <th className="w-10 px-3 py-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-paper-line dark:divide-paper-dark-line">
                 <AnimatePresence>
-                  {sources.map((source, i) => {
-                    const isExpanded = selectedSource?._id === source._id;
-                    return (
-                    <React.Fragment key={source._id || source.name}>
+                  {sources.map((source, i) => (
                     <motion.tr
+                      key={source._id || source.name}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: i * 0.03 }}
                       className={`cursor-pointer hover:bg-paper-subtle/50 dark:hover:bg-paper-dark-subtle/30 transition-colors ${
                         i % 2 === 0 ? '' : 'bg-paper-subtle/50 dark:bg-paper-dark-subtle/30'
                       }`}
-                      onClick={() => setSelectedSource(isExpanded ? null : source)}
+                      onClick={() => setSelectedSource(selectedSource?._id === source._id ? null : source)}
                     >
                       <td className="px-5 py-4">
                         <p className="font-medium text-ink dark:text-paper text-sm">{source.name}</p>
@@ -208,60 +331,61 @@ const SourceCredibility = () => {
                         </span>
                       </td>
                       <td className="px-3 py-4 text-right">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-ink-muted transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-ink-muted transition-transform ${selectedSource?._id === source._id ? 'rotate-180' : ''}`}>
                           <polyline points="6 9 12 15 18 9"/>
                         </svg>
                       </td>
                     </motion.tr>
-                    {isExpanded && (
-                      <motion.tr
-                        ref={detailRef}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                      >
-                        <td colSpan={6} className="p-0">
-                          <div className="border-t border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-[#1a1a1a] p-5">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                              <div className="text-center p-3 bg-paper-subtle dark:bg-paper-dark-subtle border border-paper-line dark:border-paper-dark-line">
-                                <p className="text-xs text-ink-muted mb-1">Credibility</p>
-                                <p className={`text-xl font-bold ${getScoreColor(source.credibilityScore)}`}>{source.credibilityScore}</p>
-                              </div>
-                              <div className="text-center p-3 bg-paper-subtle dark:bg-paper-dark-subtle border border-paper-line dark:border-paper-dark-line">
-                                <p className="text-xs text-ink-muted mb-1">Fact Check</p>
-                                <p className={`text-xl font-bold ${getScoreColor(source.factCheckScore)}`}>{source.factCheckScore}</p>
-                              </div>
-                              <div className="text-center p-3 bg-paper-subtle dark:bg-paper-dark-subtle border border-paper-line dark:border-paper-dark-line">
-                                <p className="text-xs text-ink-muted mb-1">Transparency</p>
-                                <p className={`text-xl font-bold ${getScoreColor(source.transparencyScore)}`}>{source.transparencyScore}</p>
-                              </div>
-                              <div className="text-center p-3 bg-paper-subtle dark:bg-paper-dark-subtle border border-paper-line dark:border-paper-dark-line">
-                                <p className="text-xs text-ink-muted mb-1">Total Articles</p>
-                                <p className="text-xl font-bold text-ink dark:text-paper">{source.totalArticles}</p>
-                              </div>
-                            </div>
-                            {source.url && (
-                              <a
-                                href={source.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 mt-3 text-xs text-accent hover:underline"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                Visit website →
-                              </a>
-                            )}
-                          </div>
-                        </td>
-                      </motion.tr>
-                    )}
-                    </React.Fragment>
-                    );
-                  })}
+                  ))}
                 </AnimatePresence>
               </tbody>
             </table>
           </div>
+
+          {/* Expanded Detail Panels */}
+          <AnimatePresence>
+            {selectedSource && (
+              <motion.div
+                key={selectedSource._id}
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-[#1a1a1a] p-5">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center p-3 bg-paper-subtle dark:bg-paper-dark-subtle border border-paper-line dark:border-paper-dark-line">
+                      <p className="text-xs text-ink-muted mb-1">Credibility</p>
+                      <p className={`text-xl font-bold ${getScoreColor(selectedSource.credibilityScore)}`}>{selectedSource.credibilityScore}</p>
+                    </div>
+                    <div className="text-center p-3 bg-paper-subtle dark:bg-paper-dark-subtle border border-paper-line dark:border-paper-dark-line">
+                      <p className="text-xs text-ink-muted mb-1">Fact Check</p>
+                      <p className={`text-xl font-bold ${getScoreColor(selectedSource.factCheckScore)}`}>{selectedSource.factCheckScore}</p>
+                    </div>
+                    <div className="text-center p-3 bg-paper-subtle dark:bg-paper-dark-subtle border border-paper-line dark:border-paper-dark-line">
+                      <p className="text-xs text-ink-muted mb-1">Transparency</p>
+                      <p className={`text-xl font-bold ${getScoreColor(selectedSource.transparencyScore)}`}>{selectedSource.transparencyScore}</p>
+                    </div>
+                    <div className="text-center p-3 bg-paper-subtle dark:bg-paper-dark-subtle border border-paper-line dark:border-paper-dark-line">
+                      <p className="text-xs text-ink-muted mb-1">Total Articles</p>
+                      <p className="text-xl font-bold text-ink dark:text-paper">{selectedSource.totalArticles}</p>
+                    </div>
+                  </div>
+                  {selectedSource.url && (
+                    <a
+                      href={selectedSource.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 mt-3 text-xs text-accent hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Visit website →
+                    </a>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
     </motion.div>
