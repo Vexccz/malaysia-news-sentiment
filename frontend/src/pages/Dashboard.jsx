@@ -104,7 +104,7 @@ import { Skeleton } from 'boneyard-js/react';
 const SentimentMarkInline = ({ sentiment }) => {
   const map = {
     Positive: { symbol: "+", color: "text-green-700 dark:text-green-400" },
-    Negative: { symbol: "u2212", color: "text-red-700 dark:text-red-400" },
+    Negative: { symbol: "\u2212", color: "text-red-700 dark:text-red-400" },
     Neutral:  { symbol: "~", color: "text-gray-500 dark:text-gray-400" },
   };
   const m = map[sentiment] || map.Neutral;
