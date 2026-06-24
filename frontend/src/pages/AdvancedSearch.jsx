@@ -163,7 +163,7 @@ const AdvancedSearch = () => {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search articles by title, content, or keywords..."
+            placeholder={t('searchArticlesPlaceholder')}
             className="w-full pl-11 pr-4 py-3.5 rounded-sm bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent/30"
           />
         </div>
@@ -200,7 +200,7 @@ const AdvancedSearch = () => {
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-wrap items-center gap-2 bg-gray-50 dark:bg-[#1a1a1a] border-2 border-gray-200 dark:border-[#2a2a2a] p-3"
         >
-          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Active Filters:</span>
+          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('filters')}:</span>
           {filters.sentiment.map(s => (
             <button
               key={s}
@@ -250,7 +250,7 @@ const AdvancedSearch = () => {
             >
               {/* Sentiment */}
               <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-4">
-                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Sentiment</h3>
+                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">{t('sentiment')}</h3>
                 <div className="space-y-2">
                   {SENTIMENTS.map(s => (
                     <label key={s} className="flex items-center gap-2 cursor-pointer">
@@ -271,7 +271,7 @@ const AdvancedSearch = () => {
 
               {/* Date Range */}
               <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-4">
-                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Date Range</h3>
+                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">{t('dateRange')}</h3>
                 <div className="space-y-2">
                   <input
                     type="date"
@@ -327,7 +327,7 @@ const AdvancedSearch = () => {
 
               {/* Sort */}
               <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-4">
-                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Sort By</h3>
+                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">{t('sortBy')}</h3>
                 <select
                   value={filters.sortBy}
                   onChange={(e) => setFilters(prev => ({ ...prev, sortBy: e.target.value }))}
@@ -431,7 +431,7 @@ const AdvancedSearch = () => {
                 <div className="w-full h-[2px] bg-gray-200 dark:bg-gray-700" />
                 <div className="w-full h-px bg-gray-100 dark:bg-gray-800" />
               </div>
-              <h3 className="font-['Playfair_Display'] text-xl font-bold text-gray-900 dark:text-white mb-3">No Stories Found</h3>
+              <h3 className="font-['Playfair_Display'] text-xl font-bold text-gray-900 dark:text-white mb-3">{t('noArticlesFound')}</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 italic font-serif max-w-sm mx-auto mb-5">
                 "The news you seek has not yet been written."
               </p>

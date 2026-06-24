@@ -322,7 +322,7 @@ const AdminDashboard = () => {
               {/* Topics */}
               <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
                 <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
-                  <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">Popular Topics</h3>
+                  <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">{t('popularTopics')}</h3>
                 </div>
                 <div className="px-5 py-4">
                   <div className="flex flex-wrap gap-x-3 gap-y-1">
@@ -339,7 +339,7 @@ const AdminDashboard = () => {
               {/* Recent Articles */}
               <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card border-l-0 md:border-l-0">
                 <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
-                  <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">Recent Articles</h3>
+                  <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">{t('recentArticles')}</h3>
                 </div>
                 <div className="divide-y divide-paper-line dark:divide-paper-dark-line">
                   {stats.recentArticles?.slice(0, 5).map((a, i) => (
@@ -426,7 +426,7 @@ const AdminDashboard = () => {
             <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
               <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
                 <div className="flex items-center gap-3">
-                  <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">User Management</h3>
+                  <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">{t('userManagement')}</h3>
                   <span className="text-[10px] font-bold text-ink-faint font-sans">{adminUsersTotal} Total · Page {adminUsersPage} of {adminUsersTotalPages || 1}</span>
                 </div>
               </div>
@@ -742,7 +742,7 @@ const AdminDashboard = () => {
           <motion.div key="insights" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
             <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
               <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
-                <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">Strategic Insights</h3>
+                <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">{t('strategicInsights')}</h3>
               </div>
               {insightsLoading ? (
                 <div className="py-10 text-center">
@@ -752,11 +752,11 @@ const AdminDashboard = () => {
               ) : insights ? (
                 <div className="divide-y divide-paper-line dark:divide-paper-dark-line">
                   <div className="px-5 py-4 border-l-3 border-red-600">
-                    <div className="text-[10px] font-bold text-red-700 dark:text-red-400 uppercase tracking-widest mb-1.5 font-sans">Risk Assessment</div>
+                    <div className="text-[10px] font-bold text-red-700 dark:text-red-400 uppercase tracking-widest mb-1.5 font-sans">{t('riskAssessment')}</div>
                     <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed font-sans">{insights.risk}</p>
                   </div>
                   <div className="px-5 py-4 border-l-3 border-green-600">
-                    <div className="text-[10px] font-bold text-green-700 dark:text-green-400 uppercase tracking-widest mb-1.5 font-sans">Opportunity</div>
+                    <div className="text-[10px] font-bold text-green-700 dark:text-green-400 uppercase tracking-widest mb-1.5 font-sans">{t('opportunity')}</div>
                     <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed font-sans">{insights.opportunity}</p>
                   </div>
                   {insights.trend && (
@@ -834,7 +834,7 @@ const AdminDashboard = () => {
                   return (
                     <div className={`${CARD} overflow-hidden`}>
                       <div className="px-5 pt-5 pb-3 border-b border-gray-100 dark:border-gray-800">
-                        <h3 className="text-xs font-semibold uppercase tracking-widest text-ink-muted">Top Keywords</h3>
+                        <h3 className="text-xs font-semibold uppercase tracking-widest text-ink-muted">{t('topKeywords')}</h3>
                       </div>
                       <div className="divide-y divide-gray-50 dark:divide-gray-800/50">
                         {wordFreqs.map((kw, i) => (
@@ -861,7 +861,7 @@ const AdminDashboard = () => {
                 {analytics.topicClusters?.length > 0 && (
                   <div className={`${CARD} overflow-hidden`}>
                     <div className="px-5 pt-5 pb-3 border-b border-gray-100 dark:border-gray-800">
-                      <h3 className="text-xs font-semibold uppercase tracking-widest text-ink-muted">Topic Clusters</h3>
+                      <h3 className="text-xs font-semibold uppercase tracking-widest text-ink-muted">{t('topicClusters')}</h3>
                       <p className="text-[10px] text-ink-faint mt-0.5">Grouped themes across analyzed articles</p>
                     </div>
                     <div className="px-5 py-4 flex flex-wrap gap-2">

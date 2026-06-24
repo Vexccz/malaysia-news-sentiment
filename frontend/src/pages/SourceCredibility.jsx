@@ -100,7 +100,7 @@ const SourceCredibility = () => {
     >
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">Source Credibility</h1>
+        <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">{t('sourceCredibility')}</h1>
         <div className="editorial-rule mt-2" />
         <p className="text-sm text-ink-muted mt-2">Credibility scores, bias ratings, and sentiment analysis for news sources</p>
       </motion.div>
@@ -144,7 +144,7 @@ const SourceCredibility = () => {
           <div className="px-5 pt-5 pb-3 border-b border-gray-100 dark:border-gray-800">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xs font-semibold uppercase tracking-widest text-ink-muted">Source Bias Analysis</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-widest text-ink-muted">{t('sourceBiasAnalysis')}</h3>
                 <p className="text-[10px] text-ink-faint mt-0.5">Sentiment distribution across news publishers</p>
               </div>
               <div className="flex items-center gap-3">
@@ -199,7 +199,7 @@ const SourceCredibility = () => {
           className={`${CARD} overflow-hidden`}
         >
           <div className="px-5 pt-5 pb-3 border-b border-gray-100 dark:border-gray-800">
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-ink-muted">Source Reliability</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-ink-muted">{t('sourceReliability')}</h3>
             <p className="text-[10px] text-ink-faint mt-0.5">Confidence scores by publisher</p>
           </div>
           <div className="divide-y divide-gray-50 dark:divide-gray-800/50">
@@ -247,7 +247,7 @@ const SourceCredibility = () => {
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-wrap items-center gap-2"
       >
-        <span className="text-xs font-medium text-ink-muted uppercase tracking-wider">Filter:</span>
+        <span className="text-xs font-medium text-ink-muted uppercase tracking-wider">{t('filterLabel')}</span>
         {['all', 'left', 'center', 'right', 'unknown'].map(b => (
           <motion.button
             key={b}
@@ -281,7 +281,7 @@ const SourceCredibility = () => {
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
             </svg>
           </motion.div>
-          <h3 className="text-lg font-semibold font-display text-ink dark:text-paper mb-2">No sources found</h3>
+          <h3 className="text-lg font-semibold font-display text-ink dark:text-paper mb-2">{t('noSources')}</h3>
           <p className="text-sm text-ink-muted">Source credibility data will appear here once seeded</p>
         </motion.div>
       ) : (
@@ -297,7 +297,7 @@ const SourceCredibility = () => {
                   <th className="text-center px-3 py-3 cursor-pointer hover:text-ink dark:hover:text-paper" onClick={() => toggleSort('credibilityScore')}>
                     Credibility {sortBy === 'credibilityScore' && (sortOrder === 'asc' ? '\u2191' : '\u2193')}
                   </th>
-                  <th className="text-center px-3 py-3">Bias</th>
+                  <th className="text-center px-3 py-3">{t('bias')}</th>
                   <th className="text-center px-3 py-3 cursor-pointer hover:text-ink dark:hover:text-paper" onClick={() => toggleSort('factCheckScore')}>
                     Fact Check {sortBy === 'factCheckScore' && (sortOrder === 'asc' ? '\u2191' : '\u2193')}
                   </th>
@@ -377,15 +377,15 @@ const SourceCredibility = () => {
                 <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-[#1a1a1a] p-5">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="text-center p-3 bg-paper-subtle dark:bg-paper-dark-subtle border border-paper-line dark:border-paper-dark-line">
-                      <p className="text-xs text-ink-muted mb-1">Credibility</p>
+                      <p className="text-xs text-ink-muted mb-1">{t('credibility')}</p>
                       <p className={`text-xl font-bold ${getScoreColor(selectedSource.credibilityScore)}`}>{selectedSource.credibilityScore}</p>
                     </div>
                     <div className="text-center p-3 bg-paper-subtle dark:bg-paper-dark-subtle border border-paper-line dark:border-paper-dark-line">
-                      <p className="text-xs text-ink-muted mb-1">Fact Check</p>
+                      <p className="text-xs text-ink-muted mb-1">{t('factCheck')}</p>
                       <p className={`text-xl font-bold ${getScoreColor(selectedSource.factCheckScore)}`}>{selectedSource.factCheckScore}</p>
                     </div>
                     <div className="text-center p-3 bg-paper-subtle dark:bg-paper-dark-subtle border border-paper-line dark:border-paper-dark-line">
-                      <p className="text-xs text-ink-muted mb-1">Transparency</p>
+                      <p className="text-xs text-ink-muted mb-1">{t('transparency')}</p>
                       <p className={`text-xl font-bold ${getScoreColor(selectedSource.transparencyScore)}`}>{selectedSource.transparencyScore}</p>
                     </div>
                     <div className="text-center p-3 bg-paper-subtle dark:bg-paper-dark-subtle border border-paper-line dark:border-paper-dark-line">
