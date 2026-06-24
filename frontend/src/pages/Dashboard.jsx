@@ -358,21 +358,24 @@ const AnalyticsInline = () => {
     );
   }
 
-  const { sentimentOverview, sourceBias, topKeywords } = analytics;
-  const overview = sentimentOverview || {};
-  const bias = sourceBias || [];
-  const keywords = topKeywords || [];
-
-  const total = (overview.positive || 0) + (overview.negative || 0) + (overview.neutral || 0);
+  const bias = analytics.sourceBias || [];
+  const keywords = analytics.wordTrends?.words || [];
+  // Compute sentiment overview from sourceBias
+  const overview = bias.reduce((acc, src) => {
+    acc.Positive = (acc.Positive || 0) + (src.positive || 0);
+    acc.Negative = (acc.Negative || 0) + (src.negative || 0);
+    acc.Neutral = (acc.Neutral || 0) + (src.neutral || 0);
+    return acc;
+  }, {});
 
   return (
     <div className="space-y-5">
       {/* Sentiment Overview */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Positive', count: overview.positive || 0, color: 'text-green-700 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-500/10' },
-          { label: 'Negative', count: overview.negative || 0, color: 'text-red-700 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-500/10' },
-          { label: 'Neutral',  count: overview.neutral || 0,  color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-50 dark:bg-gray-500/10' },
+          { label: 'Positive', count: overview.Positive || 0, color: 'text-green-700 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-500/10' },
+          { label: 'Negative', count: overview.Negative || 0, color: 'text-red-700 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-500/10' },
+          { label: 'Neutral',  count: overview.Neutral || 0,  color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-50 dark:bg-gray-500/10' },
         ].map(item => (
           <div key={item.label} className={`${CARD} p-4 text-center`}>
             <div className={`text-2xl font-bold font-display ${item.color}`}>{item.count}</div>
@@ -903,8 +906,6 @@ const Dashboard = () => {
     }
     return result;
   }, [articles, filter, sourceFilter, mockArticles]);
-
-
 
   const counts = {
     total:    stats.total || articles.length,
