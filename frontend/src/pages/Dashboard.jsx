@@ -78,15 +78,23 @@ const DashboardSkeleton = () => (
         </div>
       ))}
     </div>
-    {/* Article cards skeleton */}
-    <div className="space-y-3">
+    {/* Article cards skeleton — editorial */}
+    <div>
+      <div className="border-t-2 border-gray-200 dark:border-gray-700 mb-1" />
+      <div className="border-t border-gray-200 dark:border-gray-800 mb-4" />
       {[1,2,3].map(i => (
-        <div key={i} className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-4 flex gap-4">
-          <div className="w-20 h-20 rounded-xl bg-gray-200 dark:bg-gray-700 shrink-0" />
-          <div className="flex-1 space-y-2 py-1">
-            <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-gray-700" />
-            <div className="h-3 w-full rounded bg-gray-200 dark:bg-gray-700" />
-            <div className="h-3 w-1/2 rounded bg-gray-200 dark:bg-gray-700" />
+        <div key={i} className="bg-white dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222] border-l-[3px] border-l-gray-200 dark:border-l-[#333] py-4 px-5 mb-px">
+          <div className="flex gap-4">
+            <div className="w-7 h-7 bg-gray-200 dark:bg-[#252525] shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="flex justify-between">
+                <div className="h-2.5 w-20 bg-gray-200 dark:bg-[#252525]" />
+                <div className="h-2.5 w-14 bg-gray-200 dark:bg-[#252525]" />
+              </div>
+              <div className="h-4 w-3/4 bg-gray-200 dark:bg-[#252525]" />
+              <div className="h-3 w-full bg-gray-200 dark:bg-[#252525]" />
+              <div className="h-2 w-1/3 bg-gray-200 dark:bg-[#252525] mt-2 pt-2 border-t border-gray-100 dark:border-[#1a1a1a]" />
+            </div>
           </div>
         </div>
       ))}
@@ -804,44 +812,54 @@ const Dashboard = () => {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="mb-8 border-b-2 border-ink dark:border-paper pb-4"
+        className="mb-0 border-b border-ink dark:border-paper pb-0"
         data-tour="metrics"
       >
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-4">
+        {/* Top utility bar */}
+        <div className="flex items-center justify-between py-2 border-b border-ink/10 dark:border-paper/10">
+          <div className="flex items-center gap-3">
             <button
               onClick={startTour}
-              className="text-[10px] font-medium uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-colors font-sans border border-ink/15 dark:border-paper/15 px-2 py-0.5"
+              className="text-[9px] font-semibold uppercase tracking-[0.25em] text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-colors font-sans"
             >
               Tour
             </button>
             <button
               onClick={() => setLang(lang === 'en' ? 'ms' : 'en')}
-              className="text-[10px] font-medium uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-colors font-sans flex items-center gap-1"
+              className="text-[9px] font-semibold uppercase tracking-[0.25em] text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-colors font-sans flex items-center gap-1"
             >
               <Globe size={12} />
               {lang === 'en' ? 'BM' : 'ENG'}
             </button>
           </div>
-          <p className="text-[10px] uppercase tracking-[0.25em] text-ink-muted dark:text-ink-faint font-sans">
+          <p className="text-[9px] uppercase tracking-[0.3em] text-ink-muted/70 dark:text-ink-faint/70 font-sans">
             {new Date().toLocaleDateString('en-MY', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
-        <div className="text-center">
-          <h1 className="font-['Playfair_Display'] text-4xl sm:text-5xl lg:text-6xl font-bold text-ink dark:text-paper tracking-tight">
-            MY News <span className="italic">Sentiment</span>
+        {/* Masthead title */}
+        <div className="text-center py-5 sm:py-6">
+          <h1 className="font-['Playfair_Display'] text-5xl sm:text-6xl lg:text-[4.5rem] font-black text-ink dark:text-paper tracking-tight leading-none">
+            MY News <span className="italic font-normal">Sentiment</span>
           </h1>
-          <div className="flex items-center justify-center gap-4 mt-2">
-            <span className="text-[10px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans">Vol 1</span>
-            <span className="text-ink/20 dark:text-paper/20">•</span>
-            <span className="text-[10px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans">Kuala Lumpur</span>
-            <span className="text-ink/20 dark:text-paper/20">•</span>
-            <span className="text-[10px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans">Malaysia</span>
+          <div className="flex items-center justify-center gap-3 mt-2.5">
+            <span className="text-[9px] uppercase tracking-[0.35em] text-ink-muted dark:text-ink-faint font-sans font-medium">Vol 1</span>
+            <span className="w-1 h-1 bg-ink/20 dark:bg-paper/20" />
+            <span className="text-[9px] uppercase tracking-[0.35em] text-ink-muted dark:text-ink-faint font-sans font-medium">Kuala Lumpur</span>
+            <span className="w-1 h-1 bg-ink/20 dark:bg-paper/20" />
+            <span className="text-[9px] uppercase tracking-[0.35em] text-ink-muted dark:text-ink-faint font-sans font-medium">Malaysia</span>
           </div>
         </div>
       </motion.div>
 
-      <SearchBarClean onSearch={handleSearch} loading={searchLoading} noResultsQuery={noResultsQuery} />
+      {/* Search — editorial frame */}
+      <div className="border-x border-t border-ink/10 dark:border-paper/10 bg-paper-card dark:bg-paper-dark-card">
+        <div className="px-4 py-2.5 border-b border-ink/10 dark:border-paper/10">
+          <span className="text-[9px] font-semibold uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans">Search Archives</span>
+        </div>
+        <div className="p-4">
+          <SearchBarClean onSearch={handleSearch} loading={searchLoading} noResultsQuery={noResultsQuery} />
+        </div>
+      </div>
 
       {/* Dashboard Summary Banner */}
       <DashboardSummary distribution={distribution} keywords={keywords} articles={articles} />
@@ -1005,15 +1023,15 @@ const Dashboard = () => {
                         >
                           {/* Editorial Stats Grid */}
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border border-ink/10 dark:border-paper/10">
-                            {/* Total Articles */}
+                            {/* Total Articles — full-width hero stat */}
                             <motion.div 
-                              className="col-span-2 md:col-span-1 p-5 border-r border-b border-ink/10 dark:border-paper/10"
+                              className="col-span-2 p-5 border-b border-ink/10 dark:border-paper/10 bg-paper-card dark:bg-paper-dark-card"
                               variants={kpiItemVariants}
                             >
-                              <div className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-2">
+                              <div className="text-[9px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans mb-2 font-semibold">
                                 Total Analyzed
                               </div>
-                              <div className="font-['Playfair_Display'] text-4xl font-bold text-ink dark:text-paper">
+                              <div className="font-['Playfair_Display'] text-5xl font-black text-ink dark:text-paper leading-none">
                                 {counts.total.toLocaleString()}
                               </div>
                               <div className="mt-1">
@@ -1023,54 +1041,51 @@ const Dashboard = () => {
 
                             {/* Positive */}
                             <motion.div 
-                              className="p-5 border-r border-b border-ink/10 dark:border-paper/10 cursor-pointer hover:bg-ink/5 dark:hover:bg-paper/5 transition-colors"
+                              className="p-5 border-r border-b border-ink/10 dark:border-paper/10 border-l-[3px] border-l-emerald-500 cursor-pointer hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 transition-colors"
                               variants={kpiItemVariants}
                               onClick={() => handleKpiClick('positive')}
                             >
-                              <div className="flex items-center gap-1.5 mb-2">
-                                <div className="w-1.5 h-1.5 bg-emerald-500" />
-                                <span className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">Positive</span>
+                              <div className="text-[9px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans mb-2 font-semibold">
+                                Positive
                               </div>
-                              <div className="font-['Playfair_Display'] text-3xl font-bold text-emerald-600">
+                              <div className="font-['Playfair_Display'] text-5xl font-black text-emerald-600 dark:text-emerald-500 leading-none">
                                 {counts.positive.toLocaleString()}
                               </div>
-                              <div className="text-[11px] text-ink-muted dark:text-ink-faint mt-1">
+                              <div className="text-[10px] text-ink-muted dark:text-ink-faint mt-1.5 font-sans">
                                 {counts.total ? Math.round(counts.positive / counts.total * 100) : 0}%
                               </div>
                             </motion.div>
 
                             {/* Negative */}
                             <motion.div 
-                              className="p-5 border-r border-b border-ink/10 dark:border-paper/10 cursor-pointer hover:bg-ink/5 dark:hover:bg-paper/5 transition-colors md:border-r-0"
+                              className="p-5 border-b border-ink/10 dark:border-paper/10 border-l-[3px] border-l-red-500 cursor-pointer hover:bg-red-50/50 dark:hover:bg-red-950/20 transition-colors"
                               variants={kpiItemVariants}
                               onClick={() => handleKpiClick('negative')}
                             >
-                              <div className="flex items-center gap-1.5 mb-2">
-                                <div className="w-1.5 h-1.5 bg-red-500" />
-                                <span className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">Negative</span>
+                              <div className="text-[9px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans mb-2 font-semibold">
+                                Negative
                               </div>
-                              <div className="font-['Playfair_Display'] text-3xl font-bold text-red-600">
+                              <div className="font-['Playfair_Display'] text-5xl font-black text-red-600 dark:text-red-500 leading-none">
                                 {counts.negative.toLocaleString()}
                               </div>
-                              <div className="text-[11px] text-ink-muted dark:text-ink-faint mt-1">
+                              <div className="text-[10px] text-ink-muted dark:text-ink-faint mt-1.5 font-sans">
                                 {counts.total ? Math.round(counts.negative / counts.total * 100) : 0}%
                               </div>
                             </motion.div>
 
                             {/* Neutral */}
                             <motion.div 
-                              className="col-span-2 md:col-span-1 p-5 cursor-pointer hover:bg-ink/5 dark:hover:bg-paper/5 transition-colors"
+                              className="col-span-2 p-5 border-l-[3px] border-l-gray-400 dark:border-l-gray-500 cursor-pointer hover:bg-gray-50/50 dark:hover:bg-gray-900/20 transition-colors"
                               variants={kpiItemVariants}
                               onClick={() => handleKpiClick('neutral')}
                             >
-                              <div className="flex items-center gap-1.5 mb-2">
-                                <div className="w-1.5 h-1.5 bg-amber-500" />
-                                <span className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">Neutral</span>
+                              <div className="text-[9px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans mb-2 font-semibold">
+                                Neutral
                               </div>
-                              <div className="font-['Playfair_Display'] text-3xl font-bold text-amber-600">
+                              <div className="font-['Playfair_Display'] text-5xl font-black text-gray-500 dark:text-gray-400 leading-none">
                                 {counts.neutral.toLocaleString()}
                               </div>
-                              <div className="text-[11px] text-ink-muted dark:text-ink-faint mt-1">
+                              <div className="text-[10px] text-ink-muted dark:text-ink-faint mt-1.5 font-sans">
                                 {counts.total ? Math.round(counts.neutral / counts.total * 100) : 0}%
                               </div>
                             </motion.div>
@@ -1079,24 +1094,26 @@ const Dashboard = () => {
                       </Skeleton>
                     </div>
                     {/* Pie Chart - Editorial */}
-                    <div className="border border-ink/10 dark:border-paper/10 p-5 border-l-[3px] border-l-accent">
-                      <p className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-4">Sentiment Distribution</p>
+                    <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] p-5">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-[#999] dark:text-[#666] font-sans mb-4 pb-2 border-b border-[#e5e5e5] dark:border-[#222]">Sentiment Distribution</p>
                       <InlineErrorBoundary name="Pie Chart">
                         <SentimentDonutChart distribution={chartDistribution} onSegmentClick={handlePieSegmentClick} activeFilter={filter} />
                       </InlineErrorBoundary>
                     </div>
 
-                    {/* Articles */}
+                    {/* Articles — Editorial */}
                     <div>
+                      <div className="border-t-2 border-ink dark:border-paper mb-1" />
+                      <div className="border-t border-ink/30 dark:border-paper/30 mb-3" />
                       <SectionHeader title={t("recentArticles")} badge={filteredArticles.length} />
-                      <div className="flex gap-2 overflow-x-auto pb-3 mb-4 scrollbar-hide -mx-1 px-1">
+                      <div className="flex gap-1 overflow-x-auto pb-3 mb-3 scrollbar-hide -mx-1 px-1">
                         {FILTER_OPTIONS.map(opt => (
-                          <button 
-                            key={opt.key} 
-                            className={`shrink-0 px-3 py-1 text-[11px] uppercase tracking-wider font-medium transition-all border ${
-                              filter === opt.key 
-                                ? 'border-ink dark:border-paper text-ink dark:text-paper font-bold' 
-                                : 'border-transparent text-ink-muted dark:text-ink-faint hover:border-ink/20 dark:hover:border-paper/20'
+                          <button
+                            key={opt.key}
+                            className={`shrink-0 px-2.5 py-1 text-[10px] uppercase tracking-[0.15em] font-semibold transition-colors border ${
+                              filter === opt.key
+                                ? 'border-ink dark:border-paper text-ink dark:text-paper'
+                                : 'border-transparent text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper'
                             }`}
                             onClick={() => setFilter(opt.key)}
                           >
@@ -1105,38 +1122,41 @@ const Dashboard = () => {
                         ))}
                       </div>
 
-                      <StaggerList className="space-y-3">
+                      <StaggerList>
                         <Skeleton name="article-card" loading={isLoading || historyLoading} count={3}>
-                          {filteredArticles.slice(0, 5).map((article) => (
-                            <StaggerItem
-                              key={article._id || article.url}
-                            >
-                              <ArticleCardCompact 
-                                article={article} 
-                                onBookmark={toggleBookmark}
-                                isBookmarked={user?.bookmarks?.includes(article._id || article.id)}
-                              />
-                            </StaggerItem>
+                          {filteredArticles.slice(0, 5).map((article, idx) => (
+                            <React.Fragment key={article._id || article.url}>
+                              <StaggerItem>
+                                <ArticleCardCompact
+                                  article={article}
+                                  onBookmark={toggleBookmark}
+                                  isBookmarked={user?.bookmarks?.includes(article._id || article.id)}
+                                />
+                              </StaggerItem>
+                              {idx < Math.min(filteredArticles.length, 5) - 1 && (
+                                <div className="border-b border-[#e5e5e5] dark:border-[#1a1a1a]" />
+                              )}
+                            </React.Fragment>
                           ))}
                         </Skeleton>
                       </StaggerList>
 
                       {isHistoryView && stats.total > LIMIT && (
-                        <div className="flex items-center justify-center gap-4 mt-6">
-                          <button 
-                            disabled={page === 1 || isLoading} 
+                        <div className="flex items-center justify-center gap-4 mt-6 pt-4 border-t border-[#e5e5e5] dark:border-[#222]">
+                          <button
+                            disabled={page === 1 || isLoading}
                             onClick={() => handlePageChange(page - 1)}
-                            className={`${CARD} flex items-center gap-1 px-3 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 disabled:opacity-40 transition-colors`}
+                            className="flex items-center gap-1 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400 disabled:opacity-30 transition-colors border border-[#e5e5e5] dark:border-[#222]"
                           >
                             <ChevronLeft size={14} /> Prev
                           </button>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            <strong className="text-gray-900 dark:text-white">{page}</strong> / {Math.ceil(stats.total / LIMIT)}
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider font-sans">
+                            <strong className="text-gray-900 dark:text-white normal-case">{page}</strong> / {Math.ceil(stats.total / LIMIT)}
                           </span>
-                          <button 
-                            disabled={page >= Math.ceil(stats.total / LIMIT) || isLoading} 
+                          <button
+                            disabled={page >= Math.ceil(stats.total / LIMIT) || isLoading}
                             onClick={() => handlePageChange(page + 1)}
-                            className={`${CARD} flex items-center gap-1 px-3 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 disabled:opacity-40 transition-colors`}
+                            className="flex items-center gap-1 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400 disabled:opacity-30 transition-colors border border-[#e5e5e5] dark:border-[#222]"
                           >
                             Next <ChevronRight size={14} />
                           </button>
@@ -1173,33 +1193,59 @@ const Dashboard = () => {
                           animate="visible"
                         >
                           <SectionHeader title={t("charts")} />
-                          <div className={`${CARD} p-4 border-l-[3px] border-l-accent`}>
-                            <Suspense fallback={<ChartFallback />}>
-                              <InlineErrorBoundary name="Bar Chart">
-                                <SentimentHorizontalBar distribution={chartDistribution} />
-                              </InlineErrorBoundary>
-                            </Suspense>
+
+                          {/* Sentiment Breakdown */}
+                          <div>
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-[#999] dark:text-[#666] font-sans mb-1 pb-2 border-b border-[#e5e5e5] dark:border-[#222]">Sentiment Breakdown</p>
+                            <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] p-5">
+                              <Suspense fallback={<ChartFallback />}>
+                                <InlineErrorBoundary name="Bar Chart">
+                                  <SentimentHorizontalBar distribution={chartDistribution} />
+                                </InlineErrorBoundary>
+                              </Suspense>
+                            </div>
                           </div>
-                          <div className={`${CARD} p-4 border-l-[3px] border-l-accent`}>
-                            <Suspense fallback={<ChartFallback />}>
-                              <InlineErrorBoundary name="Trend Chart">
-                                <SentimentAreaChart trendsData={trends} />
-                              </InlineErrorBoundary>
-                            </Suspense>
+
+                          <hr className="border-0 border-t border-[#e5e5e5] dark:border-[#222] my-1" />
+
+                          {/* Trends Over Time */}
+                          <div>
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-[#999] dark:text-[#666] font-sans mb-1 pb-2 border-b border-[#e5e5e5] dark:border-[#222]">Trends Over Time</p>
+                            <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] p-5">
+                              <Suspense fallback={<ChartFallback />}>
+                                <InlineErrorBoundary name="Trend Chart">
+                                  <SentimentAreaChart trendsData={trends} />
+                                </InlineErrorBoundary>
+                              </Suspense>
+                            </div>
                           </div>
-                          <div className={`${CARD} p-4 border-l-[3px] border-l-accent`}>
-                            <Suspense fallback={<ChartFallback />}>
-                              <InlineErrorBoundary name="Sentiment Map">
-                                <SentimentHeatmap data={regionalData} loading={isLoading} />
-                              </InlineErrorBoundary>
-                            </Suspense>
+
+                          <hr className="border-0 border-t border-[#e5e5e5] dark:border-[#222] my-1" />
+
+                          {/* Regional Heatmap */}
+                          <div>
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-[#999] dark:text-[#666] font-sans mb-1 pb-2 border-b border-[#e5e5e5] dark:border-[#222]">Regional Sentiment</p>
+                            <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] p-5">
+                              <Suspense fallback={<ChartFallback />}>
+                                <InlineErrorBoundary name="Sentiment Map">
+                                  <SentimentHeatmap data={regionalData} loading={isLoading} />
+                                </InlineErrorBoundary>
+                              </Suspense>
+                            </div>
                           </div>
-                          <div className={`${CARD} p-4 border-l-[3px] border-l-accent`}>
-                            <Suspense fallback={<ChartFallback />}>
-                              <InlineErrorBoundary name="Sources Chart">
-                                <TopSourcesHorizontal sourcesData={sources} />
-                              </InlineErrorBoundary>
-                            </Suspense>
+
+                          <hr className="border-0 border-t border-[#e5e5e5] dark:border-[#222] my-1" />
+
+                          {/* Top Sources */}
+                          <div>
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-[#999] dark:text-[#666] font-sans mb-1 pb-2 border-b border-[#e5e5e5] dark:border-[#222]">Top News Sources</p>
+                            <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] p-5">
+                              <Suspense fallback={<ChartFallback />}>
+                                <InlineErrorBoundary name="Sources Chart">
+                                  <TopSourcesHorizontal sourcesData={sources} />
+                                </InlineErrorBoundary>
+                              </Suspense>
+                            </div>
                           </div>
                         </motion.div>
                       </Skeleton>
@@ -1293,15 +1339,15 @@ const Dashboard = () => {
                         >
                           {/* Editorial Stats Grid */}
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border border-ink/10 dark:border-paper/10">
-                            {/* Total Articles */}
+                            {/* Total Articles — hero stat */}
                             <motion.div
-                              className="col-span-2 md:col-span-1 p-5 border-r border-b border-ink/10 dark:border-paper/10"
+                              className="p-5 border-r border-b border-ink/10 dark:border-paper/10 bg-paper-card dark:bg-paper-dark-card"
                               variants={kpiItemVariants}
                             >
-                              <div className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-2">
+                              <div className="text-[9px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans mb-2 font-semibold">
                                 Total Analyzed
                               </div>
-                              <div className="font-['Playfair_Display'] text-4xl font-bold text-ink dark:text-paper">
+                              <div className="font-['Playfair_Display'] text-5xl font-black text-ink dark:text-paper leading-none">
                                 {counts.total.toLocaleString()}
                               </div>
                               <div className="mt-1">
@@ -1311,54 +1357,51 @@ const Dashboard = () => {
 
                             {/* Positive */}
                             <motion.div
-                              className="p-5 border-r border-b border-ink/10 dark:border-paper/10 cursor-pointer hover:bg-ink/5 dark:hover:bg-paper/5 transition-colors"
+                              className="p-5 border-r border-b border-ink/10 dark:border-paper/10 border-l-[3px] border-l-emerald-500 cursor-pointer hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 transition-colors"
                               variants={kpiItemVariants}
                               onClick={() => handleKpiClick('positive')}
                             >
-                              <div className="flex items-center gap-1.5 mb-2">
-                                <div className="w-1.5 h-1.5 bg-emerald-500" />
-                                <span className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">Positive</span>
+                              <div className="text-[9px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans mb-2 font-semibold">
+                                Positive
                               </div>
-                              <div className="font-['Playfair_Display'] text-3xl font-bold text-emerald-600">
+                              <div className="font-['Playfair_Display'] text-5xl font-black text-emerald-600 dark:text-emerald-500 leading-none">
                                 {counts.positive.toLocaleString()}
                               </div>
-                              <div className="text-[11px] text-ink-muted dark:text-ink-faint mt-1">
+                              <div className="text-[10px] text-ink-muted dark:text-ink-faint mt-1.5 font-sans">
                                 {counts.total ? Math.round(counts.positive / counts.total * 100) : 0}%
                               </div>
                             </motion.div>
 
                             {/* Negative */}
                             <motion.div
-                              className="p-5 border-r border-b border-ink/10 dark:border-paper/10 cursor-pointer hover:bg-ink/5 dark:hover:bg-paper/5 transition-colors md:border-r-0"
+                              className="p-5 border-r border-b border-ink/10 dark:border-paper/10 border-l-[3px] border-l-red-500 cursor-pointer hover:bg-red-50/50 dark:hover:bg-red-950/20 transition-colors"
                               variants={kpiItemVariants}
                               onClick={() => handleKpiClick('negative')}
                             >
-                              <div className="flex items-center gap-1.5 mb-2">
-                                <div className="w-1.5 h-1.5 bg-red-500" />
-                                <span className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">Negative</span>
+                              <div className="text-[9px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans mb-2 font-semibold">
+                                Negative
                               </div>
-                              <div className="font-['Playfair_Display'] text-3xl font-bold text-red-600">
+                              <div className="font-['Playfair_Display'] text-5xl font-black text-red-600 dark:text-red-500 leading-none">
                                 {counts.negative.toLocaleString()}
                               </div>
-                              <div className="text-[11px] text-ink-muted dark:text-ink-faint mt-1">
+                              <div className="text-[10px] text-ink-muted dark:text-ink-faint mt-1.5 font-sans">
                                 {counts.total ? Math.round(counts.negative / counts.total * 100) : 0}%
                               </div>
                             </motion.div>
 
                             {/* Neutral */}
                             <motion.div
-                              className="col-span-2 md:col-span-1 p-5 cursor-pointer hover:bg-ink/5 dark:hover:bg-paper/5 transition-colors"
+                              className="p-5 border-l-[3px] border-l-gray-400 dark:border-l-gray-500 cursor-pointer hover:bg-gray-50/50 dark:hover:bg-gray-900/20 transition-colors"
                               variants={kpiItemVariants}
                               onClick={() => handleKpiClick('neutral')}
                             >
-                              <div className="flex items-center gap-1.5 mb-2">
-                                <div className="w-1.5 h-1.5 bg-amber-500" />
-                                <span className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">Neutral</span>
+                              <div className="text-[9px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans mb-2 font-semibold">
+                                Neutral
                               </div>
-                              <div className="font-['Playfair_Display'] text-3xl font-bold text-amber-600">
+                              <div className="font-['Playfair_Display'] text-5xl font-black text-gray-500 dark:text-gray-400 leading-none">
                                 {counts.neutral.toLocaleString()}
                               </div>
-                              <div className="text-[11px] text-ink-muted dark:text-ink-faint mt-1">
+                              <div className="text-[10px] text-ink-muted dark:text-ink-faint mt-1.5 font-sans">
                                 {counts.total ? Math.round(counts.neutral / counts.total * 100) : 0}%
                               </div>
                             </motion.div>
@@ -1382,44 +1425,74 @@ const Dashboard = () => {
                     <div>
                       <SectionHeader title={t("charts")} widgetKey="charts" />
                       <Skeleton name="charts-grid" loading={isLoading}>
-                        <motion.div 
-                          className="grid grid-cols-2 gap-5"
+                        <motion.div
+                          className="space-y-0"
                           variants={chartVariants}
                           initial="hidden"
                           animate="visible"
                         >
-                          <div className={`${CARD} p-5 min-h-[280px] flex flex-col border-l-[3px] border-l-accent`}>
-                            <InlineErrorBoundary name="Pie Chart">
-                              <SentimentDonutChart distribution={chartDistribution} onSegmentClick={handlePieSegmentClick} activeFilter={filter} />
-                            </InlineErrorBoundary>
+                          {/* Row 1: Donut + Horizontal Bar — 2-column */}
+                          <div className="grid grid-cols-2 gap-5">
+                            <div>
+                              <p className="text-[10px] uppercase tracking-[0.2em] text-[#999] dark:text-[#666] font-sans mb-1 pb-2 border-b border-[#e5e5e5] dark:border-[#222]">Sentiment Overview</p>
+                              <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] p-5 min-h-[280px] flex flex-col">
+                                <InlineErrorBoundary name="Pie Chart">
+                                  <SentimentDonutChart distribution={chartDistribution} onSegmentClick={handlePieSegmentClick} activeFilter={filter} />
+                                </InlineErrorBoundary>
+                              </div>
+                            </div>
+                            <div>
+                              <p className="text-[10px] uppercase tracking-[0.2em] text-[#999] dark:text-[#666] font-sans mb-1 pb-2 border-b border-[#e5e5e5] dark:border-[#222]">Sentiment Breakdown</p>
+                              <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] p-5 min-h-[280px] flex flex-col">
+                                <Suspense fallback={<ChartFallback />}>
+                                  <InlineErrorBoundary name="Bar Chart">
+                                    <SentimentHorizontalBar distribution={chartDistribution} />
+                                  </InlineErrorBoundary>
+                                </Suspense>
+                              </div>
+                            </div>
                           </div>
-                          <div className={`${CARD} p-5 min-h-[280px] flex flex-col border-l-[3px] border-l-accent`}>
-                            <Suspense fallback={<ChartFallback />}>
-                              <InlineErrorBoundary name="Bar Chart">
-                                <SentimentHorizontalBar distribution={chartDistribution} />
-                              </InlineErrorBoundary>
-                            </Suspense>
+
+                          <hr className="border-0 border-t border-[#e5e5e5] dark:border-[#222] my-4" />
+
+                          {/* Row 2: Regional Heatmap — full width */}
+                          <div>
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-[#999] dark:text-[#666] font-sans mb-1 pb-2 border-b border-[#e5e5e5] dark:border-[#222]">Regional Sentiment</p>
+                            <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] p-5 min-h-[280px] flex flex-col">
+                              <Suspense fallback={<ChartFallback />}>
+                                <InlineErrorBoundary name="Sentiment Map">
+                                  <SentimentHeatmap data={regionalData} loading={isLoading} />
+                                </InlineErrorBoundary>
+                              </Suspense>
+                            </div>
                           </div>
-                          <div className={`${CARD} p-5 min-h-[280px] flex flex-col border-l-[3px] border-l-accent`}>
-                            <Suspense fallback={<ChartFallback />}>
-                              <InlineErrorBoundary name="Sentiment Map">
-                                <SentimentHeatmap data={regionalData} loading={isLoading} />
-                              </InlineErrorBoundary>
-                            </Suspense>
+
+                          <hr className="border-0 border-t border-[#e5e5e5] dark:border-[#222] my-4" />
+
+                          {/* Row 3: Trend Chart — full width */}
+                          <div>
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-[#999] dark:text-[#666] font-sans mb-1 pb-2 border-b border-[#e5e5e5] dark:border-[#222]">Trends Over Time</p>
+                            <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] p-5 min-h-[280px] flex flex-col">
+                              <Suspense fallback={<ChartFallback />}>
+                                <InlineErrorBoundary name="Trend Chart">
+                                  <SentimentAreaChart trendsData={trends} />
+                                </InlineErrorBoundary>
+                              </Suspense>
+                            </div>
                           </div>
-                          <div className={`${CARD} p-5 min-h-[280px] flex flex-col border-l-[3px] border-l-accent`}>
-                            <Suspense fallback={<ChartFallback />}>
-                              <InlineErrorBoundary name="Trend Chart">
-                                <SentimentAreaChart trendsData={trends} />
-                              </InlineErrorBoundary>
-                            </Suspense>
-                          </div>
-                          <div className={`col-span-2 ${CARD} p-5 border-l-[3px] border-l-accent`}>
-                            <Suspense fallback={<ChartFallback />}>
-                              <InlineErrorBoundary name="Sources Chart">
-                                <TopSourcesHorizontal sourcesData={sources} />
-                              </InlineErrorBoundary>
-                            </Suspense>
+
+                          <hr className="border-0 border-t border-[#e5e5e5] dark:border-[#222] my-4" />
+
+                          {/* Row 4: Top Sources — full width */}
+                          <div>
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-[#999] dark:text-[#666] font-sans mb-1 pb-2 border-b border-[#e5e5e5] dark:border-[#222]">Top News Sources</p>
+                            <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] p-5">
+                              <Suspense fallback={<ChartFallback />}>
+                                <InlineErrorBoundary name="Sources Chart">
+                                  <TopSourcesHorizontal sourcesData={sources} />
+                                </InlineErrorBoundary>
+                              </Suspense>
+                            </div>
                           </div>
                         </motion.div>
                       </Skeleton>
@@ -1469,18 +1542,22 @@ const Dashboard = () => {
                   </aside>
                 </div>
 
-                {/* Articles Section */}
+                {/* Articles Section — Editorial */}
                 {widgetVisibility.articles && (
                 <div className="mt-10" id="analysis-results">
+                  {/* Section rule */}
+                  <div className="border-t-2 border-ink dark:border-paper mb-1" />
+                  <div className="border-t border-ink/30 dark:border-paper/30 mb-4" />
+
                   <SectionHeader title={t("recentArticles")} badge={filteredArticles.length}>
-                    <div className="flex gap-1.5">
+                    <div className="flex gap-1">
                       {FILTER_OPTIONS.map(opt => (
                         <button
                           key={opt.key}
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                          className={`px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] transition-colors border ${
                             filter === opt.key
-                              ? 'bg-blue-600 text-white shadow-sm'
-                              : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
+                              ? 'border-ink dark:border-paper text-ink dark:text-paper'
+                              : 'border-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
                           }`}
                           onClick={() => setFilter(opt.key)}
                         >
@@ -1490,42 +1567,44 @@ const Dashboard = () => {
                     </div>
                   </SectionHeader>
 
-                  <StaggerList className="space-y-3">
+                  <StaggerList>
                     <Skeleton name="article-card" loading={isLoading || historyLoading} count={3}>
-                      {filteredArticles.map((article) => (
-                          <StaggerItem
-                            key={article._id || article.url}
-                          >
-                            <ArticleCardCompact 
-                              article={article} 
-                              onBookmark={toggleBookmark}
-                              isBookmarked={user?.bookmarks?.includes(article._id || article.id)}
-                            />
-                          </StaggerItem>
+                      {filteredArticles.map((article, idx) => (
+                          <React.Fragment key={article._id || article.url}>
+                            <StaggerItem>
+                              <ArticleCardCompact
+                                article={article}
+                                onBookmark={toggleBookmark}
+                                isBookmarked={user?.bookmarks?.includes(article._id || article.id)}
+                              />
+                            </StaggerItem>
+                            {idx < filteredArticles.length - 1 && (
+                              <div className="border-b border-[#e5e5e5] dark:border-[#1a1a1a]" />
+                            )}
+                          </React.Fragment>
                         ))}
                     </Skeleton>
                   </StaggerList>
 
-                  {/* Pagination - Centered */}
+                  {/* Pagination — Editorial */}
                   {isHistoryView && stats.total > LIMIT && (
-                    <div className="flex items-center justify-center gap-4 mt-8">
-                      <button 
-                        disabled={page === 1 || isLoading} 
+                    <div className="flex items-center justify-center gap-6 mt-8 pt-6 border-t border-[#e5e5e5] dark:border-[#222]">
+                      <button
+                        disabled={page === 1 || isLoading}
                         onClick={() => handlePageChange(page - 1)}
-                        className={`${CARD} flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-white/5 transition-colors`}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400 disabled:opacity-30 disabled:cursor-not-allowed hover:text-gray-900 dark:hover:text-white transition-colors border border-[#e5e5e5] dark:border-[#222]"
                       >
-                        <ChevronLeft size={16} /> Previous
+                        <ChevronLeft size={14} /> Previous
                       </button>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
-                        Page <strong className="text-gray-900 dark:text-white">{page}</strong> of {Math.ceil(stats.total / LIMIT)}
-                        <span className="text-xs ml-2 text-gray-400">({stats.total} total)</span>
+                      <div className="text-xs text-gray-400 dark:text-gray-500 font-sans uppercase tracking-wider">
+                        Page <strong className="text-gray-900 dark:text-white normal-case">{page}</strong> of {Math.ceil(stats.total / LIMIT)}
                       </div>
-                      <button 
-                        disabled={page >= Math.ceil(stats.total / LIMIT) || isLoading} 
+                      <button
+                        disabled={page >= Math.ceil(stats.total / LIMIT) || isLoading}
                         onClick={() => handlePageChange(page + 1)}
-                        className={`${CARD} flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-white/5 transition-colors`}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400 disabled:opacity-30 disabled:cursor-not-allowed hover:text-gray-900 dark:hover:text-white transition-colors border border-[#e5e5e5] dark:border-[#222]"
                       >
-                        Next <ChevronRight size={16} />
+                        Next <ChevronRight size={14} />
                       </button>
                     </div>
                   )}
@@ -1539,6 +1618,36 @@ const Dashboard = () => {
                     <CommunityInline />
                   </InlineErrorBoundary>
                 </div>
+
+                {/* Newspaper Footer */}
+                <footer className="mt-16 mb-8">
+                  <div className="border-t-2 border-ink dark:border-paper mb-1" />
+                  <div className="border-t border-ink/20 dark:border-paper/20 mb-5" />
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+                    <div>
+                      <p className="font-['Playfair_Display'] text-sm font-bold text-gray-900 dark:text-white">
+                        MY News Sentiment
+                      </p>
+                      <p className="text-[9px] uppercase tracking-[0.25em] text-gray-400 dark:text-gray-500 font-sans mt-0.5">
+                        Automated sentiment analysis for Malaysian news
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-[9px] uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 font-sans">
+                        {articles.length} Articles Indexed
+                      </span>
+                      <span className="w-px h-3 bg-gray-300 dark:bg-[#333]" />
+                      <span className="text-[9px] uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 font-sans">
+                        Edition {new Date().toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-[#e5e5e5] dark:border-[#1a1a1a] text-center">
+                    <p className="text-[8px] uppercase tracking-[0.3em] text-gray-300 dark:text-[#444] font-sans">
+                      All analysis is automated and for informational purposes only
+                    </p>
+                  </div>
+                </footer>
               </>
             )}
           </>

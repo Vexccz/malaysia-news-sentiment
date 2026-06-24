@@ -1,5 +1,5 @@
 import React from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 const SentimentDonutChart = ({ distribution = {}, onSegmentClick, activeFilter }) => {
   const data = [
@@ -15,36 +15,17 @@ const SentimentDonutChart = ({ distribution = {}, onSegmentClick, activeFilter }
       const item = payload[0];
       const percent = total > 0 ? ((item.value / total) * 100).toFixed(1) : 0;
       return (
-        <div className="bg-paper dark:bg-ink border border-ink/15 dark:border-paper/15 px-3 py-2">
+        <div className="bg-white dark:bg-[#0a0a0a] border border-[#e5e5e5] dark:border-[#222] px-3 py-2">
           <p className="text-[10px] uppercase tracking-[0.15em] font-semibold mb-1" style={{ color: item.payload.color }}>
             {item.name}
           </p>
-          <p className="text-xs text-ink/60 dark:text-paper/60">
+          <p className="text-xs text-[#666] dark:text-[#999]">
             {item.value} articles ({percent}%)
           </p>
         </div>
       );
     }
     return null;
-  };
-
-  const renderLegend = (props) => {
-    const { payload } = props;
-    return (
-      <div className="flex justify-center gap-5 mt-4">
-        {payload.map((entry, index) => (
-          <div key={`legend-${index}`} className="flex items-center gap-2">
-            <div 
-              className="w-2.5 h-2.5" 
-              style={{ backgroundColor: entry.color }}
-            />
-            <span className="text-[10px] uppercase tracking-[0.15em] text-ink-muted dark:text-ink-faint font-sans">
-              {entry.value}
-            </span>
-          </div>
-        ))}
-      </div>
-    );
   };
 
   // Center label showing total
@@ -59,7 +40,7 @@ const SentimentDonutChart = ({ distribution = {}, onSegmentClick, activeFilter }
         <tspan
           x="50%"
           dy="-0.5em"
-          className="fill-ink dark:fill-paper"
+          className="fill-black dark:fill-white"
           style={{ fontFamily: "'Playfair Display', serif", fontSize: '2rem', fontWeight: 700 }}
         >
           {total}
@@ -67,7 +48,7 @@ const SentimentDonutChart = ({ distribution = {}, onSegmentClick, activeFilter }
         <tspan
           x="50%"
           dy="1.8em"
-          className="fill-ink/40 dark:fill-paper/40"
+          className="fill-[#999] dark:fill-[#666]"
           style={{ fontFamily: "'Inter', sans-serif", fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.15em' }}
         >
           Total
@@ -78,7 +59,7 @@ const SentimentDonutChart = ({ distribution = {}, onSegmentClick, activeFilter }
 
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64 text-ink/30 dark:text-paper/30">
+      <div className="flex items-center justify-center h-64 text-[#ccc] dark:text-[#444]">
         <p className="text-sm">No data available</p>
       </div>
     );
@@ -86,7 +67,7 @@ const SentimentDonutChart = ({ distribution = {}, onSegmentClick, activeFilter }
 
   return (
     <div>
-      <ResponsiveContainer width="100%" height={260}>
+      <ResponsiveContainer width="100%" height={240}>
         <PieChart>
           <Pie
             data={data}
@@ -99,11 +80,11 @@ const SentimentDonutChart = ({ distribution = {}, onSegmentClick, activeFilter }
             onClick={(data) => onSegmentClick && onSegmentClick(data.name)}
             cursor="pointer"
             strokeWidth={1}
-            stroke="var(--color-paper, #ffffff)"
+            stroke="#fafafa"
           >
             {data.map((entry, index) => (
-              <Cell 
-                key={`cell-${index}`} 
+              <Cell
+                key={`cell-${index}`}
                 fill={entry.color}
                 opacity={activeFilter && activeFilter !== 'all' && activeFilter !== entry.name ? 0.25 : 1}
                 className="transition-opacity duration-200"
@@ -111,10 +92,24 @@ const SentimentDonutChart = ({ distribution = {}, onSegmentClick, activeFilter }
             ))}
           </Pie>
           <Tooltip content={<CustomTooltip />} />
-          <Legend content={renderLegend} />
           {renderCenterLabel()}
         </PieChart>
       </ResponsiveContainer>
+
+      {/* Legend — colored dots below chart */}
+      <div className="flex justify-center gap-6 mt-3 pt-3 border-t border-[#e5e5e5] dark:border-[#222]">
+        {data.map((entry, index) => (
+          <div key={`legend-${index}`} className="flex items-center gap-2">
+            <span
+              className="w-2 h-2 rounded-full inline-block"
+              style={{ backgroundColor: entry.color }}
+            />
+            <span className="text-[10px] uppercase tracking-[0.15em] text-[#999] dark:text-[#666] font-sans">
+              {entry.name}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

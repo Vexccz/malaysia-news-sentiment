@@ -5,6 +5,27 @@ import { ExternalLink, Bookmark, BookmarkCheck, Share2, Copy, X } from 'lucide-r
 import SentimentBadge from './SentimentBadge';
 import { useArticleAnalysis } from '../context/ArticleAnalysisContext';
 
+// ─── Sentiment border color map ─────────────────────────────────────────────
+const SENTIMENT_BORDER = {
+  Positive: 'border-l-[#4ADE80]',
+  Negative: 'border-l-[#FB7185]',
+  Neutral:  'border-l-[#FBBF24]',
+};
+
+const SENTIMENT_BG = {
+  Positive: 'bg-[#4ADE80]',
+  Negative: 'bg-[#FB7185]',
+  Neutral:  'bg-[#FBBF24]',
+};
+
+const SOURCE_COLORS = [
+  'bg-[#1a1a1a] dark:bg-[#e5e5e5]',
+  'bg-[#374151] dark:bg-[#d1d5db]',
+  'bg-[#4b5563] dark:bg-[#9ca3af]',
+  'bg-[#6b7280] dark:bg-[#6b7280]',
+  'bg-[#334155] dark:bg-[#cbd5e1]',
+];
+
 // ─── Custom long-press hook ──────────────────────────────────────────────────
 function useLongPress(callback, { delay = 500 } = {}) {
   const timeoutRef = useRef(null);
@@ -13,7 +34,6 @@ function useLongPress(callback, { delay = 500 } = {}) {
 
   const start = useCallback(
     (e) => {
-      // Ignore right-clicks
       if (e.button && e.button !== 0) return;
       isLongPress.current = false;
       targetRef.current = e.currentTarget;
@@ -45,7 +65,6 @@ function useLongPress(callback, { delay = 500 } = {}) {
 
 // ─── Action Sheet ────────────────────────────────────────────────────────────
 const ActionSheet = ({ isOpen, onClose, onBookmark, onOpenExternal, onShare, onCopyLink, isBookmarked }) => {
-  // Close on Escape
   useEffect(() => {
     if (!isOpen) return;
     const handler = (e) => e.key === 'Escape' && onClose();
@@ -53,7 +72,6 @@ const ActionSheet = ({ isOpen, onClose, onBookmark, onOpenExternal, onShare, onC
     return () => window.removeEventListener('keydown', handler);
   }, [isOpen, onClose]);
 
-  // Prevent body scroll when open
   useEffect(() => {
     if (isOpen) {
       const prev = document.body.style.overflow;
@@ -66,7 +84,6 @@ const ActionSheet = ({ isOpen, onClose, onBookmark, onOpenExternal, onShare, onC
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -75,35 +92,28 @@ const ActionSheet = ({ isOpen, onClose, onBookmark, onOpenExternal, onShare, onC
             className="fixed inset-0 z-[999] bg-black/40 backdrop-blur-[2px]"
             onClick={onClose}
           />
-
-          {/* Sheet */}
           <motion.div
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 340 }}
-            className="fixed bottom-0 left-0 right-0 z-[1000] bg-white dark:bg-[#1a1a1a] border-t border-slate-200 dark:border-[#2a2a2a]"
-            style={{ borderRadius: '12px 12px 0 0' }}
+            className="fixed bottom-0 left-0 right-0 z-[1000] bg-white dark:bg-[#111] border-t border-[#e5e5e5] dark:border-[#222]"
+            style={{ borderRadius: '0' }}
           >
-            {/* Drag handle */}
             <div className="flex justify-center pt-3 pb-1">
-              <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-[#444]" />
+              <div className="w-10 h-1 bg-gray-300 dark:bg-[#444]" />
             </div>
-
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 dark:border-[#2a2a2a]">
-              <span className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-[#e5e5e5] dark:border-[#222]">
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 font-sans">
                 Quick Actions
               </span>
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#252525] text-slate-400 dark:text-slate-500 transition-colors"
+                className="p-1.5 hover:bg-gray-100 dark:hover:bg-[#1a1a1a] text-gray-400 dark:text-gray-500 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-
-            {/* Actions */}
             <div className="px-3 py-2 flex flex-col">
               <ActionSheetButton
                 icon={isBookmarked ? <BookmarkCheck className="w-5 h-5" /> : <Bookmark className="w-5 h-5" />}
@@ -127,12 +137,10 @@ const ActionSheet = ({ isOpen, onClose, onBookmark, onOpenExternal, onShare, onC
                 onClick={() => { onCopyLink(); onClose(); }}
               />
             </div>
-
-            {/* Cancel */}
             <div className="px-3 pb-4 pt-1">
               <button
                 onClick={onClose}
-                className="w-full py-3 text-sm font-semibold rounded-xl bg-slate-100 dark:bg-[#252525] text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#303030] transition-colors active:scale-[0.98]"
+                className="w-full py-3 text-sm font-semibold bg-gray-100 dark:bg-[#1a1a1a] text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#252525] transition-colors"
               >
                 Cancel
               </button>
@@ -147,16 +155,27 @@ const ActionSheet = ({ isOpen, onClose, onBookmark, onOpenExternal, onShare, onC
 const ActionSheetButton = ({ icon, label, onClick, accent }) => (
   <button
     onClick={onClick}
-    className={`flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors active:scale-[0.98] ${
+    className={`flex items-center gap-4 px-4 py-3.5 transition-colors ${
       accent
         ? 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'
-        : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#252525]'
+        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-[#1a1a1a]'
     }`}
   >
     {icon}
     <span className="text-sm font-medium">{label}</span>
   </button>
 );
+
+// ─── Source initial circle ───────────────────────────────────────────────────
+const SourceInitial = ({ source }) => {
+  const initial = (source || 'U').charAt(0).toUpperCase();
+  const colorIndex = (source || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0) % SOURCE_COLORS.length;
+  return (
+    <div className={`w-7 h-7 flex-shrink-0 flex items-center justify-center text-[11px] font-bold text-white dark:text-[#111] ${SOURCE_COLORS[colorIndex]}`}>
+      {initial}
+    </div>
+  );
+};
 
 // ─── Swipe hint overlay ──────────────────────────────────────────────────────
 const SwipeHint = ({ direction, visible }) => {
@@ -174,14 +193,14 @@ const SwipeHint = ({ direction, visible }) => {
           }`}
         >
           <div
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${
+            className={`flex items-center gap-2 px-3 py-2 border ${
               isBookmark
                 ? 'bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300'
                 : 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300'
             }`}
           >
             {isBookmark ? <Bookmark className="w-4 h-4" /> : <ExternalLink className="w-4 h-4" />}
-            <span className="text-xs font-bold uppercase tracking-wide">
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em]">
               {isBookmark ? 'Bookmark' : 'Open'}
             </span>
           </div>
@@ -201,18 +220,26 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const { openArticlePanel } = useArticleAnalysis();
 
-  // Track mobile state
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Motion values for swipe (mobile only)
   const x = useMotionValue(0);
   const swipeThreshold = 80;
+  const swipeBg = useTransform(
+    x,
+    [-120, -40, 0, 40, 120],
+    [
+      'rgba(245,158,11,0.15)',
+      'rgba(245,158,11,0.06)',
+      'transparent',
+      'rgba(16,185,129,0.06)',
+      'rgba(16,185,129,0.15)',
+    ]
+  );
 
-  // Track swipe direction for hints (mobile only)
   const unsubscribeX = useRef(null);
   useEffect(() => {
     if (!isMobile) return;
@@ -255,7 +282,6 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
         flashCopied();
       }
     } catch {
-      // User cancelled or API not available — silently fallback
       try {
         await navigator.clipboard.writeText(article.url || window.location.href);
         flashCopied();
@@ -275,7 +301,6 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
     setTimeout(() => setCopiedToast(false), 1800);
   };
 
-  // Long press
   const longPress = useLongPress(() => setActionSheetOpen(true), { delay: 500 });
 
   const handleCardClick = () => {
@@ -283,7 +308,6 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
     if (onClick) onClick(article); else openArticlePanel(article);
   };
 
-  // Swipe complete handlers
   const handleSwipeEnd = (_, info) => {
     const { offset, velocity } = info;
     if (offset.x < -swipeThreshold || velocity.x < -300) {
@@ -293,7 +317,6 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
     }
   };
 
-  // Format time ago
   const timeAgo = (date) => {
     const seconds = Math.floor((new Date() - new Date(date)) / 1000);
     if (seconds < 60) return 'Just now';
@@ -306,41 +329,29 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
     return new Date(date).toLocaleDateString('en-MY', { month: 'short', day: 'numeric' });
   };
 
-  // Truncate title
-  const truncateTitle = (text, maxLength = 100) => {
+  const truncateTitle = (text, maxLength = 120) => {
     if (!text || text.length <= maxLength) return text;
     return text.slice(0, maxLength).trim() + '...';
   };
 
+  const sentiment = article.sentiment || 'Neutral';
+  const borderColor = SENTIMENT_BORDER[sentiment] || SENTIMENT_BORDER.Neutral;
+
   return (
     <>
-      <div
-        className="relative group"
-      >
+      <div className="relative group">
         {/* Swipe background layers - mobile only */}
         {isMobile && (
           <motion.div
-            className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none"
-            style={{
-              background: useTransform(
-                x,
-                [-120, -40, 0, 40, 120],
-                [
-                  'rgba(245,158,11,0.15)',
-                  'rgba(245,158,11,0.06)',
-                  'transparent',
-                  'rgba(16,185,129,0.06)',
-                  'rgba(16,185,129,0.15)',
-                ]
-              ),
-            }}
+            className="absolute inset-0 overflow-hidden pointer-events-none"
+            style={{ background: swipeBg }}
           >
             <SwipeHint direction="left" visible={swipeHintDir === 'left'} />
             <SwipeHint direction="right" visible={swipeHintDir === 'right'} />
           </motion.div>
         )}
 
-        {/* Swipeable card */}
+        {/* Swipeable card — editorial style */}
         <motion.div
           x={isMobile ? x : undefined}
           drag={isMobile ? 'x' : false}
@@ -350,128 +361,103 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
           onClick={handleCardClick}
           {...(isMobile ? longPress : {})}
           style={isMobile ? { x, touchAction: 'pan-y' } : {}}
-          className="relative z-20 bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-[#2a2a2a] rounded-xl p-4 hover:shadow-lg hover:border-slate-300 dark:hover:border-[#3a3a3a] transition-[border-color,box-shadow] cursor-pointer select-none"
+          className={`relative z-20 bg-white dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222] border-l-[3px] ${borderColor} py-4 px-5 hover:bg-[#fafafa] dark:hover:bg-[#161616] transition-[background-color] cursor-pointer select-none`}
           whileTap={isMobile ? { scale: 0.995 } : {}}
         >
           <div className="flex gap-4">
-            {/* Thumbnail */}
-            <div className="flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden bg-slate-100 dark:bg-[#252525]">
-              {article.urlToImage && !imageError ? (
+            {/* Source initial or favicon */}
+            <div className="flex-shrink-0 pt-0.5">
+              {article.url && !faviconError ? (
                 <img
-                  src={article.urlToImage}
-                  alt={article.title}
-                  onError={() => setImageError(true)}
-                  className="w-full h-full object-cover"
-                  draggable={false}
+                  src={getFavicon(article.url)}
+                  alt=""
+                  className="w-7 h-7 flex-shrink-0"
+                  loading="lazy"
+                  onError={() => setFaviconError(true)}
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-                  </svg>
-                </div>
+                <SourceInitial source={article.source} />
               )}
             </div>
 
             {/* Content */}
             <div className="flex-1 min-w-0">
-              {/* Header: Source + Time + Sentiment Badge */}
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
-                  {article.url && !faviconError ? (
-                    <img
-                      src={getFavicon(article.url)}
-                      alt=""
-                      className="w-4 h-4 flex-shrink-0"
-                      loading="lazy"
-                      onError={() => setFaviconError(true)}
-                    />
-                  ) : (
-                    <span className="w-4 h-4 flex-shrink-0 bg-slate-200 dark:bg-[#333] flex items-center justify-center text-[8px] font-bold text-slate-500 dark:text-slate-300">
-                      {(article.source || 'U').charAt(0)}
-                    </span>
-                  )}
-                  <span className="font-bold uppercase tracking-wide">
+              {/* Top meta row: Source + Date + Sentiment */}
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 font-sans">
                     {article.source || 'Unknown'}
                   </span>
-                  <span className="text-slate-400">•</span>
-                  <span>{timeAgo(article.publishedAt || article.createdAt)}</span>
                   {article.category && (
                     <>
-                      <span className="text-slate-400">•</span>
-                      <span className="text-emerald-600 dark:text-emerald-400">#{article.category}</span>
+                      <span className="text-gray-300 dark:text-[#333]">|</span>
+                      <span className="text-[10px] uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500 font-sans">
+                        {article.category}
+                      </span>
                     </>
                   )}
                 </div>
-
-                {/* Sentiment Badge */}
-                <SentimentBadge
-                  sentiment={article.sentiment}
-                  confidence={article.confidence}
-                />
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500 font-sans tracking-wide whitespace-nowrap">
+                    {timeAgo(article.publishedAt || article.createdAt)}
+                  </span>
+                  <SentimentBadge sentiment={sentiment} />
+                </div>
               </div>
 
-              {/* Title */}
-              <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2 line-clamp-2 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+              {/* Title — serif editorial */}
+              <h3 className="font-['Playfair_Display'] text-[17px] sm:text-lg font-bold text-gray-900 dark:text-white mb-1.5 leading-snug line-clamp-2 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors">
                 {truncateTitle(article.title)}
               </h3>
 
               {/* Summary */}
               {article.summary && (
-                <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 mb-3">
+                <p className="text-[13px] leading-relaxed text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">
                   {article.summary}
                 </p>
               )}
 
               {/* Footer: Confidence + Actions */}
-              <div className="flex items-center justify-between">
-                {/* Confidence Score */}
-                <div className="text-xs text-slate-500 dark:text-slate-300">
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#eee] dark:border-[#1a1a1a]">
+                <div className="flex items-center gap-3">
                   {article.confidence && (
-                    <span className="font-medium">
+                    <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em]">
                       {Math.round(article.confidence * 100)}% confidence
                     </span>
                   )}
                 </div>
-
-                {/* Action Buttons */}
-                <div className="flex items-center gap-2">
-                  {/* Bookmark */}
+                <div className="flex items-center gap-1">
                   <button
                     onClick={handleBookmark}
-                    className={`p-2 rounded-lg transition-colors ${
+                    className={`p-1.5 transition-colors ${
                       isBookmarked
-                        ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
-                        : 'hover:bg-slate-100 dark:hover:bg-[#252525] text-slate-600 dark:text-slate-300'
+                        ? 'text-amber-600 dark:text-amber-400'
+                        : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
                     }`}
                     title={isBookmarked ? 'Remove bookmark' : 'Bookmark'}
                   >
                     {isBookmarked ? (
-                      <BookmarkCheck className="w-4 h-4" />
+                      <BookmarkCheck className="w-3.5 h-3.5" />
                     ) : (
-                      <Bookmark className="w-4 h-4" />
+                      <Bookmark className="w-3.5 h-3.5" />
                     )}
                   </button>
-
-                  {/* View Details */}
                   <Link
                     to={'/articles/' + (article._id || article.id)}
                     onClick={(e) => e.stopPropagation()}
-                    className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-[#252525] text-slate-600 dark:text-slate-300 transition-colors"
+                    className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                     title="View full analysis"
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
                     </svg>
                   </Link>
-
-                  {/* Open External */}
                   <button
                     onClick={handleOpenExternal}
-                    className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-[#252525] text-slate-600 dark:text-slate-300 transition-colors"
+                    className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                     title="Open article"
                   >
-                    <ExternalLink className="w-4 h-4" />
+                    <ExternalLink className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
@@ -488,7 +474,7 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[1001] px-4 py-2 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-semibold shadow-lg"
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[1001] px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-semibold shadow-lg"
           >
             Link copied to clipboard
           </motion.div>

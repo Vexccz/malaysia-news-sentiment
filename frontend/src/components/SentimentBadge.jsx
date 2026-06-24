@@ -1,19 +1,33 @@
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
 
-const SENTIMENT_META = {
-  Positive: { icon: '↑', en: 'Positive', ms: 'Positif' },
-  Negative: { icon: '↓', en: 'Negative', ms: 'Negatif' },
-  Neutral:  { icon: '→', en: 'Neutral',  ms: 'Neutral' },
+const SENTIMENT_STYLES = {
+  Positive: {
+    bg: 'bg-[#4ADE80]/15 dark:bg-[#4ADE80]/10',
+    text: 'text-emerald-700 dark:text-[#4ADE80]',
+    en: 'Positive',
+    ms: 'Positif',
+  },
+  Negative: {
+    bg: 'bg-[#FB7185]/15 dark:bg-[#FB7185]/10',
+    text: 'text-rose-700 dark:text-[#FB7185]',
+    en: 'Negative',
+    ms: 'Negatif',
+  },
+  Neutral: {
+    bg: 'bg-[#FBBF24]/15 dark:bg-[#FBBF24]/10',
+    text: 'text-amber-700 dark:text-[#FBBF24]',
+    en: 'Neutral',
+    ms: 'Neutral',
+  },
 };
 
 const SentimentBadge = ({ sentiment }) => {
   const { lang } = useLanguage();
-  const meta = SENTIMENT_META[sentiment] || SENTIMENT_META.Neutral;
-  const label = meta[lang] || meta.en;
+  const style = SENTIMENT_STYLES[sentiment] || SENTIMENT_STYLES.Neutral;
+  const label = style[lang] || style.en;
   return (
-    <span className={`s-badge s-badge--${sentiment}`}>
-      <span style={{ fontSize: '13px', lineHeight: 1 }}>{meta.icon}</span>
+    <span className={`inline-flex items-center px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] ${style.bg} ${style.text}`}>
       {label}
     </span>
   );
