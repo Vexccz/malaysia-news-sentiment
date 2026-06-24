@@ -213,8 +213,8 @@ const SourceCredibility = () => {
           <p className="text-[10px] text-ink-faint mb-4">Confidence scores by publisher</p>
           <div className="space-y-2">
             {reliability.slice(0, 10).map((sr, i) => {
-              const conf = sr.avgConfidence || sr.score || 0;
-              const pct = (conf * 100).toFixed(0);
+              const conf = sr.confidence ?? 0;
+              const pct = conf.toFixed(0);
               return (
                 <motion.div
                   key={sr.source || sr._id}
