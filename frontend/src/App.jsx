@@ -23,7 +23,6 @@ const SentimentTimeline = lazy(() => import('./pages/SentimentTimeline'));
 const ComparePage = lazy(() => import('./pages/Compare'));
 const Trending = lazy(() => import('./pages/Trending'));
 const Digest = lazy(() => import('./pages/Digest'));
-const LiveMonitor = lazy(() => import('./pages/LiveMonitor'));
 const AdvancedAnalytics = lazy(() => import('./pages/AdvancedAnalytics'));
 const SharedArticles = lazy(() => import('./pages/SharedArticles'));
 
@@ -168,11 +167,6 @@ const Sidebar = ({ isOpen, isCollapsed, onClose }) => {
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
               </svg>
             }>{t('timeline')}</SideLink>
-            <SideLink to="/monitor" onClick={onClose} icon={
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49"/><path d="M7.76 16.24a6 6 0 0 1 0-8.49"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 19.07a10 10 0 0 1 0-14.14"/>
-              </svg>
-            }>Live Monitor</SideLink>
             <SideLink to="/analytics" onClick={onClose} icon={
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>
@@ -253,7 +247,6 @@ const TITLES = {
   '/feed': 'liveFeed',
   '/timeline': 'timeline',
   '/alerts': 'alerts',
-  '/monitor': 'liveMonitor',
   '/analytics': 'advancedAnalytics',
   '/shared-articles': 'sharedArticles',
   '/credibility': 'sources',
@@ -520,7 +513,6 @@ const AppInner = () => (
     <Route path="/heatmap" element={<ProtectedRoute><Layout><Heatmap /></Layout></ProtectedRoute>} />
     <Route path="/categories" element={<ProtectedRoute><Layout><Categories /></Layout></ProtectedRoute>} />
     <Route path="/forecast" element={<ProtectedRoute><Layout><Forecast /></Layout></ProtectedRoute>} />
-    <Route path="/monitor" element={<ProtectedRoute><Layout><LiveMonitor /></Layout></ProtectedRoute>} />
     <Route path="/analytics" element={<ProtectedRoute><Layout><AdvancedAnalytics /></Layout></ProtectedRoute>} />
     <Route path="/shared-articles" element={<ProtectedRoute><Layout><SharedArticles /></Layout></ProtectedRoute>} />
 
