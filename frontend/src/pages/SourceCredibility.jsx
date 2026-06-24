@@ -34,6 +34,7 @@ const SourceCredibility = () => {
   const [sortOrder, setSortOrder] = useState('desc');
   const [biasFilter, setBiasFilter] = useState('all');
   const [selectedSource, setSelectedSource] = useState(null);
+  const [malaysiaOnly, setMalaysiaOnly] = useState(true);
 
   useEffect(() => {
     fetchData();
@@ -69,8 +70,16 @@ const SourceCredibility = () => {
   };
 
   // Derived analytics data
-  const bias = analytics?.sourceBias || [];
-  const reliability = analytics?.sourceReliability || [];
+  const MALAYSIA_SOURCES = new Set([
+    'FMT', 'Astro Awani', 'Malaysiakini', 'The Star', 'The Star Online',
+    'NST', 'New Straits Times', 'Bernama', 'Harian Metro', 'Utusan',
+    'Malay Mail', 'The Edge', 'Sinar Harian', 'Berita Harian', 'my',
+    'Unknown',
+  ]);
+  const rawBias = analytics?.sourceBias || [];
+  const bias = malaysiaOnly ? rawBias.filter(s => MALAYSIA_SOURCES.has(s.source)) : rawBias;
+  const rawReliability = analytics?.sourceReliability || [];
+  const reliability = malaysiaOnly ? rawReliability.filter(s => MALAYSIA_SOURCES.has(s.source)) : rawReliability;
 
   if (loading) {
     return (
@@ -122,6 +131,20 @@ const SourceCredibility = () => {
           </div>
         );
       })()}
+
+      {/* Malaysia Only Toggle */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setMalaysiaOnly(!malaysiaOnly)}
+          className={`px-3 py-1.5 text-xs font-medium transition-all border ${
+            malaysiaOnly
+              ? 'bg-ink dark:bg-paper text-paper dark:text-ink border-ink dark:border-paper'
+              : 'bg-paper-card dark:bg-[#1a1a1a] border-paper-line dark:border-paper-dark-line text-ink-muted'
+          }`}
+        >
+          {malaysiaOnly ? 'Malaysia Only' : 'All Sources'}
+        </button>
+      </div>
 
       {/* Source Bias Analysis */}
       {bias.length > 0 && (
@@ -206,10 +229,10 @@ const SourceCredibility = () => {
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
                       transition={{ duration: 0.8, delay: i * 0.05 }}
-                      className={`h-full rounded-sm ${conf > 0.7 ? 'bg-green-500' : conf > 0.5 ? 'bg-amber-500' : 'bg-red-500'}`}
+                      className={`h-full rounded-sm ${conf > 70 ? 'bg-green-500' : conf > 50 ? 'bg-amber-500' : 'bg-red-500'}`}
                     />
                   </div>
-                  <span className={`text-[10px] font-semibold tabular-nums w-10 text-right ${conf > 0.7 ? 'text-green-600' : conf > 0.5 ? 'text-amber-600' : 'text-red-600'}`}>
+                  <span className={`text-[10px] font-semibold tabular-nums w-10 text-right ${conf > 70 ? 'text-green-600' : conf > 50 ? 'text-amber-600' : 'text-red-600'}`}>
                     {pct}%
                   </span>
                 </motion.div>
