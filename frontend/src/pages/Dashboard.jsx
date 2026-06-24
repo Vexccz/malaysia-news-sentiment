@@ -110,18 +110,6 @@ const SentimentMarkInline = ({ sentiment }) => {
   const m = map[sentiment] || map.Neutral;
   return <span className={`inline-block text-xs font-bold ${m.color} mr-1`}>{m.symbol}</span>;
 };
-/* ─── Inline: Analytics ────────────────────────────────────────────── */
-const AnalyticsInline = () => {
-  return (
-    <div className={`${CARD} p-8 text-center`}>
-      <Activity size={24} className="mx-auto mb-2 text-ink-faint" />
-      <p className="text-sm text-ink-muted mb-2">Advanced analytics have moved to the Admin Dashboard.</p>
-      <a href="/admin" className="text-xs font-semibold uppercase tracking-wider text-accent hover:underline">
-        Go to Admin Dashboard
-      </a>
-    </div>
-  );
-};
 /* ─── Inline: Community ────────────────────────────────────────────── */
 const CommunityInline = () => {
   const [shared, setShared] = useState([]);
@@ -326,7 +314,7 @@ const Dashboard = () => {
   const { pullDistance, isRefreshing, onTouchStart: pullTouchStart, onTouchMove: pullTouchMove, onTouchEnd: pullTouchEnd } = usePullToRefresh(handlePullRefresh);
 
   // Swipe between tabs
-  const MOBILE_TABS = ['overview', 'charts', 'analytics', 'community', 'ai'];
+  const MOBILE_TABS = ['overview', 'charts', 'community', 'ai'];
   const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipeTabs(MOBILE_TABS, mobileTab, setMobileTab);
 
   // FAB label tooltip on first visit
@@ -975,7 +963,7 @@ const Dashboard = () => {
                   {[
                     { key: 'overview', label: 'Overview', icon: <BarChart3 size={12} /> },
                     { key: 'charts', label: 'Charts', icon: <TrendingUp size={12} /> },
-                    { key: 'analytics', label: 'Analytics', icon: <Activity size={12} /> },
+                    
                     { key: 'community', label: 'Community', icon: <Users size={12} /> },
                     { key: 'ai', label: 'AI Insights', icon: <Brain size={12} /> },
                   ].map(tab => (
@@ -1220,34 +1208,7 @@ const Dashboard = () => {
                   </motion.div>
                 )}
 
-                {mobileTab === 'analytics' && (
-                <motion.div
-                  key="analytics"
-                  custom={slideDirection}
-                  variants={slideVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}>
-                <div className="space-y-5">
-                  <SectionHeader title="Advanced Analytics" />
-                  <InlineErrorBoundary name="Analytics">
-                    <AnalyticsInline />
-                  </InlineErrorBoundary>
-                </div>
-                </motion.div>
-                )}
-
-                {mobileTab === 'community' && (
-                  <motion.div
-                    key="community"
-                    custom={slideDirection}
-                    variants={slideVariants}
-                    initial="enter"
-                    animate="center"
-                    exit="exit"
-                    transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-                  >
+                
                   <div className="space-y-5">
                     <SectionHeader title="Community" />
                     <InlineErrorBoundary name="Community">
@@ -1561,14 +1522,6 @@ const Dashboard = () => {
                   )}
                 </div>
                 )}
-
-                {/* Advanced Analytics Section */}
-                <div className="mt-10">
-                  <SectionHeader title="ADVANCED ANALYTICS" />
-                  <InlineErrorBoundary name="Analytics">
-                    <AnalyticsInline />
-                  </InlineErrorBoundary>
-                </div>
 
                 {/* Community Section */}
                 <div className="mt-10">
