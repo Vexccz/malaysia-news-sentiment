@@ -5,9 +5,11 @@ import api, { getAdminStats, getAdminUsers, updateUserRole, deleteUser, updateUs
 import toast from 'react-hot-toast';
 import ScrollToTop from '../components/ScrollToTop';
 import { useSocket } from '../context/SocketContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
+  const { t, lang } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [insights, setInsights] = useState(null);
   const [insightsLoading, setInsightsLoading] = useState(false);

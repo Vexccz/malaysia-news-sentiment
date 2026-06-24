@@ -14,6 +14,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import {
+import { useLanguage } from '../context/LanguageContext';
   Bookmark,
   BookmarkX,
   FolderPlus,
@@ -28,6 +29,7 @@ import {
 const Bookmarks = () => {
   const { user, toggleBookmark } = useAuth();
   const [articles, setArticles] = useState([]);
+  const { t, lang } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [selectedArticle, setSelectedArticle] = useState(null);
 

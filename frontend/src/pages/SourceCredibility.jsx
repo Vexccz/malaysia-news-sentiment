@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import api from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 const biasColors = {
   left: 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400',
@@ -28,6 +29,7 @@ const getBarColor = (score) => {
 
 const SourceCredibility = () => {
   const [sources, setSources] = useState([]);
+  const { t, lang } = useLanguage();
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState('credibilityScore');

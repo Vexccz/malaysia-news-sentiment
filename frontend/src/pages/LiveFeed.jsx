@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSocket } from '../context/SocketContext';
 import api from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5001/api/v1';
 
@@ -205,6 +206,7 @@ const ArticleCard = ({ article, isNew }) => (
 const LiveFeed = () => {
   const socket = useSocket();
   const [stats, setStats] = useState(null);
+  const { t, lang } = useLanguage();
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');

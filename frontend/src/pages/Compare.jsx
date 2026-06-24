@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import toast from 'react-hot-toast';
 import api from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 const COLORS = ['#2563eb', '#7c3aed', '#10b981', '#f59e0b', '#ef4444'];
 
 const Compare = () => {
   const [topics, setTopics] = useState(['', '']);
+  const { t, lang } = useLanguage();
   const [days, setDays] = useState(30);
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);

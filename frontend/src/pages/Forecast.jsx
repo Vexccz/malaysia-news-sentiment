@@ -2,9 +2,11 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, ComposedChart, Legend } from 'recharts';
 import api from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 const Forecast = () => {
   const [topic, setTopic] = useState('');
+  const { t, lang } = useLanguage();
   const [days, setDays] = useState(7);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -109,7 +111,7 @@ const Forecast = () => {
                       <span className="inline-block w-3.5 h-3.5 border-2 border-paper/30 border-t-paper dark:border-ink/30 dark:border-t-ink rounded-full animate-spin" />
                       Forecasting
                     </span>
-                  ) : 'Generate'}
+                  ) : t('generate')}
                 </button>
               </div>
             </div>

@@ -5,6 +5,7 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import api from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 // Malaysia GeoJSON from public source
 const GEOJSON_URL = 'https://raw.githubusercontent.com/dosm-malaysia/data-open/main/datasets/geodata/administrative_1_state.geojson';
@@ -47,6 +48,7 @@ const getSentimentLabel = (val) => {
 
 const Heatmap = () => {
   const [data, setData] = useState([]);
+  const { t, lang } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(7);
   const [selectedState, setSelectedState] = useState(null);

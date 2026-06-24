@@ -7,6 +7,7 @@ import ArticlePreviewModal from '../components/ArticlePreviewModal';
 import { getHistory, deleteArticle, bulkDeleteArticles, getStats } from '../services/api';
 import { exportToCSV } from '../services/exportUtils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLanguage } from '../context/LanguageContext';
 
 const History = () => {
   const queryClient = useQueryClient();
@@ -20,6 +21,7 @@ const History = () => {
     page: 1,
     limit: 50
   });
+  const { t, lang } = useLanguage();
 
   const [searchInput, setSearchInput] = useState('');
   const debounceRef = useRef(null);

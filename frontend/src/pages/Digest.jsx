@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 const Digest = () => {
   const [activeTab, setActiveTab] = useState('daily');
+  const { t, lang } = useLanguage();
   const [dailyData, setDailyData] = useState(null);
   const [weeklyData, setWeeklyData] = useState(null);
   const [topicData, setTopicData] = useState(null);

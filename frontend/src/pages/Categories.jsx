@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 const Categories = () => {
   const [categories, setCategories] = useState([]);
+  const { t, lang } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [articles, setArticles] = useState([]);

@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 const TEMPLATES = [
   {
@@ -68,6 +69,7 @@ const ALL_SECTIONS = [
 
 const Reports = () => {
   const [topic, setTopic] = useState('');
+  const { t, lang } = useLanguage();
   const [topicB, setTopicB] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');

@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { Search, List, Network, X, TrendingUp, BarChart3, FileText, Share2, PieChart } from 'lucide-react';
 import { LineChart, Line, PieChart as RechartsPie, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { GraphSkeleton, CardSkeleton } from '../components/Skeletons';
+import { useLanguage } from '../context/LanguageContext';
 
 const SENTIMENT_COLORS = { Positive: '#10B981', Negative: '#EF4444', Neutral: '#F59E0B' };
 const SENTIMENT_GLOW = { Positive: 'rgba(16,185,129,0.4)', Negative: 'rgba(239,68,68,0.4)', Neutral: 'rgba(245,158,11,0.4)' };
@@ -30,6 +31,7 @@ export default function EntityGraphPage() {
   const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   const [data, setData] = useState({ nodes: [], edges: [] });
+  const { t, lang } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [graphRendering, setGraphRendering] = useState(false);
   const [selectedNode, setSelectedNode] = useState(null);

@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import api from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 const Alerts = () => {
   const [alerts, setAlerts] = useState([]);
+  const { t, lang } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingAlert, setEditingAlert] = useState(null);

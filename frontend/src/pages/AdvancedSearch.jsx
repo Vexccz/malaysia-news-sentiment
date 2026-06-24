@@ -4,6 +4,7 @@ import { StaggerList, StaggerItem } from '../components/StaggerList';
 import { X } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 const SENTIMENTS = ['Positive', 'Negative', 'Neutral'];
 const SORT_OPTIONS = [
@@ -23,6 +24,7 @@ const SkeletonCard = () => (
 const AdvancedSearch = () => {
   const [searchParams] = useSearchParams();
   const [query, setQuery] = useState('');
+  const { t, lang } = useLanguage();
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);

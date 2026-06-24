@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import api from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 const RANGE_OPTIONS = [
   { label: '7D', value: 7 },
@@ -28,6 +29,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 const SentimentTimeline = () => {
   const [topic, setTopic] = useState('');
+  const { t, lang } = useLanguage();
   const [days, setDays] = useState(30);
   const [timeline, setTimeline] = useState([]);
   const [summary, setSummary] = useState(null);

@@ -4,9 +4,11 @@ import { getTopViewed } from '../services/api';
 import ArticleCard from '../components/ArticleCard';
 import ArticlePreviewModal from '../components/ArticlePreviewModal';
 import toast from 'react-hot-toast';
+import { useLanguage } from '../context/LanguageContext';
 
 const Trending = () => {
   const [articles, setArticles] = useState([]);
+  const { t, lang } = useLanguage();
   const [timeframe, setTimeframe] = useState('today');
   const [loading, setLoading] = useState(true);
   const [selectedArticle, setSelectedArticle] = useState(null);
@@ -47,8 +49,8 @@ const Trending = () => {
         {/* Timeframe — editorial tab style */}
         <div className="flex items-center gap-0">
           {[
-            { value: 'today', label: 'Today' },
-            { value: 'week', label: 'This Week' },
+            { value: 'today', label: t('today') },
+            { value: 'week', label: t('thisWeek') },
           ].map((opt, i) => (
             <React.Fragment key={opt.value}>
               {i > 0 && <span className="text-ink-faint mx-1.5">|</span>}
