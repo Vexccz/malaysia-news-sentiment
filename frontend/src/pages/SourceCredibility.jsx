@@ -151,53 +151,54 @@ const SourceCredibility = () => {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`${CARD} p-5`}
+          className={`${CARD} overflow-hidden`}
         >
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-1">Source Bias Analysis</h3>
-          <p className="text-[10px] text-ink-faint mb-4">Sentiment distribution across news publishers</p>
-          <div className="space-y-3">
-            {bias.slice(0, 12).map((src, i) => {
+          <div className="px-5 pt-5 pb-3 border-b border-gray-100 dark:border-gray-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-widest text-ink-muted">Source Bias Analysis</h3>
+                <p className="text-[10px] text-ink-faint mt-0.5">Sentiment distribution across news publishers</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /><span className="text-[9px] text-ink-faint uppercase tracking-wider">Pos</span></div>
+                <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-rose-500" /><span className="text-[9px] text-ink-faint uppercase tracking-wider">Neg</span></div>
+                <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600" /><span className="text-[9px] text-ink-faint uppercase tracking-wider">Neu</span></div>
+              </div>
+            </div>
+          </div>
+          <div className="divide-y divide-gray-50 dark:divide-gray-800/50">
+            {bias.slice(0, 10).map((src, i) => {
               const srcTotal = (src.positive || 0) + (src.negative || 0) + (src.neutral || 0) || 1;
-              const posPct = ((src.positive || 0) / srcTotal * 100).toFixed(0);
-              const negPct = ((src.negative || 0) / srcTotal * 100).toFixed(0);
+              const posPct = (src.positive || 0) / srcTotal * 100;
+              const negPct = (src.negative || 0) / srcTotal * 100;
+              const neuPct = 100 - posPct - negPct;
               return (
                 <motion.div
                   key={src.source}
-                  initial={{ opacity: 0, x: -10 }}
+                  initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.04 }}
-                  className="space-y-1"
+                  transition={{ delay: i * 0.03 }}
+                  className="px-5 py-3 hover:bg-gray-50/50 dark:hover:bg-white/[0.02] transition-colors"
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-ink dark:text-paper">{src.source}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[9px] text-green-600 dark:text-green-400 font-medium">{posPct}%</span>
-                      <span className="text-[9px] text-red-600 dark:text-red-400 font-medium">{negPct}%</span>
-                      <span className="text-[10px] text-ink-faint tabular-nums">{srcTotal}</span>
+                  <div className="flex items-center gap-4">
+                    <span className="text-[10px] font-mono text-ink-faint w-4 text-right tabular-nums">{i + 1}</span>
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-ink dark:text-paper w-28 truncate">{src.source}</span>
+                    <div className="flex-1 flex items-center gap-2">
+                      <div className="flex-1 flex h-[6px] rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800">
+                        <motion.div initial={{ width: 0 }} animate={{ width: posPct + '%' }} transition={{ duration: 0.6, delay: i * 0.03 }} className="bg-emerald-500 rounded-l-full" />
+                        <motion.div initial={{ width: 0 }} animate={{ width: negPct + '%' }} transition={{ duration: 0.6, delay: i * 0.03 + 0.1 }} className="bg-rose-500" />
+                        <motion.div initial={{ width: 0 }} animate={{ width: neuPct + '%' }} transition={{ duration: 0.6, delay: i * 0.03 + 0.2 }} className="bg-gray-300 dark:bg-gray-600 rounded-r-full" />
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex h-2 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800">
-                    <div className="bg-green-500 transition-all duration-700" style={{ width: `${((src.positive || 0) / srcTotal) * 100}%` }} />
-                    <div className="bg-red-500 transition-all duration-700" style={{ width: `${((src.negative || 0) / srcTotal) * 100}%` }} />
-                    <div className="bg-gray-400 transition-all duration-700" style={{ width: `${((src.neutral || 0) / srcTotal) * 100}%` }} />
+                    <div className="flex items-center gap-2 w-24 justify-end">
+                      <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 tabular-nums w-8 text-right">{posPct.toFixed(0)}%</span>
+                      <span className="text-[10px] font-mono text-rose-500 dark:text-rose-400 tabular-nums w-8 text-right">{negPct.toFixed(0)}%</span>
+                      <span className="text-[10px] font-mono text-ink-faint tabular-nums w-8 text-right">{srcTotal}</span>
+                    </div>
                   </div>
                 </motion.div>
               );
             })}
-          </div>
-          <div className="flex items-center gap-4 mt-4 pt-3 border-t border-paper-line dark:border-paper-dark-line">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-green-500" />
-              <span className="text-[9px] text-ink-faint uppercase tracking-wider">Positive</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-red-500" />
-              <span className="text-[9px] text-ink-faint uppercase tracking-wider">Negative</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-gray-400" />
-              <span className="text-[9px] text-ink-faint uppercase tracking-wider">Neutral</span>
-            </div>
           </div>
         </motion.div>
       )}
@@ -207,34 +208,44 @@ const SourceCredibility = () => {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`${CARD} p-5`}
+          className={`${CARD} overflow-hidden`}
         >
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-1">Source Reliability</h3>
-          <p className="text-[10px] text-ink-faint mb-4">Confidence scores by publisher</p>
-          <div className="space-y-2">
-            {reliability.slice(0, 10).map((sr, i) => {
+          <div className="px-5 pt-5 pb-3 border-b border-gray-100 dark:border-gray-800">
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-ink-muted">Source Reliability</h3>
+            <p className="text-[10px] text-ink-faint mt-0.5">Confidence scores by publisher</p>
+          </div>
+          <div className="divide-y divide-gray-50 dark:divide-gray-800/50">
+            {reliability.slice(0, 8).map((sr, i) => {
               const conf = sr.confidence ?? 0;
-              const pct = conf.toFixed(0);
+              const tier = conf >= 70 ? 'high' : conf >= 50 ? 'mid' : conf > 0 ? 'low' : 'none';
               return (
                 <motion.div
                   key={sr.source || sr._id}
-                  initial={{ opacity: 0, x: -10 }}
+                  initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="flex items-center gap-3"
+                  transition={{ delay: i * 0.04 }}
+                  className="px-5 py-3 hover:bg-gray-50/50 dark:hover:bg-white/[0.02] transition-colors"
                 >
-                  <span className="text-[11px] font-medium text-ink dark:text-paper w-32 truncate">{sr.source || sr._id}</span>
-                  <div className="flex-1 h-3 bg-gray-100 dark:bg-gray-800 rounded-sm overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${pct}%` }}
-                      transition={{ duration: 0.8, delay: i * 0.05 }}
-                      className={`h-full rounded-sm ${conf > 70 ? 'bg-green-500' : conf > 50 ? 'bg-amber-500' : 'bg-red-500'}`}
-                    />
+                  <div className="flex items-center gap-4">
+                    <span className="text-[10px] font-mono text-ink-faint w-4 text-right tabular-nums">{i + 1}</span>
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-ink dark:text-paper w-28 truncate">{sr.source || sr._id}</span>
+                    <div className="flex-1 flex items-center gap-2">
+                      <div className="flex-1 h-[6px] bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: conf + '%' }}
+                          transition={{ duration: 0.8, delay: i * 0.04 }}
+                          className={('h-full rounded-full ' + (conf >= 70 ? 'bg-emerald-500' : conf >= 50 ? 'bg-amber-500' : conf > 0 ? 'bg-rose-500' : 'bg-gray-300 dark:bg-gray-600')) }
+                        />
+                      </div>
+                    </div>
+                    <span className={'text-[10px] font-mono font-semibold tabular-nums w-10 text-right ' + (conf >= 70 ? 'text-emerald-600 dark:text-emerald-400' : conf >= 50 ? 'text-amber-600 dark:text-amber-400' : conf > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-ink-faint')}>
+                      {conf.toFixed(0)}%
+                    </span>
+                    <span className={'text-[9px] font-medium px-1.5 py-0.5 rounded ' + (conf >= 70 ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : conf >= 50 ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400' : conf > 0 ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400' : 'bg-gray-100 dark:bg-gray-800 text-ink-faint')}>
+                      {conf >= 70 ? 'HIGH' : conf >= 50 ? 'MED' : conf > 0 ? 'LOW' : 'N/A'}
+                    </span>
                   </div>
-                  <span className={`text-[10px] font-semibold tabular-nums w-10 text-right ${conf > 70 ? 'text-green-600' : conf > 50 ? 'text-amber-600' : 'text-red-600'}`}>
-                    {pct}%
-                  </span>
                 </motion.div>
               );
             })}
