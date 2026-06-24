@@ -1208,7 +1208,16 @@ const Dashboard = () => {
                   </motion.div>
                 )}
 
-                
+                {mobileTab === 'community' && (
+                  <motion.div
+                    key="community"
+                    custom={slideDirection}
+                    variants={slideVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                  >
                   <div className="space-y-5">
                     <SectionHeader title="Community" />
                     <InlineErrorBoundary name="Community">
