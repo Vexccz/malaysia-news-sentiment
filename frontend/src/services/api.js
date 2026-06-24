@@ -407,4 +407,31 @@ export const getArticleAnalysis = async (article) => {
   return response.data;
 };
 
+/**
+ * Track a user behavior action
+ */
+export const trackBehaviorAction = async (action, data = {}) => {
+  const response = await api.post('/behavior/track', {
+    action,
+    ...data,
+  });
+  return response.data;
+};
+
+/**
+ * Get user behavior stats
+ */
+export const getBehaviorStats = async () => {
+  const response = await api.get('/behavior/stats');
+  return response.data;
+};
+
+/**
+ * Get AI-generated user behavior insights
+ */
+export const getBehaviorInsights = async () => {
+  const response = await api.get('/behavior/insights');
+  return response.data;
+};
+
 export default api;

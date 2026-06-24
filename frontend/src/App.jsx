@@ -25,6 +25,7 @@ const Trending = lazy(() => import('./pages/Trending'));
 const Digest = lazy(() => import('./pages/Digest'));
 const LiveMonitor = lazy(() => import('./pages/LiveMonitor'));
 const AdvancedAnalytics = lazy(() => import('./pages/AdvancedAnalytics'));
+const SharedArticles = lazy(() => import('./pages/SharedArticles'));
 
 
 // Lighter pages - still lazy but less critical
@@ -204,6 +205,11 @@ const Sidebar = ({ isOpen, isCollapsed, onClose }) => {
                 <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
               </svg>
             }>{t('settings')}</SideLink>
+            <SideLink to="/shared-articles" onClick={onClose} icon={
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
+              </svg>
+            }>{t('sharedArticles')}</SideLink>
           </nav>
         </div>
 
@@ -249,6 +255,7 @@ const TITLES = {
   '/alerts': 'alerts',
   '/monitor': 'liveMonitor',
   '/analytics': 'advancedAnalytics',
+  '/shared-articles': 'sharedArticles',
   '/credibility': 'sources',
   '/digest': 'digest',
   '/search': 'search',
@@ -515,6 +522,7 @@ const AppInner = () => (
     <Route path="/forecast" element={<ProtectedRoute><Layout><Forecast /></Layout></ProtectedRoute>} />
     <Route path="/monitor" element={<ProtectedRoute><Layout><LiveMonitor /></Layout></ProtectedRoute>} />
     <Route path="/analytics" element={<ProtectedRoute><Layout><AdvancedAnalytics /></Layout></ProtectedRoute>} />
+    <Route path="/shared-articles" element={<ProtectedRoute><Layout><SharedArticles /></Layout></ProtectedRoute>} />
 
     <Route path="/articles/:id" element={<ProtectedRoute><Layout><ArticleDetail /></Layout></ProtectedRoute>} />
     

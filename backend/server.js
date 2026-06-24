@@ -177,6 +177,8 @@ app.use('/api/v1/bookmarks', require('./routes/bookmarkRoutes'));
 app.use('/api/v1/monitor', require('./routes/monitorRoutes'));
 
 app.use('/api/v1/analytics', require('./routes/analyticsRoutes'));
+app.use('/api/v1/behavior', require('./routes/behaviorRoutes'));
+app.use('/api/v1/collab', require('./routes/collaboration'));
 
 // ── Backward compatibility — old routes redirect to v1 ───────
 app.use('/api/auth', authLimiter, require('./routes/authRoutes'));
@@ -197,6 +199,7 @@ app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/bookmarks', require('./routes/bookmarkRoutes'));
 app.use('/api/monitor', require('./routes/monitorRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
+app.use('/api/behavior', require('./routes/behaviorRoutes'));
 // Metrics backward compat
 app.get('/api/admin/metrics', protect, authorize('admin'), (req, res) => res.redirect('/api/v1/admin/metrics'));
 // ── Global error handler ──────────────────────────────────────

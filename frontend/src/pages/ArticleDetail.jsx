@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../services/api';
 import SentimentBadge from '../components/SentimentBadge';
+import ArticleComments from '../components/ArticleComments';
+import ShareModal from '../components/ShareModal';
 import { useFreshness } from '../context/FreshnessContext';
 
 const formatDate = (dateStr) => {
@@ -80,6 +82,7 @@ const ArticleDetail = () => {
   const [credibility, setCredibility] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
 
   const fetchArticle = useCallback(async () => {
     setLoading(true);
