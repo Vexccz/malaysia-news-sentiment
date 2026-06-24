@@ -548,7 +548,6 @@ export const translations = {
     forecastTopicPlaceholder: 'e.g. economy, politics, education',
     // Sentiment timeline tooltip
     score: 'Score',
-  },
     entityGraph: 'Entity Graph',
     entityGraphDesc: 'Explore relationships between entities in the news',
     searchEntities: 'Search entities...',
@@ -709,7 +708,7 @@ export const translations = {
     noDataForTopic: 'No data found for this topic and time range',
     sentimentScore: 'Sentiment Score',
     opportunities: 'Opportunities',
-
+  },
   ms: {
     // Nav
     sections: 'SEKSYEN',
@@ -994,8 +993,6 @@ export const translations = {
     forecastTopicPlaceholder: 'cth: ekonomi, politik, pendidikan',
     // Sentiment timeline tooltip
     score: 'Skor',
-  }
-
     entityGraph: 'Graf Entiti',
     entityGraphDesc: 'Terokai hubungan antara entiti dalam berita',
     searchEntities: 'Cari entiti...',
@@ -1156,4 +1153,5 @@ export const translations = {
     noDataForTopic: 'Tiada data ditemui untuk topik dan julat masa ini',
     sentimentScore: 'Skor Sentimen',
     opportunities: 'Peluang',
+  }
 };
