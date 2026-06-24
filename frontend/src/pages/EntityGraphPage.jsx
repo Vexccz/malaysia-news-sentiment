@@ -567,7 +567,7 @@ export default function EntityGraphPage() {
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             className="pl-8 pr-3 py-2 text-sm bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm outline-none focus:border-blue-500 dark:focus:border-blue-500 transition-colors w-full sm:w-52 text-gray-900 dark:text-white placeholder:text-gray-400"
-            placeholder="Search entities..."
+            placeholder=t('searchEntities')
             value={search}
             onChange={e => setSearch(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && fetchGraph()}
