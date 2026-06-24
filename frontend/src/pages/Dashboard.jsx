@@ -1317,18 +1317,22 @@ const Dashboard = () => {
                   </motion.div>
                 )}
 
-                    initial="enter"
-                    animate="center"
-                    exit="exit"
-                    transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-                  >
-                  <div className="space-y-5">
-                    <SectionHeader title="Advanced Analytics" />
-                    <InlineErrorBoundary name="Analytics">
-                      <AnalyticsInline />
-                    </InlineErrorBoundary>
-                  </div>
-                  </motion.div>
+                {mobileTab === 'analytics' && (
+                <motion.div
+                  key="analytics"
+                  custom={slideDirection}
+                  variants={slideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}>
+                <div className="space-y-5">
+                  <SectionHeader title="Advanced Analytics" />
+                  <InlineErrorBoundary name="Analytics">
+                    <AnalyticsInline />
+                  </InlineErrorBoundary>
+                </div>
+                </motion.div>
                 )}
 
                 {mobileTab === 'community' && (
