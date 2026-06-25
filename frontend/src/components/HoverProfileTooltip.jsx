@@ -9,6 +9,7 @@ const HoverProfileTooltip = ({ userId, userName, userRole, children }) => {
   const [visible, setVisible] = useState(false);
   const [profile, setProfile] = useState(null);
   const [badges, setBadges] = useState([]);
+  const [selectedBadges, setSelectedBadges] = useState([]);
   const [loading, setLoading] = useState(false);
   const [fetched, setFetched] = useState(false);
 
@@ -32,6 +33,7 @@ const HoverProfileTooltip = ({ userId, userName, userRole, children }) => {
       if (badgesRes.ok) {
         const data = await badgesRes.json();
         setBadges(data.badges || data || []);
+        setSelectedBadges(data.selectedBadges || []);
       }
     } catch (e) {
       console.error('Failed to fetch profile:', e);
@@ -80,7 +82,14 @@ const HoverProfileTooltip = ({ userId, userName, userRole, children }) => {
     ? new Date(profile.createdAt).toLocaleDateString('en-MY', { year: 'numeric', month: 'short' })
     : '\u2014';
 
-  const topBadges = badges.slice(0, 3);
+  const topBadges = badges
+    .filter(b => b.earned)
+    .sort((a, b) => {
+      const aSelected = selectedBadges.includes(a.id) ? 0 : 1;
+      const bSelected = selectedBadges.includes(b.id) ? 0 : 1;
+      return aSelected - bSelected;
+    })
+    .slice(0, 3);
 
   return (
     <div
@@ -139,15 +148,22 @@ const HoverProfileTooltip = ({ userId, userName, userRole, children }) => {
                     {t('badges') || 'Badges'}
                   </div>
                   <div className="flex gap-1">
-                    {topBadges.map((badge, i) => (
-                      <span
-                        key={i}
-                        className="inline-block px-1.5 py-0.5 text-[10px] bg-amber-700 text-white font-sans"
-                        title={badge.description || badge.name}
-                      >
-                        {badge.icon || badge.name}
-                      </span>
-                    ))}
+                    {topBadges.map((badge, i) => {
+                      const isSelected = selectedBadges.includes(badge.id);
+                      return (
+                        <span
+                          key={i}
+                          className={`inline-block px-1.5 py-0.5 text-[10px] font-sans ${
+                            isSelected
+                              ? 'bg-accent/10 text-accent border border-accent/30'
+                              : 'bg-amber-700 text-white'
+                          }`}
+                          title={badge.description || badge.name}
+                        >
+                          {badge.icon || badge.name}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               )}

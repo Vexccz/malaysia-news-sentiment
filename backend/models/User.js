@@ -48,7 +48,10 @@ const userSchema = new mongoose.Schema({
     viewedAt: { type: Date, default: Date.now }
   }],
 
-  // ── Two-Factor Auth ────────────────────────────────────────
+  // ── Selected Badges (displayed on profile) ──────────────
+  selectedBadges: [{ type: String }],
+
+  // ── Two-Factor Auth ──────────────────────────────────────
   twoFactorSecret: { type: String, select: false },
   twoFactorEnabled: { type: Boolean, default: false },
 

@@ -48,6 +48,13 @@ export const translations = {
     sentimentExpertDesc: '20+ accurate sentiment comments',
     ghostWriter: 'Ghost Writer',
     ghostWriterDesc: '20+ anonymous comments',
+    myBadges: 'My Badges',
+    earnedBadges: 'Earned Badges',
+    lockedBadges: 'Locked Badges',
+    selectUpTo3: 'Select up to 3',
+    displaying: 'Displaying',
+    saving: 'Saving...',
+    noBadges: 'No badges available yet. Start commenting to earn badges!',
 
     // Profile
     memberSince: 'Member since',
@@ -137,6 +144,13 @@ export const translations = {
     sentimentExpertDesc: '20+ komen sentimen tepat',
     ghostWriter: 'Penulis Hantu',
     ghostWriterDesc: '20+ komen tanpa nama',
+    myBadges: 'Lencana Saya',
+    earnedBadges: 'Lencana Diperoleh',
+    lockedBadges: 'Lencana Dikunci',
+    selectUpTo3: 'Pilih sehingga 3',
+    displaying: 'Paparkan',
+    saving: 'Menyimpan...',
+    noBadges: 'Tiada lencana lagi. Mula komen untuk mendapat lencana!',
 
     // Profile
     memberSince: 'Ahli sejak',

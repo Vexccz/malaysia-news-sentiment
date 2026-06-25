@@ -106,6 +106,10 @@ const ProfilePage = () => {
   });
   const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [badges, setBadges] = useState([]);
+  const [selectedBadges, setSelectedBadges] = useState([]);
+  const [badgesLoading, setBadgesLoading] = useState(true);
+  const [savingBadges, setSavingBadges] = useState(false);
 
   const initials = (user?.name || user?.email || 'U')
     .split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -231,6 +235,48 @@ const ProfilePage = () => {
     fetchAllData();
   }, [user]);
 
+  // Fetch badges
+  useEffect(() => {
+    const fetchBadges = async () => {
+      setBadgesLoading(true);
+      try {
+        const res = await api.get('/auth/badges');
+        setBadges(res.data.badges || []);
+        setSelectedBadges(res.data.selectedBadges || []);
+      } catch (err) {
+        console.error('Failed to fetch badges:', err);
+      } finally {
+        setBadgesLoading(false);
+      }
+    };
+    fetchBadges();
+  }, [user]);
+
+  const handleBadgeToggle = async (badgeId) => {
+    const isSelected = selectedBadges.includes(badgeId);
+    let newSelected;
+    if (isSelected) {
+      newSelected = selectedBadges.filter(id => id !== badgeId);
+    } else {
+      if (selectedBadges.length >= 3) return; // max 3
+      newSelected = [...selectedBadges, badgeId];
+    }
+    setSelectedBadges(newSelected);
+    setSavingBadges(true);
+    try {
+      await api.put('/auth/badges', { badgeIds: newSelected });
+    } catch (err) {
+      console.error('Failed to save badges:', err);
+      // Revert on error
+      setSelectedBadges(selectedBadges);
+    } finally {
+      setSavingBadges(false);
+    }
+  };
+
+  const earnedBadges = badges.filter(b => b.earned);
+  const lockedBadges = badges.filter(b => !b.earned);
+
   return (
     <div className="max-w-5xl mx-auto">
       {/* ── Masthead ── */}
@@ -280,6 +326,25 @@ const ProfilePage = () => {
                   Online
                 </Badge>
               </div>
+
+              {/* Selected badges under role */}
+              {selectedBadges.length > 0 && (
+                <div className="flex items-center gap-1.5 mt-2 flex-wrap justify-center">
+                  {selectedBadges.map(id => {
+                    const badge = badges.find(b => b.id === id);
+                    if (!badge) return null;
+                    return (
+                      <span
+                        key={id}
+                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-sans bg-accent/10 text-accent border border-accent/20"
+                        title={badge.description}
+                      >
+                        {badge.icon} {badge.name}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
 
               <button
                 onClick={() => navigate('/settings')}
@@ -354,6 +419,111 @@ const ProfilePage = () => {
               color="text-blue-600 dark:text-blue-400"
             />
           </div>
+
+          {/* ── Badge Selection ── */}
+          <Section title={t('myBadges') || 'My Badges'} icon={<Award size={14} />}>
+            <div className="p-5">
+              {badgesLoading ? (
+                <p className="text-sm text-ink-muted dark:text-ink-faint font-sans">{t('loading') || 'Loading...'}</p>
+              ) : (
+                <>
+                  {/* Selected badges display */}
+                  {selectedBadges.length > 0 && (
+                    <div className="mb-4 flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] text-ink-faint dark:text-ink-faint uppercase tracking-wider font-sans">
+                        {t('displaying') || 'Displaying'}:
+                      </span>
+                      {selectedBadges.map(id => {
+                        const badge = badges.find(b => b.id === id);
+                        if (!badge) return null;
+                        return (
+                          <span
+                            key={id}
+                            className="inline-flex items-center gap-1 px-2 py-1 text-xs font-sans bg-accent/10 text-accent border border-accent/30"
+                          >
+                            {badge.icon} {badge.name}
+                          </span>
+                        );
+                      })}
+                      {savingBadges && (
+                        <span className="text-[10px] text-ink-faint font-sans italic">
+                          {t('saving') || 'Saving...'}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Earned badges (selectable) */}
+                  {earnedBadges.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-[10px] text-ink-faint dark:text-ink-faint uppercase tracking-wider font-sans mb-2">
+                        {t('earnedBadges') || 'Earned Badges'} ({earnedBadges.length}) — {t('selectUpTo3') || 'Select up to 3'}
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {earnedBadges.map(badge => {
+                          const isSelected = selectedBadges.includes(badge.id);
+                          return (
+                            <button
+                              key={badge.id}
+                              onClick={() => handleBadgeToggle(badge.id)}
+                              disabled={savingBadges || (!isSelected && selectedBadges.length >= 3)}
+                              className={`
+                                flex items-center gap-2 px-3 py-2.5 text-left border transition-all text-sm font-sans
+                                ${isSelected
+                                  ? 'border-accent bg-accent/5 text-accent'
+                                  : 'border-[#e5e5e5] dark:border-[#222] text-ink dark:text-paper hover:border-accent/50'
+                                }
+                                disabled:opacity-40 disabled:cursor-not-allowed
+                              `}
+                            >
+                              <span className="text-lg">{badge.icon}</span>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-xs truncate">{badge.name}</p>
+                                <p className="text-[10px] text-ink-faint truncate">{badge.description}</p>
+                              </div>
+                              {isSelected && (
+                                <span className="text-accent text-xs">✓</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Locked badges (grayed out) */}
+                  {lockedBadges.length > 0 && (
+                    <div>
+                      <p className="text-[10px] text-ink-faint dark:text-ink-faint uppercase tracking-wider font-sans mb-2">
+                        {t('lockedBadges') || 'Locked Badges'} ({lockedBadges.length})
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {lockedBadges.map(badge => (
+                          <div
+                            key={badge.id}
+                            className="flex items-center gap-2 px-3 py-2.5 border border-[#e5e5e5] dark:border-[#222] opacity-40 text-sm font-sans"
+                          >
+                            <span className="text-lg grayscale">{badge.icon}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-xs truncate text-ink-muted">{badge.name}</p>
+                              <p className="text-[10px] text-ink-faint truncate">{badge.description}</p>
+                            </div>
+                            <span className="text-ink-faint text-xs">🔒</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {earnedBadges.length === 0 && lockedBadges.length === 0 && (
+                    <p className="text-sm text-ink-muted dark:text-ink-faint font-sans text-center py-4">
+                      {t('noBadges') || 'No badges available yet. Start commenting to earn badges!'}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          </Section>
 
           {/* Recent Activity */}
           <Section title={t('recentActivity') || 'Recent Activity'} icon={<Activity size={14} />}>

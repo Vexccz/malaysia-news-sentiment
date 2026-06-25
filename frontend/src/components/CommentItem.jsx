@@ -55,6 +55,7 @@ const CommentItem = ({
   const [replyOpen, setReplyOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [userBadges, setUserBadges] = useState([]);
+  const [userSelectedBadges, setUserSelectedBadges] = useState([]);
   const [badgesFetched, setBadgesFetched] = useState(false);
   const [showDraftSaved, setShowDraftSaved] = useState(false);
   const [liked, setLiked] = useState(false);
@@ -103,6 +104,7 @@ const CommentItem = ({
         if (res.ok) {
           const data = await res.json();
           setUserBadges(data.badges || data || []);
+          setUserSelectedBadges(data.selectedBadges || []);
         }
       } catch (e) {
         // silently fail
@@ -164,7 +166,15 @@ const CommentItem = ({
       ? 'text-amber-700'
       : 'text-gray-500 dark:text-gray-400';
 
-  const displayBadges = userBadges.slice(0, 3);
+  const displayBadges = userBadges
+    .filter(b => b.earned)
+    .sort((a, b) => {
+      // Selected badges first
+      const aSelected = userSelectedBadges.includes(a.id) ? 0 : 1;
+      const bSelected = userSelectedBadges.includes(b.id) ? 0 : 1;
+      return aSelected - bSelected;
+    })
+    .slice(0, 3);
   const indentClass = depth > 0 ? 'pl-4 border-l-2 border-red-700' : '';
   const isOwnComment = currentUserId && comment.author === currentUserId;
 
@@ -190,15 +200,22 @@ const CommentItem = ({
           </HoverProfileTooltip>
 
           {/* User badges (up to 3) */}
-          {displayBadges.map((badge, i) => (
-            <span
-              key={i}
-              className="inline-block px-1 py-0.5 text-[10px] bg-amber-700 text-white font-sans cursor-help"
-              title={badge.description || badge.name}
-            >
-              {badge.icon || badge.name}
-            </span>
-          ))}
+          {displayBadges.map((badge, i) => {
+            const isSelected = userSelectedBadges.includes(badge.id);
+            return (
+              <span
+                key={i}
+                className={`inline-block px-1 py-0.5 text-[10px] font-sans cursor-help ${
+                  isSelected
+                    ? 'bg-accent/10 text-accent border border-accent/30'
+                    : 'bg-amber-700 text-white'
+                }`}
+                title={badge.description || badge.name}
+              >
+                {badge.icon || badge.name}
+              </span>
+            );
+          })}
 
           {/* Role badge */}
           <span

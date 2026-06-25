@@ -511,7 +511,12 @@ const getUserBadges = async (req, res) => {
       }
     ];
 
-    res.status(200).json(badges);
+    // Get user's selected badges
+    const User = require('../models/User');
+    const userDoc = await User.findById(userId).select('selectedBadges').lean();
+    const selectedBadges = userDoc?.selectedBadges || [];
+
+    res.status(200).json({ badges, selectedBadges });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
