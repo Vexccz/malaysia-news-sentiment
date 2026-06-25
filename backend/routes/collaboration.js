@@ -24,6 +24,8 @@ const {
   createPoll,
   getPolls,
   votePoll,
+  getUserBadges,
+  getUserProfile,
 } = require('../controllers/collaborationController');
 
 // ── Comments ────────────────────────────────────────────────
@@ -60,5 +62,9 @@ router.post('/polls', protect, createPoll);
 router.post('/polls/:id/vote', protect, votePoll);
 
 router.get('/shared', getSharedArticles);
+
+// ── Badges & Profile ────────────────────────────────────────
+router.get('/badges/:userId', getUserBadges);
+router.get('/profile/:userId', getUserProfile);
 
 module.exports = router;

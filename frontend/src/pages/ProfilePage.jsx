@@ -253,9 +253,10 @@ const ProfilePage = () => {
   // Fetch badges
   useEffect(() => {
     const fetchBadges = async () => {
+      if (!user?.id) return;
       setBadgesLoading(true);
       try {
-        const res = await api.get('/auth/badges');
+        const res = await api.get(`/collab/badges/${user.id}`);
         setBadges(res.data.badges || []);
         setSelectedBadges(res.data.selectedBadges || []);
       } catch (err) {

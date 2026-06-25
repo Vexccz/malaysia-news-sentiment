@@ -1103,3 +1103,75 @@ exports.votePoll = async (req, res) => {
     res.status(500).json({ error: 'Failed to vote.' });
   }
 };
+
+// ── Badges ────────────────────────────────────────────────────
+exports.getUserBadges = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const User = require('../models/User');
+    const mongoose = require('mongoose');
+
+    const userDoc = await User.findById(userId).select('selectedBadges').lean();
+    const selectedBadges = userDoc?.selectedBadges || [];
+
+    const uid = new mongoose.Types.ObjectId(userId);
+
+    // Count from Comment model (the actual comment collection)
+    let totalComments = 0, totalLikes = 0, sentimentComments = 0, anonymousComments = 0;
+    try { totalComments = await Comment.countDocuments({ userId: uid }); } catch (e) {}
+    try {
+      const likesResult = await Comment.aggregate([
+        { $match: { userId: uid } },
+        { $project: { likeCount: { $size: { $ifNull: ['$likes', []] } } } },
+        { $group: { _id: null, total: { $sum: '$likeCount' } } }
+      ]);
+      totalLikes = likesResult[0]?.total || 0;
+    } catch (e) {}
+    try { sentimentComments = await Comment.countDocuments({ userId: uid, commentSentiment: { $exists: true, $ne: null } }); } catch (e) {}
+    try { anonymousComments = await Comment.countDocuments({ userId: uid, isAnonymous: true }); } catch (e) {}
+
+    // First commenter count (from Comment model, grouped by articleId)
+    let firstCommentCount = 0;
+    try {
+      const firstComments = await Comment.aggregate([
+        { $sort: { createdAt: 1 } },
+        { $group: { _id: '$articleId', firstCommenter: { $first: '$userId' } } },
+        { $match: { firstCommenter: uid } },
+        { $count: 'count' }
+      ]);
+      firstCommentCount = firstComments[0]?.count || 0;
+    } catch (e) {}
+
+    const badges = [
+      { id: 'commentator', icon: '💬', name: 'Commentator', description: 'Post 5 or more comments', earned: totalComments >= 5, progress: totalComments, target: 5 },
+      { id: 'active_voice', icon: '⭐', name: 'Active Voice', description: 'Post 20 or more comments', earned: totalComments >= 20, progress: totalComments, target: 20 },
+      { id: 'top_contributor', icon: '🏆', name: 'Top Contributor', description: 'Post 50 or more comments', earned: totalComments >= 50, progress: totalComments, target: 50 },
+      { id: 'trendsetter', icon: '🚀', name: 'Trendsetter', description: 'Be first to comment in 10 discussions', earned: firstCommentCount >= 10, progress: firstCommentCount, target: 10 },
+      { id: 'beloved', icon: '❤️', name: 'Beloved', description: 'Receive 100 likes on comments', earned: totalLikes >= 100, progress: totalLikes, target: 100 },
+      { id: 'sentiment_expert', icon: '🎯', name: 'Sentiment Expert', description: 'Add sentiment to 20 comments', earned: sentimentComments >= 20, progress: sentimentComments, target: 20 },
+      { id: 'ghost_writer', icon: '👤', name: 'Ghost Writer', description: 'Post 20 anonymous comments', earned: anonymousComments >= 20, progress: anonymousComments, target: 20 },
+    ];
+
+    res.json({ badges, selectedBadges });
+  } catch (err) {
+    console.error('[Collab] Get badges error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch badges.' });
+  }
+};
+
+exports.getUserProfile = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const comments = await Comment.find({ userId });
+    const commentCount = comments.length;
+    const totalLikes = comments.reduce((sum, c) => sum + (c.likes?.length || 0), 0);
+
+    res.json({
+      commentCount,
+      totalLikes,
+    });
+  } catch (err) {
+    console.error('[Collab] Get profile error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch profile.' });
+  }
+};
