@@ -462,6 +462,19 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
                 </div>
               </div>
             </div>
+
+            {/* Thumbnail */}
+            {article.urlToImage && !imageError && (
+              <div className="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 overflow-hidden">
+                <img
+                  src={article.urlToImage}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  onError={() => setImageError(true)}
+                />
+              </div>
+            )}
           </div>
         </motion.div>
       </div>
