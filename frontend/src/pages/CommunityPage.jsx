@@ -1,9 +1,131 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, X, Eye, Bookmark, MessageCircle, Calendar, Shield } from 'lucide-react';
 
 const CARD = 'bg-white dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222]';
+
+/* ── User Profile Modal ── */
+const UserProfileModal = ({ userId, onClose }) => {
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) return;
+    setLoading(true);
+    api.get(`/auth/profile/${userId}`)
+      .then(res => setProfile(res.data.user))
+      .catch(() => setProfile(null))
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  const timeAgo = (dateStr) => {
+    if (!dateStr) return '';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  };
+
+  const sentimentColor = (s) => s === 'Positive' ? '#4ADE80' : s === 'Negative' ? '#FB7185' : '#FBBF24';
+
+  const initials = (profile?.name || 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const memberSince = profile?.createdAt
+    ? new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    : 'N/A';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/40" />
+      <div
+        className="relative w-full max-w-md bg-white dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222] max-h-[80vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="sticky top-0 bg-white dark:bg-[#111] border-b border-[#e5e5e5] dark:border-[#222] px-5 py-3 flex items-center justify-between z-10">
+          <span className="text-xs font-semibold text-ink dark:text-paper uppercase tracking-[0.2em] font-sans">User Profile</span>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
+            <X size={16} className="text-ink-muted dark:text-ink-faint" />
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="p-6 animate-pulse space-y-4">
+            <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-700 mx-auto" />
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mx-auto" />
+            <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded w-1/3 mx-auto" />
+          </div>
+        ) : !profile ? (
+          <div className="p-6 text-center text-sm text-ink-faint">User not found</div>
+        ) : (
+          <>
+            {/* Profile Info */}
+            <div className="p-5 flex flex-col items-center text-center border-b border-[#e5e5e5] dark:border-[#222]">
+              {profile.avatar ? (
+                <img src={profile.avatar} alt={profile.name} className="w-16 h-16 rounded-full object-cover border-2 border-[#e5e5e5] dark:border-[#222]" />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-accent/10 text-accent flex items-center justify-center text-xl font-bold font-display border-2 border-accent/20">
+                  {initials}
+                </div>
+              )}
+              <h3 className="font-display text-lg font-bold text-ink dark:text-paper mt-2">{profile.name}</h3>
+              <div className="flex items-center gap-2 mt-1">
+                <span className={`inline-flex items-center px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider border ${profile.role === 'admin' ? 'border-red-500 text-red-600 dark:text-red-400' : 'border-[#e5e5e5] dark:border-[#222] text-ink-muted dark:text-ink-faint'}`}>
+                  {profile.role === 'admin' ? 'Admin' : 'Member'}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 mt-2 text-[11px] text-ink-faint">
+                <Calendar size={11} />
+                <span>Member since {memberSince}</span>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 divide-x divide-[#e5e5e5] dark:divide-[#222] border-b border-[#e5e5e5] dark:border-[#222]">
+              <div className="py-3 text-center">
+                <p className="text-lg font-bold font-display text-ink dark:text-paper">{profile.analysisCount?.toLocaleString() || '0'}</p>
+                <p className="text-[9px] text-ink-faint uppercase tracking-wider">Analyses</p>
+              </div>
+              <div className="py-3 text-center">
+                <p className="text-lg font-bold font-display text-ink dark:text-paper">{profile.commentCount || '0'}</p>
+                <p className="text-[9px] text-ink-faint uppercase tracking-wider">Comments</p>
+              </div>
+              <div className="py-3 text-center">
+                <p className="text-lg font-bold font-display text-ink dark:text-paper">{profile.bookmarksCount || '0'}</p>
+                <p className="text-[9px] text-ink-faint uppercase tracking-wider">Bookmarks</p>
+              </div>
+            </div>
+
+            {/* Recent Comments */}
+            {profile.recentComments?.length > 0 && (
+              <div>
+                <div className="px-5 py-2.5 border-b border-[#e5e5e5] dark:border-[#222]">
+                  <span className="text-[10px] font-semibold text-ink dark:text-paper uppercase tracking-[0.15em]">Recent Comments</span>
+                </div>
+                <div className="divide-y divide-[#e5e5e5] dark:divide-[#222]">
+                  {profile.recentComments.map((c, i) => (
+                    <div key={i} className="px-5 py-2.5">
+                      <p className="text-xs text-ink dark:text-paper leading-relaxed line-clamp-2">&ldquo;{c.content}&rdquo;</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {c.sentiment && (
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ background: sentimentColor(c.sentiment) }} />
+                        )}
+                        <span className="text-[10px] text-ink-faint truncate flex-1">{c.articleTitle}</span>
+                        <span className="text-[10px] text-ink-faint shrink-0">{timeAgo(c.createdAt)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const SentimentMarkInline = ({ sentiment }) => {
   const map = {
@@ -15,13 +137,15 @@ const SentimentMarkInline = ({ sentiment }) => {
   return <span className={`inline-block text-xs font-bold ${m.color} mr-1`}>{m.symbol}</span>;
 };
 
-const CommentItem = ({ c, onLike, timeAgo, sentimentColor }) => {
+const CommentItem = ({ c, onLike, timeAgo, sentimentColor, onUserClick }) => {
   const [showReply, setShowReply] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [replying, setReplying] = useState(false);
   const [showReplies, setShowReplies] = useState(false);
   const [localReplies, setLocalReplies] = useState(c.replies || []);
   const [replyAnonymous, setReplyAnonymous] = useState(false);
+
+  const userInitials = (c.user?.name || 'A').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
   const submitReply = async () => {
     if (!replyText.trim() || replying) return;
@@ -38,9 +162,33 @@ const CommentItem = ({ c, onLike, timeAgo, sentimentColor }) => {
 
   return (
     <div className="px-4 py-3">
-      <div className="flex items-center gap-2 mb-1">
-        <span className="text-xs font-semibold text-ink dark:text-paper">
-          {c.isAnonymous ? '\uD83D\uDC64 Anonymous' : (c.user?.name || 'Anonymous')}
+      <div className="flex items-center gap-2.5 mb-1.5">
+        {/* Avatar */}
+        {c.isAnonymous ? (
+          <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] text-ink-faint flex-shrink-0">
+            ?
+          </div>
+        ) : c.user?.avatar ? (
+          <img
+            src={c.user.avatar}
+            alt={c.user.name}
+            className="w-7 h-7 rounded-full object-cover flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => c.userId && onUserClick(c.userId)}
+          />
+        ) : (
+          <div
+            className="w-7 h-7 rounded-full bg-accent/10 text-accent flex items-center justify-center text-[10px] font-bold flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => c.userId && onUserClick(c.userId)}
+          >
+            {userInitials}
+          </div>
+        )}
+        {/* Username */}
+        <span
+          className={`text-xs font-semibold ${c.isAnonymous ? 'text-ink-faint' : 'text-ink dark:text-paper cursor-pointer hover:underline'}`}
+          onClick={() => !c.isAnonymous && c.userId && onUserClick(c.userId)}
+        >
+          {c.isAnonymous ? 'Anonymous' : (c.user?.name || 'Anonymous')}
         </span>
         {c.commentSentiment && (
           <span className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider"
@@ -53,8 +201,8 @@ const CommentItem = ({ c, onLike, timeAgo, sentimentColor }) => {
         ))}
         <span className="text-[10px] text-ink-faint ml-auto">{timeAgo(c.createdAt)}</span>
       </div>
-      <p className="text-sm text-ink-secondary dark:text-ink-muted leading-relaxed">{c.content}</p>
-      <div className="flex items-center gap-3 mt-1.5">
+      <p className="text-sm text-ink-secondary dark:text-ink-muted leading-relaxed ml-[38px]">{c.content}</p>
+      <div className="flex items-center gap-3 mt-1.5 ml-[38px]">
         <button onClick={() => onLike(c._id)}
           className="flex items-center gap-1 text-[10px] text-ink-faint hover:text-ink dark:hover:text-paper transition-colors">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -82,11 +230,11 @@ const CommentItem = ({ c, onLike, timeAgo, sentimentColor }) => {
       </div>
 
       {showReply && (
-        <div className="mt-2 ml-4 pl-3 border-l-2 border-[#e5e5e5] dark:border-[#333]">
+        <div className="mt-2 ml-[38px] pl-3 border-l-2 border-[#e5e5e5] dark:border-[#333]">
           <div className="flex items-center gap-2 mb-1.5">
             <button onClick={() => setReplyAnonymous(!replyAnonymous)}
               className={`flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-medium border transition-colors ${replyAnonymous ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/20 text-amber-600' : 'border-[#e5e5e5] dark:border-[#333] text-ink-faint'}`}>
-              {replyAnonymous ? '\uD83D\uDC64 Anonymous' : '\uD83E\uDDD1 Visible'}
+              {replyAnonymous ? 'Anonymous' : 'Visible'}
             </button>
           </div>
           <div className="flex gap-2">
@@ -103,18 +251,36 @@ const CommentItem = ({ c, onLike, timeAgo, sentimentColor }) => {
       )}
 
       {showReplies && localReplies.length > 0 && (
-        <div className="mt-2 ml-4 pl-3 border-l-2 border-[#e5e5e5] dark:border-[#333] space-y-2">
-          {localReplies.map(r => (
-            <div key={r._id} className="py-1.5">
-              <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-[11px] font-semibold text-ink dark:text-paper">
-                  {r.isAnonymous ? '\uD83D\uDC64 Anonymous' : (r.user?.name || 'Anonymous')}
-                </span>
-                <span className="text-[9px] text-ink-faint">{timeAgo(r.createdAt)}</span>
+        <div className="mt-2 ml-[38px] pl-3 border-l-2 border-[#e5e5e5] dark:border-[#333] space-y-2">
+          {localReplies.map(r => {
+            const replyInitials = (r.user?.name || 'A').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+            return (
+              <div key={r._id} className="py-1.5">
+                <div className="flex items-center gap-2 mb-0.5">
+                  {r.isAnonymous ? (
+                    <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[8px] text-ink-faint">?</div>
+                  ) : r.user?.avatar ? (
+                    <img src={r.user.avatar} alt={r.user.name}
+                      className="w-5 h-5 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => r.userId && onUserClick(r.userId)} />
+                  ) : (
+                    <div className="w-5 h-5 rounded-full bg-accent/10 text-accent flex items-center justify-center text-[8px] font-bold cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => r.userId && onUserClick(r.userId)}>
+                      {replyInitials}
+                    </div>
+                  )}
+                  <span
+                    className={`text-[11px] font-semibold ${r.isAnonymous ? 'text-ink-faint' : 'text-ink dark:text-paper cursor-pointer hover:underline'}`}
+                    onClick={() => !r.isAnonymous && r.userId && onUserClick(r.userId)}
+                  >
+                    {r.isAnonymous ? 'Anonymous' : (r.user?.name || 'Anonymous')}
+                  </span>
+                  <span className="text-[9px] text-ink-faint">{timeAgo(r.createdAt)}</span>
+                </div>
+                <p className="text-xs text-ink-secondary dark:text-ink-muted leading-relaxed ml-7">{r.content}</p>
               </div>
-              <p className="text-xs text-ink-secondary dark:text-ink-muted leading-relaxed">{r.content}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -133,6 +299,7 @@ const CommunityPage = () => {
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [viewingUserId, setViewingUserId] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -278,7 +445,7 @@ const CommunityPage = () => {
                     <div className="p-4 animate-pulse space-y-2"><div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4" /></div>
                   ) : (
                     <div className="max-h-60 overflow-y-auto divide-y divide-[#e5e5e5] dark:divide-[#222]">
-                      {comments.map(c => <CommentItem key={c._id} c={c} onLike={likeComment} timeAgo={timeAgo} sentimentColor={sentimentColor} />)}
+                      {comments.map(c => <CommentItem key={c._id} c={c} onLike={likeComment} timeAgo={timeAgo} sentimentColor={sentimentColor} onUserClick={setViewingUserId} />)}
                       {comments.length === 0 && <div className="p-4 text-center text-xs text-ink-faint">No comments yet.</div>}
                     </div>
                   )}
@@ -350,7 +517,7 @@ const CommunityPage = () => {
                           <div className="p-4 animate-pulse space-y-2"><div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4" /></div>
                         ) : (
                           <div className="max-h-60 overflow-y-auto divide-y divide-[#e5e5e5] dark:divide-[#222]">
-                            {comments.map(c => <CommentItem key={c._id} c={c} onLike={likeComment} timeAgo={timeAgo} sentimentColor={sentimentColor} />)}
+                            {comments.map(c => <CommentItem key={c._id} c={c} onLike={likeComment} timeAgo={timeAgo} sentimentColor={sentimentColor} onUserClick={setViewingUserId} />)}
                             {comments.length === 0 && <div className="p-4 text-center text-xs text-ink-faint">No comments yet.</div>}
                           </div>
                         )}
@@ -401,6 +568,11 @@ const CommunityPage = () => {
           )}
         </div>
       </div>
+
+      {/* User Profile Modal */}
+      {viewingUserId && (
+        <UserProfileModal userId={viewingUserId} onClose={() => setViewingUserId(null)} />
+      )}
     </div>
   );
 };

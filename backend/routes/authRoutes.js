@@ -55,6 +55,55 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
+// Public user profile (for community features)
+router.get('/profile/:userId', async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const Comment = require('../models/Comment');
+    const { userId } = req.params;
+
+    const user = await User.findById(userId)
+      .select('name avatar role createdAt analysisCount bookmarks')
+      .lean();
+
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    // Get comment count
+    const commentCount = await Comment.countDocuments({ userId, isAnonymous: false });
+
+    // Get recent comments (last 5, non-anonymous)
+    const recentComments = await Comment.find({ userId, isAnonymous: false })
+      .select('content articleId commentSentiment createdAt')
+      .populate('articleId', 'title source')
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .lean();
+
+    res.json({
+      user: {
+        id: user._id,
+        name: user.name,
+        avatar: user.avatar,
+        role: user.role,
+        createdAt: user.createdAt,
+        analysisCount: user.analysisCount || 0,
+        bookmarksCount: Array.isArray(user.bookmarks) ? user.bookmarks.length : 0,
+        commentCount,
+        recentComments: recentComments.map(c => ({
+          content: c.content,
+          sentiment: c.commentSentiment,
+          createdAt: c.createdAt,
+          articleTitle: c.articleId?.title || 'Unknown',
+          articleSource: c.articleId?.source || '',
+        })),
+      },
+    });
+  } catch (err) {
+    console.error('[Auth] Public profile error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch profile.' });
+  }
+});
+
 // Protected
 router.get('/me',                   protect, getMe);
 router.patch('/preferences',        protect, updatePreferences);
