@@ -16,6 +16,11 @@ const {
   getSentimentPulse,
   toggleReaction,
   getLeaderboard,
+  createPost,
+  getPosts,
+  likePost,
+  reactToPost,
+  replyToPost,
 } = require('../controllers/collaborationController');
 
 // ── Comments ────────────────────────────────────────────────
@@ -38,6 +43,14 @@ router.post('/share', protect, trackShare);
 router.get('/trending-keywords', getTrendingKeywords);
 router.get('/sentiment-pulse', getSentimentPulse);
 router.get('/leaderboard', getLeaderboard);
+
+// ── Community Posts (Share Your Take) ────────────────────────
+router.get('/posts', getPosts);
+router.post('/posts', protect, createPost);
+router.post('/posts/:id/like', protect, likePost);
+router.post('/posts/:id/react', protect, reactToPost);
+router.post('/posts/:id/reply', protect, replyToPost);
+
 router.get('/shared', getSharedArticles);
 
 module.exports = router;

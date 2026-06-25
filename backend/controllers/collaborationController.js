@@ -820,3 +820,179 @@ exports.getLeaderboard = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch leaderboard.' });
   }
 };
+
+// ── Community Posts (Share Your Take) ────────────────────────────
+
+const CommunityPost = require('../models/CommunityPost');
+const classifyCommentSentiment2 = (text) => {
+  const lower = text.toLowerCase();
+  const posWords = ['good', 'great', 'excellent', 'agree', 'accurate', 'correct', 'true', 'well done', 'nice', 'love', 'best', 'awesome', 'fantastic', 'brilliant', 'right', 'support', 'positive', 'helpful', 'informative', 'insightful'];
+  const negWords = ['bad', 'wrong', 'disagree', 'false', 'fake', 'terrible', 'awful', 'worst', 'hate', 'stupid', 'biased', 'propaganda', 'nonsense', 'rubbish', 'garbage', 'lie', 'misleading', 'negative', 'poor', 'disappoint'];
+  let posScore = 0, negScore = 0;
+  posWords.forEach(w => { if (lower.includes(w)) posScore++; });
+  negWords.forEach(w => { if (lower.includes(w)) negScore++; });
+  if (posScore > negScore) return 'Positive';
+  if (negScore > posScore) return 'Negative';
+  return 'Neutral';
+};
+
+// @desc    Create a standalone community post
+// @route   POST /api/v1/collab/posts
+// @access  Private
+exports.createPost = async (req, res) => {
+  try {
+    const { content, isAnonymous, tags } = req.body;
+    if (!content?.trim()) return res.status(400).json({ error: 'Content is required.' });
+    if (content.length > 2000) return res.status(400).json({ error: 'Max 2000 characters.' });
+
+    const sentiment = classifyCommentSentiment2(content);
+    const post = await CommunityPost.create({
+      userId: req.userId,
+      content: content.trim(),
+      sentiment,
+      isAnonymous: isAnonymous === true,
+      tags: (tags || []).slice(0, 5).map(t => t.trim().toLowerCase()),
+    });
+
+    await post.populate('userId', 'name avatar');
+    const obj = post.toObject();
+    obj.user = obj.userId;
+    obj.userId = obj.user?._id;
+
+    res.status(201).json({ post: obj });
+  } catch (err) {
+    console.error('[Collab] createPost error:', err.message);
+    res.status(500).json({ error: 'Failed to create post.' });
+  }
+};
+
+// @desc    Get community posts (feed)
+// @route   GET /api/v1/collab/posts
+// @access  Public
+exports.getPosts = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+    const tag = req.query.tag;
+
+    const filter = {};
+    if (tag) filter.tags = tag.toLowerCase();
+
+    const [posts, total] = await Promise.all([
+      CommunityPost.find(filter)
+        .populate('userId', 'name avatar')
+        .sort({ pinned: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      CommunityPost.countDocuments(filter),
+    ]);
+
+    // Normalize user field + compute badges
+    const userIds = [...new Set(posts.map(p => p.userId?._id?.toString()).filter(Boolean))];
+    const badgeMap = {};
+    for (const uid of userIds) {
+      badgeMap[uid] = await computeBadges(uid);
+    }
+
+    const normalized = posts.map(p => {
+      p.user = p.userId;
+      p.userId = p.user?._id;
+      p.badges = badgeMap[p.user?._id?.toString()] || [];
+      return p;
+    });
+
+    res.json({ posts: normalized, total, page, pages: Math.ceil(total / limit) });
+  } catch (err) {
+    console.error('[Collab] getPosts error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch posts.' });
+  }
+};
+
+// @desc    Like/unlike a community post
+// @route   POST /api/v1/collab/posts/:id/like
+// @access  Private
+exports.likePost = async (req, res) => {
+  try {
+    const post = await CommunityPost.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: 'Post not found.' });
+
+    const uid = req.userId;
+    const idx = post.likes.findIndex(id => id.toString() === uid);
+    if (idx > -1) post.likes.splice(idx, 1);
+    else post.likes.push(uid);
+
+    await post.save();
+    res.json({ likes: post.likes.length, liked: idx === -1 });
+  } catch (err) {
+    console.error('[Collab] likePost error:', err.message);
+    res.status(500).json({ error: 'Failed to like post.' });
+  }
+};
+
+// @desc    React to a community post
+// @route   POST /api/v1/collab/posts/:id/react
+// @access  Private
+exports.reactToPost = async (req, res) => {
+  try {
+    const { emoji } = req.body;
+    const allowedEmojis = ['😂', '😢', '😡', '🔥', '👏', '❤️', '🤔', '💯'];
+    if (!emoji || !allowedEmojis.includes(emoji)) return res.status(400).json({ error: 'Invalid emoji.' });
+
+    const post = await CommunityPost.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: 'Post not found.' });
+
+    const uid = req.userId;
+    const existingIdx = post.reactions.findIndex(r => r.emoji === emoji && r.userId.toString() === uid);
+    if (existingIdx > -1) post.reactions.splice(existingIdx, 1);
+    else post.reactions.push({ emoji, userId: uid });
+
+    await post.save();
+
+    const grouped = {};
+    post.reactions.forEach(r => {
+      if (!grouped[r.emoji]) grouped[r.emoji] = { emoji: r.emoji, count: 0, userReacted: false };
+      grouped[r.emoji].count++;
+      if (r.userId.toString() === uid) grouped[r.emoji].userReacted = true;
+    });
+
+    res.json({ reactions: Object.values(grouped) });
+  } catch (err) {
+    console.error('[Collab] reactToPost error:', err.message);
+    res.status(500).json({ error: 'Failed to react to post.' });
+  }
+};
+
+// @desc    Reply to a community post
+// @route   POST /api/v1/collab/posts/:id/reply
+// @access  Private
+exports.replyToPost = async (req, res) => {
+  try {
+    const { content, isAnonymous } = req.body;
+    if (!content?.trim()) return res.status(400).json({ error: 'Content is required.' });
+
+    const post = await CommunityPost.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: 'Post not found.' });
+
+    const newReply = {
+      userId: req.userId,
+      content: content.trim(),
+      isAnonymous: isAnonymous === true,
+    };
+    post.replies.push(newReply);
+    await post.save();
+
+    const addedReply = post.replies[post.replies.length - 1];
+    await post.populate('replies.userId', 'name avatar');
+
+    const replyObj = addedReply.toObject();
+    replyObj.user = replyObj.userId;
+    replyObj.userId = replyObj.user?._id;
+
+    res.status(201).json({ reply: replyObj });
+  } catch (err) {
+    console.error('[Collab] replyToPost error:', err.message);
+    res.status(500).json({ error: 'Failed to reply to post.' });
+  }
+};
