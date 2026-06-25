@@ -9,6 +9,9 @@ const {
   trackShare,
   getSharedArticles,
   getRecentDiscussions,
+  getHotTakes,
+  setDiscussionOfDay,
+  getDiscussionOfDay,
 } = require('../controllers/collaborationController');
 
 // ── Comments ────────────────────────────────────────────────
@@ -19,6 +22,9 @@ router.post('/comments/:id/reply', protect, replyToComment);
 
 // ── Discussions ─────────────────────────────────────────────
 router.get('/discussions', getRecentDiscussions);
+router.get('/hot-takes', getHotTakes);
+router.get('/discussion-of-day', getDiscussionOfDay);
+router.post('/discussion-of-day', protect, setDiscussionOfDay);
 
 // ── Sharing ─────────────────────────────────────────────────
 router.post('/share', protect, trackShare);

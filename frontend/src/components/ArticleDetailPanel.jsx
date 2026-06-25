@@ -34,6 +34,7 @@ const ArticleDetailPanel = ({ article, isOpen, onClose }) => {
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [isAnonymous, setIsAnonymous] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !article) {
@@ -78,7 +79,7 @@ const ArticleDetailPanel = ({ article, isOpen, onClose }) => {
     if (!articleId) return;
     setSubmitting(true);
     try {
-      const { data } = await api.post('/collab/comments', { articleId, content: newComment.trim() });
+      const { data } = await api.post('/collab/comments', { articleId, content: newComment.trim(), isAnonymous });
       setComments(prev => [data.comment, ...prev]);
       setNewComment('');
     } catch { /* silent */ }
@@ -191,6 +192,26 @@ const ArticleDetailPanel = ({ article, isOpen, onClose }) => {
                     <div className="animate-in">
                       <span className="premium-label">Discussion ({comments.length})</span>
                       
+                      {/* Anonymous toggle */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                        <button
+                          onClick={() => setIsAnonymous(!isAnonymous)}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 4,
+                            padding: '4px 10px', fontSize: 10, fontWeight: 600,
+                            border: isAnonymous ? '1px solid #f59e0b' : '1px solid var(--border)',
+                            background: isAnonymous ? '#f59e0b10' : 'transparent',
+                            color: isAnonymous ? '#f59e0b' : 'var(--text-muted)',
+                            cursor: 'pointer', transition: 'all 0.2s',
+                          }}
+                        >
+                          {isAnonymous ? '👤 Anonymous' : '🧑 Visible'}
+                        </button>
+                        <span style={{ fontSize: 10, color: 'var(--text-muted, #999)' }}>
+                          {isAnonymous ? 'Your identity is hidden' : 'Your name is shown'}
+                        </span>
+                      </div>
+
                       {/* Comment input */}
                       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
                         <input

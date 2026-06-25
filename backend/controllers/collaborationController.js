@@ -1,6 +1,72 @@
 const Comment = require('../models/Comment');
 const Share = require('../models/Share');
 const Article = require('../models/Article');
+const DiscussionOfDay = require('../models/DiscussionOfDay');
+
+// ── Simple sentiment classifier for comments ─────────────────
+const classifyCommentSentiment = (text) => {
+  const lower = text.toLowerCase();
+  const posWords = ['good', 'great', 'excellent', 'agree', 'accurate', 'correct', 'true', 'well done', 'nice', 'love', 'best', 'awesome', 'fantastic', 'brilliant', 'right', 'support', 'positive', 'helpful', 'informative', 'insightful'];
+  const negWords = ['bad', 'wrong', 'disagree', 'false', 'fake', 'terrible', 'awful', 'worst', 'hate', 'stupid', 'biased', 'propaganda', 'nonsense', 'rubbish', 'garbage', 'lie', 'misleading', 'negative', 'poor', 'disappoint'];
+  
+  let posScore = 0;
+  let negScore = 0;
+  posWords.forEach(w => { if (lower.includes(w)) posScore++; });
+  negWords.forEach(w => { if (lower.includes(w)) negScore++; });
+  
+  if (posScore > negScore) return 'Positive';
+  if (negScore > posScore) return 'Negative';
+  return 'Neutral';
+};
+
+// ── Compute user badges ─────────────────────────────────────
+const computeBadges = async (userId) => {
+  const badges = [];
+  
+  try {
+    // Total comments
+    const totalComments = await Comment.countDocuments({ userId });
+    
+    if (totalComments >= 50) badges.push({ icon: '🏆', label: 'Top Contributor', tier: 'gold' });
+    else if (totalComments >= 20) badges.push({ icon: '⭐', label: 'Active Voice', tier: 'silver' });
+    else if (totalComments >= 5) badges.push({ icon: '💬', label: 'Commentator', tier: 'bronze' });
+    
+    // First comment on articles
+    const firstComments = await Comment.aggregate([
+      { $sort: { createdAt: 1 } },
+      { $group: { _id: '$articleId', firstUserId: { $first: '$userId' } } },
+      { $match: { firstUserId: userId } },
+      { $count: 'total' },
+    ]);
+    const firstCount = firstComments[0]?.total || 0;
+    if (firstCount >= 10) badges.push({ icon: '🚀', label: 'Trendsetter', tier: 'gold' });
+    else if (firstCount >= 3) badges.push({ icon: '🎯', label: 'First Mover', tier: 'silver' });
+    
+    // Total likes received
+    const userComments = await Comment.find({ userId }).select('likes').lean();
+    const totalLikes = userComments.reduce((sum, c) => sum + (c.likes?.length || 0), 0);
+    if (totalLikes >= 100) badges.push({ icon: '❤️', label: 'Beloved', tier: 'gold' });
+    else if (totalLikes >= 20) badges.push({ icon: '👍', label: 'Appreciated', tier: 'silver' });
+    
+    // Sentiment accuracy (if user voted sentiment that matches AI)
+    const sentimentMatches = await Comment.countDocuments({ 
+      userId, 
+      sentiment: { $ne: null },
+      $expr: { $eq: ['$sentiment', '$commentSentiment'] } 
+    });
+    if (sentimentMatches >= 20) badges.push({ icon: '🎯', label: 'Sentiment Expert', tier: 'gold' });
+    else if (sentimentMatches >= 5) badges.push({ icon: '🔍', label: 'Sharp Eye', tier: 'silver' });
+    
+    // Anonymous streak
+    const anonCount = await Comment.countDocuments({ userId, isAnonymous: true });
+    if (anonCount >= 20) badges.push({ icon: '👤', label: 'Ghost Writer', tier: 'silver' });
+    
+  } catch (err) {
+    console.error('[Badges] Error computing badges:', err.message);
+  }
+  
+  return badges;
+};
 
 // ── Comments ────────────────────────────────────────────────────
 
@@ -9,7 +75,7 @@ const Article = require('../models/Article');
 // @access  Private
 exports.addComment = async (req, res) => {
   try {
-    const { articleId, content, sentiment } = req.body;
+    const { articleId, content, sentiment, isAnonymous } = req.body;
 
     if (!articleId || !content?.trim()) {
       return res.status(400).json({ error: 'articleId and content are required.' });
@@ -19,19 +85,27 @@ exports.addComment = async (req, res) => {
       return res.status(400).json({ error: 'Comment must be 2000 characters or less.' });
     }
 
+    // Auto-classify comment sentiment
+    const commentSentiment = classifyCommentSentiment(content);
+
     const comment = await Comment.create({
       userId: req.userId,
       articleId,
       content: content.trim(),
       sentiment: sentiment || null,
+      commentSentiment,
+      isAnonymous: isAnonymous === true,
     });
 
     // Populate user info for response
     await comment.populate('userId', 'name avatar');
 
     const commentObj = comment.toObject();
-    commentObj.user = commentObj.userId;
+    commentObj.user = comment.userId;
     commentObj.userId = commentObj.user._id;
+    
+    // Compute badges for the commenter
+    commentObj.badges = await computeBadges(req.userId);
 
     // Emit via Socket.IO for real-time updates
     const io = req.app.get('io');
@@ -67,10 +141,17 @@ exports.getComments = async (req, res) => {
       Comment.countDocuments({ articleId }),
     ]);
 
-    // Normalize user field
+    // Normalize user field + compute badges
+    const userIds = [...new Set(comments.map(c => c.userId?._id?.toString()).filter(Boolean))];
+    const badgeMap = {};
+    for (const uid of userIds) {
+      badgeMap[uid] = await computeBadges(uid);
+    }
+
     const normalized = comments.map(c => {
       c.user = c.userId;
       c.userId = c.user?._id;
+      c.badges = badgeMap[c.user?._id?.toString()] || [];
       c.replies = (c.replies || []).map(r => {
         r.user = r.userId;
         r.userId = r.user?._id;
@@ -131,7 +212,7 @@ exports.likeComment = async (req, res) => {
 // @access  Private
 exports.replyToComment = async (req, res) => {
   try {
-    const { content } = req.body;
+    const { content, isAnonymous } = req.body;
     if (!content?.trim()) {
       return res.status(400).json({ error: 'Reply content is required.' });
     }
@@ -143,7 +224,7 @@ exports.replyToComment = async (req, res) => {
     const comment = await Comment.findById(req.params.id);
     if (!comment) return res.status(404).json({ error: 'Comment not found.' });
 
-    const reply = { userId: req.userId, content: content.trim() };
+    const reply = { userId: req.userId, content: content.trim(), isAnonymous: isAnonymous === true };
     comment.replies.push(reply);
     await comment.save();
 
@@ -173,6 +254,147 @@ exports.replyToComment = async (req, res) => {
   }
 };
 
+// ── Hot Takes ────────────────────────────────────────────────────
+
+// @desc    Get most discussed articles this week
+// @route   GET /api/v1/collab/hot-takes
+// @access  Public
+exports.getHotTakes = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 5;
+    const days = parseInt(req.query.days) || 7;
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const pipeline = [
+      { $match: { createdAt: { $gte: since } } },
+      {
+        $group: {
+          _id: '$articleId',
+          commentCount: { $sum: 1 },
+          lastCommentAt: { $max: '$createdAt' },
+          uniqueUsers: { $addToSet: '$userId' },
+          sentimentVotes: {
+            $push: {
+              $cond: [{ $ne: ['$sentiment', null] }, '$sentiment', '$$REMOVE']
+            }
+          },
+        },
+      },
+      {
+        $addFields: {
+          uniqueUserCount: { $size: '$uniqueUsers' },
+          controversy: {
+            $let: {
+              vars: {
+                pos: { $size: { $filter: { input: '$sentimentVotes', cond: { $eq: ['$$this', 'Positive'] } } } },
+                neg: { $size: { $filter: { input: '$sentimentVotes', cond: { $eq: ['$$this', 'Negative'] } } } },
+                total: { $size: '$sentimentVotes' },
+              },
+              in: {
+                $cond: [
+                  { $gt: ['$$total', 0] },
+                  { $divide: [{ $min: ['$$pos', '$$neg'] }, { $max: [{ $divide: ['$$total', 2] }, 1] }] },
+                  0,
+                ],
+              },
+            },
+          },
+        },
+      },
+      { $sort: { commentCount: -1, controversy: -1 } },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: 'articles',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'article',
+        },
+      },
+      { $unwind: { path: '$article', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 0,
+          articleId: '$_id',
+          articleTitle: '$article.title',
+          articleSource: '$article.source',
+          articleSentiment: '$article.sentiment',
+          commentCount: 1,
+          uniqueUserCount: 1,
+          lastCommentAt: 1,
+          controversy: { $round: [{ $multiply: ['$controversy', 100] }, 0] },
+        },
+      },
+    ];
+
+    const results = await Comment.aggregate(pipeline);
+    res.json({ hotTakes: results });
+  } catch (err) {
+    console.error('[Collab] getHotTakes error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch hot takes.' });
+  }
+};
+
+// ── Discussion of the Day ────────────────────────────────────────
+
+// @desc    Set discussion of the day (admin)
+// @route   POST /api/v1/collab/discussion-of-day
+// @access  Private (Admin)
+exports.setDiscussionOfDay = async (req, res) => {
+  try {
+    const { articleId, reason } = req.body;
+    if (!articleId) return res.status(400).json({ error: 'articleId is required.' });
+
+    // Deactivate previous
+    await DiscussionOfDay.updateMany({ active: true }, { active: false });
+
+    const dotd = await DiscussionOfDay.create({
+      articleId,
+      setBy: req.userId,
+      reason: reason || '',
+      active: true,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h
+    });
+
+    await dotd.populate('articleId', 'title source sentiment url');
+
+    const io = req.app.get('io');
+    if (io) io.emit('discussion-of-day', { articleId, reason });
+
+    res.status(201).json({ discussion: dotd });
+  } catch (err) {
+    console.error('[Collab] setDiscussionOfDay error:', err.message);
+    res.status(500).json({ error: 'Failed to set discussion of the day.' });
+  }
+};
+
+// @desc    Get active discussion of the day
+// @route   GET /api/v1/collab/discussion-of-day
+// @access  Public
+exports.getDiscussionOfDay = async (req, res) => {
+  try {
+    const dotd = await DiscussionOfDay.findOne({ active: true })
+      .populate('articleId', 'title source sentiment url description')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (!dotd) return res.json({ discussion: null });
+
+    // Get comment count
+    const commentCount = await Comment.countDocuments({ articleId: dotd.articleId._id });
+
+    res.json({
+      discussion: {
+        ...dotd,
+        commentCount,
+      },
+    });
+  } catch (err) {
+    console.error('[Collab] getDiscussionOfDay error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch discussion of the day.' });
+  }
+};
+
 // ── Sharing ─────────────────────────────────────────────────────
 
 // @desc    Track a share action
@@ -197,7 +419,6 @@ exports.trackShare = async (req, res) => {
       platform,
     });
 
-    // Increment share count on article (store as a virtual counter via a simple field)
     await Article.findByIdAndUpdate(articleId, { $inc: { shareCount: 1 } }).catch(() => {});
 
     res.status(201).json({ share });
@@ -290,7 +511,6 @@ exports.getRecentDiscussions = async (req, res) => {
     const limit = parseInt(req.query.limit) || 15;
     const skip = (page - 1) * limit;
 
-    // Get recent comments grouped by article
     const pipeline = [
       { $sort: { createdAt: -1 } },
       {
@@ -301,6 +521,7 @@ exports.getRecentDiscussions = async (req, res) => {
           lastComment: { $first: '$content' },
           lastUser: { $first: '$userId' },
           lastSentiment: { $first: '$sentiment' },
+          lastIsAnonymous: { $first: '$isAnonymous' },
         },
       },
       { $sort: { lastCommentAt: -1 } },
@@ -335,7 +556,14 @@ exports.getRecentDiscussions = async (req, res) => {
           commentCount: 1,
           lastComment: 1,
           lastSentiment: 1,
-          userName: { $ifNull: ['$user.name', 'Anonymous'] },
+          lastIsAnonymous: 1,
+          userName: {
+            $cond: [
+              { $eq: ['$lastIsAnonymous', true] },
+              'Anonymous',
+              { $ifNull: ['$user.name', 'Anonymous'] },
+            ],
+          },
         },
       },
     ];
