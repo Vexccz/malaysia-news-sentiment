@@ -29,7 +29,7 @@ const SharedArticles = lazy(() => import('./pages/SharedArticles'));
 
 // Lighter pages - still lazy but less critical
 const History = lazy(() => import('./pages/History'));
-// const CommunityPage = lazy(() => import('./pages/CommunityPage'));
+const CommunityPage = lazy(() => import('./pages/CommunityPage'));
 const Bookmarks = lazy(() => import('./pages/Bookmarks'));
 const Alerts = lazy(() => import('./pages/Alerts'));
 const SourceCredibility = lazy(() => import('./pages/SourceCredibility'));
@@ -516,7 +516,7 @@ const AppInner = () => (
     <Route path="/forecast" element={<ProtectedRoute><Layout><Forecast /></Layout></ProtectedRoute>} />
     <Route path="/analytics" element={<ProtectedRoute><Layout><AdvancedAnalytics /></Layout></ProtectedRoute>} />
     <Route path="/shared-articles" element={<ProtectedRoute><Layout><SharedArticles /></Layout></ProtectedRoute>} />
-    // <Route path="/community" element={<ProtectedRoute><Layout><CommunityPage /></Layout></ProtectedRoute>} />
+    <Route path="/community" element={<ProtectedRoute><Layout><CommunityPage /></Layout></ProtectedRoute>} />
 
     <Route path="/articles/:id" element={<ProtectedRoute><Layout><ArticleDetail /></Layout></ProtectedRoute>} />
     
