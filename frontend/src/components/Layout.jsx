@@ -242,7 +242,10 @@ const Layout = ({ children }) => {
             <ThemeToggle />
           </div>
           {user && (
-            <div className="flex items-center gap-3 p-2 rounded-sm hover:bg-paper dark:hover:bg-white/5 transition-colors">
+            <div
+              onClick={() => navigate('/profile')}
+              className="flex items-center gap-3 p-2 rounded-sm hover:bg-paper dark:hover:bg-white/5 transition-colors cursor-pointer"
+            >
               {user.avatar ? (
                 <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full object-cover" loading="lazy" decoding="async" />
               ) : (
@@ -255,7 +258,7 @@ const Layout = ({ children }) => {
                 <p className="text-[11px] text-ink-muted dark:text-ink-faint truncate">{user.email || user.phone || ''}</p>
               </div>
               <button
-                onClick={handleLogout}
+                onClick={(e) => { e.stopPropagation(); handleLogout(); }}
                 className="p-1.5 rounded-sm hover:bg-accent/10 text-ink-muted hover:text-accent transition-colors"
                 title={t('logout')}
               >
