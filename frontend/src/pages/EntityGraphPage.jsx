@@ -35,6 +35,7 @@ export default function EntityGraphPage() {
   const [loading, setLoading] = useState(true);
   const [graphRendering, setGraphRendering] = useState(false);
   const [selectedNode, setSelectedNode] = useState(null);
+  const [focusedNode, setFocusedNode] = useState(null);
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -144,8 +145,8 @@ export default function EntityGraphPage() {
       });
       return;
     }
-    if (selectedNode === name) { setSelectedNode(null); setDetail(null); }
-    else { setSelectedNode(name); fetchDetail(name); }
+    if (selectedNode === name) { setSelectedNode(null); setDetail(null); setFocusedNode(null); }
+    else { setSelectedNode(name); setFocusedNode(null); fetchDetail(name); }
   };
 
   // Feature 5: BFS shortest path algorithm
@@ -313,8 +314,23 @@ export default function EntityGraphPage() {
     }
 
     const maxMentions = Math.max(...graphNodes.map(n => n.mentions), 1);
-    const baseNodeSize = mobileGraphMode ? 20 : 28;
-    const sizeRange = mobileGraphMode ? 20 : 52;
+    const baseNodeSize = mobileGraphMode ? 18 : 24;
+    const sizeRange = mobileGraphMode ? 30 : 70;
+
+    // Feature: Focus neighborhood - compute connected nodes
+    const focusedNeighborIds = new Set();
+    let focusedNodeId = null;
+    if (focusedNode) {
+      const focusedGraph = graphNodes.find(n => n.label === focusedNode);
+      if (focusedGraph) {
+        focusedNodeId = focusedGraph.id;
+        focusedNeighborIds.add(focusedNodeId);
+        graphEdges.forEach(e => {
+          if (e.source === focusedNodeId) focusedNeighborIds.add(e.target);
+          if (e.target === focusedNodeId) focusedNeighborIds.add(e.source);
+        });
+      }
+    }
 
     const g6Data = {
       nodes: graphNodes.map(n => {
@@ -328,14 +344,17 @@ export default function EntityGraphPage() {
         return {
           id: n.id,
           label: n.label,
+          clusterId: n.category || 'default',
           data: { label: n.label, mentions: n.mentions, sentiment: n.sentiment, category: n.category },
           size: isExpanded ? nodeSize * 0.85 : nodeSize,
           style: {
             fill: color,
             stroke: isExpanded ? '#6366F1' : color,
-            lineWidth: isExpanded ? 3.5 : 2.5,
-            opacity: (isHighlighted && onPath) ? 1 : 0.08,
+            lineWidth: n.mentions > maxMentions * 0.6 ? 3.5 : 2,
+            opacity: (isHighlighted && onPath && (!focusedNode || focusedNeighborIds.has(n.id))) ? 1 : 0.08,
             lineDash: isExpanded ? [4, 2] : undefined,
+            shadowBlur: n.mentions > maxMentions * 0.6 ? 20 : 0,
+            shadowColor: `${color}60`,
           },
           labelCfg: {
             style: {
@@ -355,15 +374,18 @@ export default function EntityGraphPage() {
         const pathIdxSrc = highlightedPath ? highlightedPath.indexOf(e.source) : -1;
         const pathIdxTgt = highlightedPath ? highlightedPath.indexOf(e.target) : -1;
         const isPathEdge = isOnPath && Math.abs(pathIdxSrc - pathIdxTgt) === 1;
+        // Feature: Focus neighborhood - dim edges not connected to focused node
+        const focusConnected = !focusedNodeId || (focusedNeighborIds.has(e.source) && focusedNeighborIds.has(e.target));
         return {
           id: `edge-${i}`,
           source: e.source,
           target: e.target,
+          label: e.weight > 2 ? `${e.weight}x` : '',
           data: { weight: e.weight, avgSentiment: e.avgSentiment },
           style: {
             stroke: isPathEdge ? '#6366F1' : edgeColor,
             lineWidth: isPathEdge ? 5 : Math.min(5, 1.5 + e.weight * 0.6),
-            strokeOpacity: (highlightedPath && !isPathEdge) ? 0.05 : 0.6,
+            strokeOpacity: (highlightedPath && !isPathEdge) ? 0.05 : (focusConnected ? 0.6 : 0.03),
             endArrow: isPathEdge ? { path: 'M 0,0 L 8,4 L 8,-4 Z', fill: '#6366F1' } : false,
           },
         };
@@ -381,13 +403,17 @@ export default function EntityGraphPage() {
       layout: {
         type: 'force',
         preventOverlap: true,
-        nodeSpacing: mobileGraphMode ? 100 : 120,
-        linkDistance: mobileGraphMode ? 120 : linkDistance,
-        nodeStrength: mobileGraphMode ? -800 : -nodeStrength,
+        nodeSpacing: 120,
+        linkDistance: linkDistance,
+        nodeStrength: -nodeStrength,
         edgeStrength: 0.25,
         collideStrength: 1,
         alphaDecay: 0.015,
         alphaMin: 0.001,
+        clustering: true,
+        clusterNodeStrength: 3,
+        clusterEdgeStrength: 0.5,
+        clusterFociStrength: 0.8,
       },
       modes: {
         default: [
@@ -412,8 +438,24 @@ export default function EntityGraphPage() {
         },
       },
       edge: {
+        style: {
+          labelCfg: {
+            style: {
+              fill: isDark ? '#94a3b8' : '#64748b',
+              fontSize: 10,
+              fontFamily: 'Inter, sans-serif',
+            },
+            autoRotate: true,
+            refY: -8,
+          },
+        },
         state: {
-          active: { stroke: '#6366F1', lineWidth: 3.5, strokeOpacity: 0.9 },
+          active: {
+            stroke: '#6366F1',
+            lineWidth: 3.5,
+            strokeOpacity: 0.9,
+            labelVisible: true,
+          },
           inactive: { strokeOpacity: 0.06 },
         },
       },
@@ -495,7 +537,7 @@ export default function EntityGraphPage() {
         graphInstance.current = null;
       }
     };
-  }, [data, loading, isDark, viewMode, isMobile, getFilteredData, calculateEdgeSentiments, linkDistance, nodeStrength, highlightedPath, timelineValue, graphDataExtra, pathMode]);
+  }, [data, loading, isDark, viewMode, isMobile, getFilteredData, calculateEdgeSentiments, linkDistance, nodeStrength, highlightedPath, timelineValue, graphDataExtra, pathMode, focusedNode]);
 
   // Handle resize
   useEffect(() => {
@@ -873,11 +915,12 @@ export default function EntityGraphPage() {
               animate={{ width: isMobile ? '100%' : 340, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-              className="border-l border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] overflow-y-auto overflow-x-hidden z-[2] p-5"
+              className="border-l border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] overflow-y-auto overflow-x-hidden z-[2] p-5 relative"
+              style={detail ? { borderLeft: `3px solid ${SENTIMENT_COLORS[detail.sentiment] || SENTIMENT_COLORS.Neutral}` } : {}}
             >
               {/* Close button */}
               <button
-                onClick={() => { setSelectedNode(null); setDetail(null); }}
+                onClick={() => { setSelectedNode(null); setDetail(null); setFocusedNode(null); }}
                 className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
               >
                 <X size={16} />
@@ -892,7 +935,7 @@ export default function EntityGraphPage() {
                   {/* Header */}
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">{detail.name}</h3>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white" style={{ fontFamily: "'Playfair Display', serif" }}>{detail.name}</h3>
                     </div>
                     <span className="inline-block mt-2 text-[11px] font-semibold text-blue-600 bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded capitalize">{detail.category}</span>
                   </div>
@@ -920,6 +963,74 @@ export default function EntityGraphPage() {
                         <span className="text-[11px] font-semibold text-gray-900 dark:text-white w-6 text-right">{v}</span>
                       </div>
                     ))}
+                  </div>
+
+                  {/* Mini Sentiment Timeline Chart */}
+                  <div>
+                    <div className="text-[11px] font-semibold text-gray-900 dark:text-white mb-2">Sentiment Trend</div>
+                    <div style={{ height: 150 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart
+                          data={
+                            detail.sentimentHistory?.length >= 2
+                              ? detail.sentimentHistory.slice(-7)
+                              : [
+                                  { day: 'Mon', score: 0.3 },
+                                  { day: 'Tue', score: 0.5 },
+                                  { day: 'Wed', score: 0.2 },
+                                  { day: 'Thu', score: 0.6 },
+                                  { day: 'Fri', score: 0.4 },
+                                  { day: 'Sat', score: 0.7 },
+                                  { day: 'Sun', score: 0.5 },
+                                ]
+                          }
+                          margin={{ top: 4, right: 4, bottom: 4, left: 4 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#333' : '#e5e7eb'} />
+                          <XAxis dataKey="day" tick={{ fontSize: 9, fill: isDark ? '#94a3b8' : '#6b7280' }} axisLine={false} tickLine={false} />
+                          <YAxis domain={[-1, 1]} tick={{ fontSize: 9, fill: isDark ? '#94a3b8' : '#6b7280' }} axisLine={false} tickLine={false} width={24} />
+                          <Tooltip
+                            contentStyle={{
+                              background: isDark ? '#1e1e1e' : '#fff',
+                              border: `1px solid ${isDark ? '#333' : '#e5e7eb'}`,
+                              borderRadius: 0,
+                              fontSize: 11,
+                              color: isDark ? '#e2e8f0' : '#1e293b',
+                            }}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="score"
+                            stroke={SENTIMENT_COLORS[detail.sentiment || 'Neutral']}
+                            strokeWidth={2}
+                            dot={false}
+                            activeDot={{ r: 4, fill: SENTIMENT_COLORS[detail.sentiment || 'Neutral'] }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Focus Neighborhood Button */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setFocusedNode(focusedNode === selectedNode ? null : selectedNode)}
+                      className={`flex-1 py-2 text-[11px] font-semibold border transition-colors ${
+                        focusedNode === selectedNode
+                          ? 'bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 border-indigo-200 dark:border-indigo-500/30'
+                          : 'bg-white dark:bg-[#1a1a1a] text-gray-600 dark:text-gray-300 border-[#e5e5e5] dark:border-[#333] hover:border-indigo-300 dark:hover:border-indigo-500/40'
+                      }`}
+                    >
+                      {focusedNode === selectedNode ? '✓ Focused' : 'Focus Neighborhood'}
+                    </button>
+                    {focusedNode && (
+                      <button
+                        onClick={() => setFocusedNode(null)}
+                        className="px-3 py-2 text-[11px] font-semibold text-gray-500 dark:text-gray-400 border border-[#e5e5e5] dark:border-[#333] hover:border-red-300 dark:hover:border-red-500/40 hover:text-red-500 transition-colors"
+                      >
+                        Reset View
+                      </button>
+                    )}
                   </div>
 
                   {/* Connected Entities */}
