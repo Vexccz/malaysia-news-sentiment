@@ -3,12 +3,25 @@ import toast from 'react-hot-toast';
 import SentimentBadge from './SentimentBadge';
 import AlertBadge from './AlertBadge';
 import { trackView, voteSentiment, toggleBookmark } from '../services/api';
+import { X, Bookmark, BookmarkCheck, ExternalLink, TrendingUp, TrendingDown, Minus, Lightbulb, MessageSquare } from 'lucide-react';
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '';
   return new Date(dateStr).toLocaleDateString('en-MY', {
     day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
   });
+};
+
+const getSentimentColor = (s) => {
+  if (s === 'Positive') return '#4ADE80';
+  if (s === 'Negative') return '#FB7185';
+  return '#FBBF24';
+};
+
+const getSentimentIcon = (s) => {
+  if (s === 'Positive') return TrendingUp;
+  if (s === 'Negative') return TrendingDown;
+  return Minus;
 };
 
 const ArticlePreviewModal = ({ article, isOpen, onClose }) => {
@@ -22,10 +35,7 @@ const ArticlePreviewModal = ({ article, isOpen, onClose }) => {
       document.body.style.overflow = 'hidden';
       trackView(article._id).catch(() => {});
     }
-
-    return () => {
-      document.body.style.overflow = originalOverflow || '';
-    };
+    return () => { document.body.style.overflow = originalOverflow || ''; };
   }, [isOpen, article?._id]);
 
   if (!isOpen || !article) return null;
@@ -35,15 +45,17 @@ const ArticlePreviewModal = ({ article, isOpen, onClose }) => {
     publishedAt, topic, sentiment, aiSentiment, reason, confidence, isAlert, content
   } = article;
 
+  const effectiveSentiment = aiSentiment || sentiment || 'Neutral';
+  const SentimentIcon = getSentimentIcon(effectiveSentiment);
+  const sentimentColor = getSentimentColor(effectiveSentiment);
+
   const handleVote = async (s) => {
     try {
       const res = await voteSentiment(_id, { sentiment: s });
       setLocalFeedback(res.feedback);
       setVoted(true);
       toast.success('Feedback recorded!');
-    } catch {
-      toast.error('Failed to submit vote');
-    }
+    } catch { toast.error('Failed to submit vote'); }
   };
 
   const handleBookmark = async () => {
@@ -51,166 +63,346 @@ const ArticlePreviewModal = ({ article, isOpen, onClose }) => {
       const res = await toggleBookmark(_id);
       setIsBookmarked(res.bookmarked);
       toast.success(res.bookmarked ? 'Saved!' : 'Removed!');
-    } catch {
-      toast.error('Bookmark error');
-    }
+    } catch { toast.error('Bookmark error'); }
   };
 
   const cleanHtml = (html) => {
     if (!html) return '';
-    // Strip dangerous tags and attributes for XSS prevention
     let clean = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
     clean = clean.replace(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi, '');
     clean = clean.replace(/<object[^>]*>[\s\S]*?<\/object>/gi, '');
     clean = clean.replace(/<embed[^>]*>/gi, '');
     clean = clean.replace(/<link[^>]*>/gi, '');
-    // Strip image/figure tags that might break layout
     clean = clean.replace(/<figure[^>]*>[\s\S]*?<\/figure>/gi, '');
     clean = clean.replace(/<img[^>]*>/gi, '');
-    // Remove event handlers (onclick, onerror, onload, etc.)
     clean = clean.replace(/\son\w+\s*=\s*["'][^"']*["']/gi, '');
     clean = clean.replace(/\son\w+\s*=\s*[^\s>]*/gi, '');
-    // Remove javascript: URLs
     clean = clean.replace(/href\s*=\s*["']javascript:[^"']*["']/gi, '');
-    // Remove complex style attributes
     clean = clean.replace(/style="[^"]*"/gi, '');
     return clean;
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-container" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose} aria-label="Close modal">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-
-        <div className="modal-content">
-          <header className="modal-header">
-            <div className="modal-meta-row">
-              <span className="modal-source-pill">{source}</span>
-              <span className="modal-date-text">{formatDate(publishedAt)}</span>
-              {topic && <span className="modal-topic-chip">#{topic}</span>}
-              <button 
-                className="btn-bookmark" 
-                onClick={handleBookmark} 
-                title={isBookmarked ? "Remove bookmark" : "Add to bookmarks"}
-                style={{ 
-                  marginLeft: 'auto', 
-                  marginRight: '48px',
-                  background: 'none', 
-                  border: 'none', 
-                  cursor: 'pointer', 
-                  color: isBookmarked ? 'var(--neu)' : 'var(--text-400)',
-                  transition: 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-                }}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill={isBookmarked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
-              </button>
-            </div>
-            {isAlert && <AlertBadge />}
-            <h2 className="modal-title">{title}</h2>
-          </header>
-
-          <div className="modal-body">
-            {urlToImage && (
-              <div className="modal-image-wrapper">
-                <img src={urlToImage} alt={title} className="modal-image" loading="lazy" decoding="async" />
-              </div>
+    <div 
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000,
+        background: 'rgba(0,0,0,0.75)',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+        padding: '40px 16px',
+        overflowY: 'auto',
+        backdropFilter: 'blur(4px)',
+      }}
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: 'var(--bg, #fff)',
+          border: '1px solid var(--border, #e5e5e5)',
+          width: '100%', maxWidth: 680,
+          position: 'relative',
+        }}
+      >
+        {/* Top bar — source + actions */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '12px 20px',
+          borderBottom: '1px solid var(--border, #e5e5e5)',
+          background: 'var(--card, #fafafa)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{
+              fontSize: 10, fontWeight: 800, letterSpacing: '0.15em',
+              textTransform: 'uppercase', color: 'var(--brand, #e11d48)',
+            }}>
+              {source || 'Unknown'}
+            </span>
+            <span style={{ fontSize: 11, color: 'var(--text-muted, #999)' }}>
+              {formatDate(publishedAt)}
+            </span>
+            {topic && (
+              <span style={{
+                fontSize: 10, fontWeight: 700, letterSpacing: '0.1em',
+                textTransform: 'uppercase', color: 'var(--text-400, #aaa)',
+                padding: '2px 8px', border: '1px solid var(--border, #e5e5e5)',
+              }}>
+                {topic}
+              </span>
             )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button 
+              onClick={handleBookmark}
+              title={isBookmarked ? "Remove bookmark" : "Add to bookmarks"}
+              style={{ 
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: isBookmarked ? '#f59e0b' : 'var(--text-400, #aaa)',
+                padding: 4, display: 'flex',
+              }}
+            >
+              {isBookmarked ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
+            </button>
+            <button 
+              onClick={onClose}
+              style={{ 
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--text-400, #aaa)', padding: 4, display: 'flex',
+              }}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
 
-            <div className="modal-analysis-section">
-              <div className="modal-section-grid">
-                <div className="analysis-card-main">
-                  <h4 className="modal-section-label">Sentiment Analysis (Hybrid)</h4>
-                  <div className="modal-sentiment-row">
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                       <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-400)', textTransform: 'uppercase' }}>AI Classifier:</span>
-                       <SentimentBadge sentiment={aiSentiment || sentiment} />
-                    </div>
-                    <div className="modal-confidence-bar-group">
-                       <span className="modal-conf-value">{Math.round((confidence || 0) * 100)}% Confidence</span>
-                       <div className="modal-conf-track">
-                         <div 
-                           className="modal-conf-fill" 
-                           style={{ width: `${Math.round((confidence || 0) * 100)}%`, background: `var(--${(aiSentiment || sentiment).toLowerCase()})` }} 
-                         />
-                       </div>
-                    </div>
-                  </div>
-                </div>
+        {/* Article content */}
+        <div style={{ padding: '20px 20px 0' }}>
+          {isAlert && <AlertBadge />}
+          
+          {/* Title */}
+          <h2 style={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            fontSize: 22, fontWeight: 700, lineHeight: 1.3,
+            color: 'var(--text-primary, #000)',
+            letterSpacing: '-0.02em',
+            margin: '0 0 12px',
+          }}>
+            {title}
+          </h2>
 
-                <div className="analysis-card-reason">
-                  <h4 className="modal-section-label">Strategic Reasoning</h4>
-                  <div className="modal-reason-box">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--brand)', marginTop: 2 }}>
-                      <path d="M12 22v-5"/><path d="M9 18l3 3 3-3"/><circle cx="12" cy="7" r="5"/><path d="M12 12V2"/>
-                    </svg>
-                    <p className="modal-reason-text">
-                      {reason || 'Standard keyword indicators detected (Local fallback analysis).'}
-                    </p>
-                  </div>
-                </div>
+          {/* Image */}
+          {urlToImage && (
+            <div style={{
+              margin: '0 -20px 16px', height: 240, overflow: 'hidden',
+              background: 'var(--bg, #f5f5f5)',
+              borderTop: '1px solid var(--border, #e5e5e5)',
+              borderBottom: '1px solid var(--border, #e5e5e5)',
+            }}>
+              <img 
+                src={urlToImage} alt={title} 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                loading="lazy" decoding="async" 
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Analysis section — editorial style */}
+        <div style={{ padding: '0 20px 16px' }}>
+          {/* Sentiment + Confidence row */}
+          <div style={{
+            display: 'flex', alignItems: 'stretch', gap: 0,
+            border: '1px solid var(--border, #e5e5e5)',
+            marginBottom: 16,
+          }}>
+            {/* Sentiment */}
+            <div style={{
+              flex: 1, padding: '12px 16px',
+              borderRight: '1px solid var(--border, #e5e5e5)',
+              display: 'flex', alignItems: 'center', gap: 10,
+            }}>
+              <div style={{
+                width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: `${sentimentColor}15`, color: sentimentColor,
+              }}>
+                <SentimentIcon size={14} />
               </div>
-
-              <div className="vote-section">
-                <span className="vote-label">User Feedback:</span>
-                <div className="vote-options">
-                   {['Positive', 'Neutral', 'Negative'].map(s => (
-                     <button 
-                       key={s} 
-                       className={`btn-vote ${voted ? 'disabled' : ''}`}
-                       onClick={() => !voted && handleVote(s)}
-                       disabled={voted}
-                     >
-                       {s} {localFeedback?.[s] > 0 && `(${localFeedback[s]})`}
-                     </button>
-                   ))}
+              <div>
+                <div style={{
+                  fontSize: 9, fontWeight: 700, letterSpacing: '0.15em',
+                  textTransform: 'uppercase', color: 'var(--text-muted, #999)',
+                  marginBottom: 2,
+                }}>
+                  Sentiment
+                </div>
+                <div style={{
+                  fontSize: 13, fontWeight: 700, color: sentimentColor,
+                  textTransform: 'uppercase', letterSpacing: '0.05em',
+                }}>
+                  {effectiveSentiment}
                 </div>
               </div>
             </div>
 
-            <div className="modal-text-section">
-              <h4 className="modal-section-label">Description</h4>
-              <p className="modal-full-text">{description}</p>
-              
-               {content && (
-                <div className="modal-excerpt-container">
-                  <h4 className="modal-section-label">Strategic Excerpt</h4>
-                  <div 
-                    className="modal-excerpt-text"
-                    dangerouslySetInnerHTML={{ 
-                      __html: cleanHtml(
-                        (content.split('[+')[0].length > 450 
-                          ? content.split('[+')[0].slice(0, 450) + '...' 
-                          : content.split('[+')[0])
-                      ) 
-                    }}
-                  />
+            {/* Confidence */}
+            <div style={{
+              flex: 1, padding: '12px 16px',
+              display: 'flex', alignItems: 'center', gap: 10,
+            }}>
+              <div style={{
+                width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'var(--card, #f5f5f5)', color: 'var(--text-secondary, #666)',
+              }}>
+                <span style={{ fontSize: 11, fontWeight: 800, fontFamily: 'monospace' }}>
+                  {Math.round((confidence || 0) * 100)}
+                </span>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{
+                  fontSize: 9, fontWeight: 700, letterSpacing: '0.15em',
+                  textTransform: 'uppercase', color: 'var(--text-muted, #999)',
+                  marginBottom: 4,
+                }}>
+                  Confidence
                 </div>
-              )}
+                <div style={{
+                  height: 4, background: 'var(--border, #e5e5e5)', overflow: 'hidden',
+                }}>
+                  <div style={{
+                    height: '100%', width: `${Math.round((confidence || 0) * 100)}%`,
+                    background: sentimentColor,
+                    transition: 'width 0.6s ease',
+                  }} />
+                </div>
+              </div>
             </div>
           </div>
 
-          <footer className="modal-footer">
-            {url ? (
-              <button 
-                onClick={() => window.open(url, '_blank')}
-                className="modal-cta-primary"
-              >
-                Read Full Story on {source || 'Media Source'}
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 8 }}>
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
-                </svg>
-              </button>
-            ) : (
-              <button className="modal-cta-primary" disabled style={{ opacity: 0.6, cursor: 'not-allowed' }}>
-                Full Story Source Unavailable
-              </button>
-            )}
-            <button className="btn-outline" onClick={onClose} style={{ marginLeft: 12 }}>
-              Close Preview
+          {/* Reason */}
+          {reason && (
+            <div style={{
+              display: 'flex', gap: 10, padding: '12px 16px',
+              borderLeft: `3px solid ${sentimentColor}`,
+              background: 'var(--card, #fafafa)',
+              marginBottom: 16,
+            }}>
+              <Lightbulb size={14} style={{ color: '#f59e0b', flexShrink: 0, marginTop: 2 }} />
+              <p style={{
+                fontSize: 13, lineHeight: 1.6, color: 'var(--text-secondary, #666)',
+                margin: 0, fontStyle: 'italic',
+              }}>
+                {reason}
+              </p>
+            </div>
+          )}
+
+          {/* Vote */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16,
+            paddingTop: 12, borderTop: '1px dashed var(--border, #e5e5e5)',
+          }}>
+            <span style={{
+              fontSize: 10, fontWeight: 700, letterSpacing: '0.12em',
+              textTransform: 'uppercase', color: 'var(--text-muted, #999)',
+              marginRight: 4,
+            }}>
+              Feedback
+            </span>
+            {['Positive', 'Neutral', 'Negative'].map(s => {
+              const btnColor = getSentimentColor(s);
+              return (
+                <button 
+                  key={s}
+                  onClick={() => !voted && handleVote(s)}
+                  disabled={voted}
+                  style={{
+                    padding: '5px 12px', fontSize: 11, fontWeight: 600,
+                    border: `1px solid ${voted ? 'var(--border)' : btnColor}40`,
+                    background: voted ? 'var(--card)' : 'transparent',
+                    color: voted ? 'var(--text-muted)' : btnColor,
+                    cursor: voted ? 'default' : 'pointer',
+                    textTransform: 'uppercase', letterSpacing: '0.05em',
+                    transition: 'all 0.2s',
+                    opacity: voted ? 0.6 : 1,
+                  }}
+                >
+                  {s} {localFeedback?.[s] > 0 && `(${localFeedback[s]})`}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Description */}
+        <div style={{ padding: '0 20px 16px' }}>
+          <div style={{
+            fontSize: 9, fontWeight: 700, letterSpacing: '0.15em',
+            textTransform: 'uppercase', color: 'var(--text-muted, #999)',
+            marginBottom: 8,
+          }}>
+            Description
+          </div>
+          <p style={{
+            fontSize: 14, lineHeight: 1.7, color: 'var(--text-secondary, #444)',
+            margin: '0 0 16px',
+          }}>
+            {description}
+          </p>
+
+          {content && (
+            <>
+              <div style={{
+                fontSize: 9, fontWeight: 700, letterSpacing: '0.15em',
+                textTransform: 'uppercase', color: 'var(--text-muted, #999)',
+                marginBottom: 8,
+              }}>
+                Strategic Excerpt
+              </div>
+              <div 
+                style={{
+                  fontSize: 13, lineHeight: 1.7, color: 'var(--text-muted, #888)',
+                  padding: '12px 16px',
+                  borderLeft: '3px solid var(--border, #e5e5e5)',
+                  background: 'var(--card, #fafafa)',
+                }}
+                dangerouslySetInnerHTML={{ 
+                  __html: cleanHtml(
+                    (content.split('[+')[0].length > 450 
+                      ? content.split('[+')[0].slice(0, 450) + '...' 
+                      : content.split('[+')[0])
+                  ) 
+                }}
+              />
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '14px 20px',
+          borderTop: '1px solid var(--border, #e5e5e5)',
+          background: 'var(--card, #fafafa)',
+        }}>
+          {url ? (
+            <button 
+              onClick={() => window.open(url, '_blank')}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                background: 'var(--text-primary, #000)', color: '#fff',
+                padding: '8px 18px', border: 'none',
+                fontSize: 12, fontWeight: 700, letterSpacing: '0.08em',
+                textTransform: 'uppercase', cursor: 'pointer',
+                transition: 'opacity 0.2s',
+              }}
+            >
+              Read Full Story
+              <ExternalLink size={13} />
             </button>
-          </footer>
+          ) : (
+            <button 
+              disabled 
+              style={{
+                padding: '8px 18px', border: 'none',
+                fontSize: 12, fontWeight: 700, letterSpacing: '0.08em',
+                textTransform: 'uppercase', opacity: 0.4, cursor: 'not-allowed',
+                background: 'var(--text-primary, #000)', color: '#fff',
+              }}
+            >
+              Source Unavailable
+            </button>
+          )}
+          <button 
+            onClick={onClose}
+            style={{
+              padding: '8px 16px', background: 'transparent',
+              border: '1px solid var(--border, #e5e5e5)',
+              fontSize: 11, fontWeight: 600, letterSpacing: '0.08em',
+              textTransform: 'uppercase', color: 'var(--text-secondary, #666)',
+              cursor: 'pointer', transition: 'all 0.2s',
+            }}
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>
