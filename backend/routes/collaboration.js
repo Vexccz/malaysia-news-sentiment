@@ -12,6 +12,8 @@ const {
   getHotTakes,
   setDiscussionOfDay,
   getDiscussionOfDay,
+  getTrendingKeywords,
+  getSentimentPulse,
 } = require('../controllers/collaborationController');
 
 // ── Comments ────────────────────────────────────────────────
@@ -28,6 +30,10 @@ router.post('/discussion-of-day', protect, setDiscussionOfDay);
 
 // ── Sharing ─────────────────────────────────────────────────
 router.post('/share', protect, trackShare);
+
+// ── Community Features ───────────────────────────────────────
+router.get('/trending-keywords', getTrendingKeywords);
+router.get('/sentiment-pulse', getSentimentPulse);
 router.get('/shared', getSharedArticles);
 
 module.exports = router;

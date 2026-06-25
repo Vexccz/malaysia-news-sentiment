@@ -589,3 +589,137 @@ exports.getRecentDiscussions = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch discussions.' });
   }
 };
+
+// ── Trending Keywords from Comments ──────────────────────────────
+
+// @desc    Get trending keywords from recent comments
+// @route   GET /api/v1/collab/trending-keywords
+// @access  Public
+exports.getTrendingKeywords = async (req, res) => {
+  try {
+    const days = parseInt(req.query.days) || 7;
+    const limit = parseInt(req.query.limit) || 15;
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    // Get recent non-anonymous comments
+    const comments = await Comment.find({
+      createdAt: { $gte: since },
+      isAnonymous: { $ne: true },
+    })
+      .select('content')
+      .lean()
+      .limit(500);
+
+    // Extract keywords (simple word frequency)
+    const stopWords = new Set([
+      'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+      'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
+      'should', 'may', 'might', 'shall', 'can', 'need', 'dare', 'ought',
+      'used', 'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from',
+      'as', 'into', 'through', 'during', 'before', 'after', 'above', 'below',
+      'between', 'out', 'off', 'over', 'under', 'again', 'further', 'then',
+      'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'both',
+      'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor',
+      'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just',
+      'don', 'now', 'and', 'but', 'or', 'if', 'while', 'that', 'this',
+      'these', 'those', 'i', 'me', 'my', 'we', 'our', 'you', 'your', 'he',
+      'him', 'his', 'she', 'her', 'it', 'its', 'they', 'them', 'their',
+      'what', 'which', 'who', 'whom', 'about', 'up', 'down', 'also', 'like',
+      'just', 'get', 'got', 'make', 'made', 'take', 'know', 'think', 'see',
+      'come', 'go', 'say', 'said', 'one', 'two', 'new', 'good', 'first',
+      'last', 'long', 'great', 'little', 'own', 'old', 'right', 'big', 'high',
+      'different', 'small', 'large', 'next', 'early', 'young', 'important',
+      'because', 'still', 'much', 'well', 'back', 'even', 'any', 'give',
+      'day', 'year', 'way', 'thing', 'man', 'woman', 'world', 'life', 'hand',
+      'part', 'place', 'case', 'week', 'company', 'system', 'program', 'work',
+      'use', 'problem', 'fact',
+    ]);
+
+    const wordCount = {};
+    comments.forEach(c => {
+      const words = (c.content || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '')
+        .split(/\s+/)
+        .filter(w => w.length > 3 && !stopWords.has(w));
+      words.forEach(w => {
+        wordCount[w] = (wordCount[w] || 0) + 1;
+      });
+    });
+
+    const keywords = Object.entries(wordCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([word, count]) => ({ word, count }));
+
+    res.json({ keywords, totalComments: comments.length });
+  } catch (err) {
+    console.error('[Collab] getTrendingKeywords error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch trending keywords.' });
+  }
+};
+
+// ── Sentiment Pulse ──────────────────────────────────────────────
+
+// @desc    Get sentiment distribution from recent comments
+// @route   GET /api/v1/collab/sentiment-pulse
+// @access  Public
+exports.getSentimentPulse = async (req, res) => {
+  try {
+    const days = parseInt(req.query.days) || 7;
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const pipeline = [
+      { $match: { createdAt: { $gte: since }, commentSentiment: { $ne: null } } },
+      {
+        $group: {
+          _id: '$commentSentiment',
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 } },
+    ];
+
+    const dailyPipeline = [
+      { $match: { createdAt: { $gte: since }, commentSentiment: { $ne: null } } },
+      {
+        $group: {
+          _id: {
+            date: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            sentiment: '$commentSentiment',
+          },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { '_id.date': 1 } },
+    ];
+
+    const [distribution, daily] = await Promise.all([
+      Comment.aggregate(pipeline),
+      Comment.aggregate(dailyPipeline),
+    ]);
+
+    const total = distribution.reduce((sum, d) => sum + d.count, 0);
+    const sentiments = distribution.map(d => ({
+      sentiment: d._id,
+      count: d.count,
+      percentage: total > 0 ? Math.round((d.count / total) * 100) : 0,
+    }));
+
+    // Format daily data
+    const dailyFormatted = {};
+    daily.forEach(d => {
+      if (!dailyFormatted[d._id.date]) dailyFormatted[d._id.date] = {};
+      dailyFormatted[d._id.date][d._id.sentiment] = d.count;
+    });
+
+    const dailyArray = Object.entries(dailyFormatted)
+      .map(([date, sents]) => ({ date, ...sents }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    res.json({ sentiments, daily: dailyArray, total });
+  } catch (err) {
+    console.error('[Collab] getSentimentPulse error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch sentiment pulse.' });
+  }
+};

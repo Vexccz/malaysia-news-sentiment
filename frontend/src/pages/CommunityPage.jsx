@@ -324,20 +324,26 @@ const CommunityPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [viewingUserId, setViewingUserId] = useState(null);
+  const [trendingKeywords, setTrendingKeywords] = useState([]);
+  const [sentimentPulse, setSentimentPulse] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [discRes, hotRes, dotdRes] = await Promise.all([
+        const [discRes, hotRes, dotdRes, kwRes, spRes] = await Promise.all([
           api.get('/collab/discussions'),
           api.get('/collab/hot-takes?limit=5'),
           api.get('/collab/discussion-of-day'),
+          api.get('/collab/trending-keywords?days=7&limit=15'),
+          api.get('/collab/sentiment-pulse?days=7'),
         ]);
         if (!cancelled) {
           setDiscussions(discRes.data.discussions || []);
           setHotTakes(hotRes.data.hotTakes || []);
           setDotd(dotdRes.data.discussion || null);
+          setTrendingKeywords(kwRes.data.keywords || []);
+          setSentimentPulse(spRes.data || null);
         }
       } catch (err) {
         console.error('Community fetch failed:', err);
@@ -557,6 +563,66 @@ const CommunityPage = () => {
 
         {/* Right: Hot Takes sidebar */}
         <div className="space-y-4">
+          {/* Sentiment Pulse */}
+          {sentimentPulse && sentimentPulse.sentiments?.length > 0 && (
+            <div className={`${CARD} p-4`}>
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-ink-muted dark:text-ink-faint mb-3 flex items-center gap-1.5">
+                {'\uD83D\uDCA4'} Sentiment Pulse <span className="text-ink-faint font-normal">7d</span>
+              </h3>
+              {/* Bar chart */}
+              <div className="space-y-2">
+                {sentimentPulse.sentiments.map(s => {
+                  const color = s.sentiment === 'Positive' ? '#4ADE80' : s.sentiment === 'Negative' ? '#FB7185' : '#FBBF24';
+                  return (
+                    <div key={s.sentiment}>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-[11px] font-medium text-ink dark:text-paper">{s.sentiment}</span>
+                        <span className="text-[10px] text-ink-faint">{s.count} ({s.percentage}%)</span>
+                      </div>
+                      <div className="w-full h-2 bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                        <div
+                          className="h-full transition-all duration-700"
+                          style={{ width: `${s.percentage}%`, background: color }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-[9px] text-ink-faint mt-2 text-center">
+                {sentimentPulse.total} comments this week
+              </p>
+            </div>
+          )}
+
+          {/* Trending Keywords */}
+          {trendingKeywords.length > 0 && (
+            <div className={`${CARD} p-4`}>
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-ink-muted dark:text-ink-faint mb-3 flex items-center gap-1.5">
+                {'\uD83D\uDD2D'} Trending Keywords
+              </h3>
+              <div className="flex flex-wrap gap-1.5">
+                {trendingKeywords.map((kw, i) => {
+                  // Size based on count (top 3 bigger)
+                  const isTop = i < 3;
+                  return (
+                    <span
+                      key={kw.word}
+                      className={`inline-block px-2 py-0.5 border transition-colors cursor-default ${
+                        isTop
+                          ? 'text-[11px] font-semibold border-ink/30 dark:border-paper/30 text-ink dark:text-paper'
+                          : 'text-[10px] border-[#e5e5e5] dark:border-[#333] text-ink-muted dark:text-ink-faint'
+                      }`}
+                    >
+                      {kw.word}
+                      <span className="ml-1 text-[8px] opacity-50">{kw.count}</span>
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {hotTakes.length > 0 && (
             <div className={`${CARD} p-4`}>
               <h3 className="text-[10px] font-bold uppercase tracking-widest text-ink-muted dark:text-ink-faint mb-3 flex items-center gap-1.5">
