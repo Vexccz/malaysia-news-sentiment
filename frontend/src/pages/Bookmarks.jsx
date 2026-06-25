@@ -33,9 +33,8 @@ const Bookmarks = () => {
   const [loading, setLoading] = useState(true);
   const [selectedArticle, setSelectedArticle] = useState(null);
 
-  // Folder state
   const [folders, setFolders] = useState([]);
-  const [activeFolder, setActiveFolder] = useState(null); // null = "All"
+  const [activeFolder, setActiveFolder] = useState(null);
   const [newFolderName, setNewFolderName] = useState('');
   const [showNewFolderInput, setShowNewFolderInput] = useState(false);
   const [editingFolderId, setEditingFolderId] = useState(null);
@@ -47,7 +46,7 @@ const Bookmarks = () => {
       const data = await getBookmarkFolders();
       setFolders(data.folders || data || []);
     } catch {
-      // Silently fail — folders are optional enhancement
+      // Silently fail
     }
   }, []);
 
@@ -80,7 +79,6 @@ const Bookmarks = () => {
     setArticles((prev) => prev.filter((a) => (a._id || a.id) !== id));
   };
 
-  // --- Folder CRUD ---
   const handleCreateFolder = async () => {
     const name = newFolderName.trim();
     if (!name) return;
@@ -136,17 +134,17 @@ const Bookmarks = () => {
     return (
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
-          <div className="h-8 w-40 bg-[#f0f0f0] dark:bg-[#2a2a2a] rounded animate-pulse mb-2" />
-          <div className="h-4 w-56 bg-[#f0f0f0] dark:bg-[#2a2a2a] rounded animate-pulse" />
+          <div className="h-8 w-40 bg-[#fafafa] dark:bg-[#222] animate-pulse mb-2" />
+          <div className="h-4 w-56 bg-[#fafafa] dark:bg-[#222] animate-pulse" />
         </div>
         <div className="flex gap-2 mb-6">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-8 w-24 bg-[#f0f0f0] dark:bg-[#2a2a2a] rounded animate-pulse" />
+            <div key={i} className="h-8 w-24 bg-[#fafafa] dark:bg-[#222] animate-pulse" />
           ))}
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-28 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm animate-pulse" />
+            <div key={i} className="h-28 bg-white dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222] animate-pulse" />
           ))}
         </div>
       </div>
@@ -161,48 +159,37 @@ const Bookmarks = () => {
       className="max-w-4xl mx-auto"
     >
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-6"
-      >
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2 font-['Playfair_Display']">
-          <Bookmark size={24} className="text-blue-600" />
-          Bookmarks
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-black dark:text-white tracking-tight" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+          {t('bookmarks')}
         </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-sans">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500 dark:text-[#999] mt-1">
           Articles you've saved for later
         </p>
-      </motion.div>
+        <div className="mt-3 border-b border-[#e5e5e5] dark:border-[#222]" />
+      </div>
 
       {/* Folder Chips */}
-      <motion.div
-        initial={{ opacity: 0, y: -5 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="mb-6"
-      >
+      <div className="mb-6">
         <div className="flex items-center gap-2 mb-3">
-          <Folder size={14} className="text-ink-muted dark:text-ink-faint" />
-          <span className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">
+          <Folder size={14} className="text-gray-400 dark:text-[#666]" />
+          <span className="text-[10px] uppercase tracking-[0.18em] text-gray-500 dark:text-[#999]">
             Folders
           </span>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* All chip */}
           <button
             onClick={() => setActiveFolder(null)}
-            className={`px-3 py-1.5 text-xs font-sans border transition-colors ${
+            className={`px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.18em] border transition-colors ${
               activeFolder === null
-                ? 'border-ink dark:border-paper text-ink dark:text-paper bg-ink/5 dark:bg-paper/5'
-                : 'border-ink/10 dark:border-paper/10 text-ink-muted dark:text-ink-faint hover:border-ink/30 dark:hover:border-paper/30'
+                ? 'border-black dark:border-white text-white dark:text-black bg-black dark:bg-white'
+                : 'border-[#e5e5e5] dark:border-[#222] text-gray-500 dark:text-[#999] hover:border-black dark:hover:border-white'
             }`}
           >
             All
           </button>
 
-          {/* Folder chips */}
           {folders.map((folder) => {
             const folderId = folder._id || folder.id;
             const isActive = activeFolder === folderId;
@@ -218,17 +205,17 @@ const Bookmarks = () => {
                       if (e.key === 'Enter') handleRenameFolder(folderId);
                       if (e.key === 'Escape') { setEditingFolderId(null); setEditingFolderName(''); }
                     }}
-                    className="px-2 py-1 text-xs border border-ink/20 dark:border-paper/20 bg-transparent text-ink dark:text-paper outline-none focus:border-ink/40 dark:focus:border-paper/40 w-28 font-sans"
+                    className="px-2 py-1 text-xs border border-[#e5e5e5] dark:border-[#222] bg-transparent text-black dark:text-white outline-none focus:border-black dark:focus:border-white w-28"
                   />
                   <button
                     onClick={() => handleRenameFolder(folderId)}
-                    className="p-1 text-green-600 hover:text-green-700"
+                    className="p-1 text-[#4ADE80] hover:opacity-70"
                   >
                     <Check size={14} />
                   </button>
                   <button
                     onClick={() => { setEditingFolderId(null); setEditingFolderName(''); }}
-                    className="p-1 text-gray-400 hover:text-gray-600"
+                    className="p-1 text-gray-400 dark:text-[#666] hover:text-black dark:hover:text-white"
                   >
                     <X size={14} />
                   </button>
@@ -240,23 +227,22 @@ const Bookmarks = () => {
               <div key={folderId} className="group relative flex items-center">
                 <button
                   onClick={() => setActiveFolder(folderId)}
-                  className={`px-3 py-1.5 text-xs font-sans border transition-colors ${
+                  className={`px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.18em] border transition-colors ${
                     isActive
-                      ? 'border-ink dark:border-paper text-ink dark:text-paper bg-ink/5 dark:bg-paper/5'
-                      : 'border-ink/10 dark:border-paper/10 text-ink-muted dark:text-ink-faint hover:border-ink/30 dark:hover:border-paper/30'
+                      ? 'border-black dark:border-white text-white dark:text-black bg-black dark:bg-white'
+                      : 'border-[#e5e5e5] dark:border-[#222] text-gray-500 dark:text-[#999] hover:border-black dark:hover:border-white'
                   }`}
                 >
                   {folder.name}
                 </button>
-                {/* Edit/Delete actions on hover */}
-                <div className="absolute -top-1 -right-1 hidden group-hover:flex items-center gap-0.5 bg-white dark:bg-[#1a1a1a] border border-ink/10 dark:border-paper/10 p-0.5 z-10">
+                <div className="absolute -top-1 -right-1 hidden group-hover:flex items-center gap-0.5 bg-white dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222] p-0.5 z-10">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setEditingFolderId(folderId);
                       setEditingFolderName(folder.name);
                     }}
-                    className="p-0.5 text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper"
+                    className="p-0.5 text-gray-400 dark:text-[#666] hover:text-black dark:hover:text-white"
                   >
                     <Pencil size={10} />
                   </button>
@@ -265,7 +251,7 @@ const Bookmarks = () => {
                       e.stopPropagation();
                       handleDeleteFolder(folderId);
                     }}
-                    className="p-0.5 text-ink-muted dark:text-ink-faint hover:text-red-500"
+                    className="p-0.5 text-gray-400 dark:text-[#666] hover:text-[#FB7185]"
                   >
                     <Trash2 size={10} />
                   </button>
@@ -274,7 +260,6 @@ const Bookmarks = () => {
             );
           })}
 
-          {/* New folder input / button */}
           {showNewFolderInput ? (
             <div className="flex items-center gap-1">
               <input
@@ -286,17 +271,17 @@ const Bookmarks = () => {
                   if (e.key === 'Escape') { setShowNewFolderInput(false); setNewFolderName(''); }
                 }}
                 placeholder="Folder name"
-                className="px-2 py-1 text-xs border border-ink/20 dark:border-paper/20 bg-transparent text-ink dark:text-paper outline-none focus:border-ink/40 dark:focus:border-paper/40 w-32 font-sans placeholder:text-ink-faint dark:placeholder:text-ink-muted"
+                className="px-2 py-1 text-xs border border-[#e5e5e5] dark:border-[#222] bg-transparent text-black dark:text-white outline-none focus:border-black dark:focus:border-white w-32 placeholder:text-gray-400 dark:placeholder:text-[#666]"
               />
               <button
                 onClick={handleCreateFolder}
-                className="p-1 text-green-600 hover:text-green-700"
+                className="p-1 text-[#4ADE80] hover:opacity-70"
               >
                 <Check size={14} />
               </button>
               <button
                 onClick={() => { setShowNewFolderInput(false); setNewFolderName(''); }}
-                className="p-1 text-gray-400 hover:text-gray-600"
+                className="p-1 text-gray-400 dark:text-[#666] hover:text-black dark:hover:text-white"
               >
                 <X size={14} />
               </button>
@@ -304,42 +289,36 @@ const Bookmarks = () => {
           ) : (
             <button
               onClick={() => setShowNewFolderInput(true)}
-              className="px-3 py-1.5 text-xs font-sans border border-dashed border-ink/20 dark:border-paper/20 text-ink-muted dark:text-ink-faint hover:border-ink/40 dark:hover:border-paper/40 hover:text-ink dark:hover:text-paper transition-colors flex items-center gap-1"
+              className="px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.18em] border border-dashed border-[#e5e5e5] dark:border-[#222] text-gray-400 dark:text-[#666] hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white transition-colors flex items-center gap-1"
             >
               <FolderPlus size={12} />
               New
             </button>
           )}
         </div>
-      </motion.div>
+      </div>
 
       {/* Content */}
       {articles.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center justify-center py-20 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a]"
-        >
-          <div className="max-w-[60px] mx-auto mb-5 flex flex-col items-center gap-0.5">
-            <div className="w-full h-[2px] bg-gray-200 dark:bg-gray-700" />
-            <div className="w-full h-px bg-gray-100 dark:bg-gray-800" />
-          </div>
-          <BookmarkX size={36} className="text-gray-200 dark:text-gray-600 mb-4" />
-          <h3 className="font-['Playfair_Display'] text-xl font-bold text-gray-900 dark:text-white mb-3">
+        <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222]">
+          <BookmarkX size={36} className="text-gray-200 dark:text-[#333] mb-4" />
+          <h3 className="text-xl font-bold text-black dark:text-white mb-3" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
             {activeFolder ? 'No Bookmarks Here' : 'No Bookmarks Yet'}
           </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 italic font-serif max-w-sm mx-auto">
+          <p className="text-sm text-gray-500 dark:text-[#999] italic max-w-sm mx-auto">
             {activeFolder
               ? '"Move articles here from your other bookmarks."'
               : '"Start saving articles to build your personal collection."'}
           </p>
-        </motion.div>
+        </div>
       ) : (
         <StaggerList className="grid gap-3 md:grid-cols-2">
           {articles.map((art) => {
             const artId = art._id || art.id;
+            const sentimentBorderColor = art.sentiment === 'Positive' ? 'border-l-[#4ADE80]' :
+              art.sentiment === 'Negative' ? 'border-l-[#FB7185]' : 'border-l-[#FBBF24]';
             return (
-              <StaggerItem key={artId} className="relative">
+              <StaggerItem key={artId} className={`relative border-l-2 ${sentimentBorderColor}`}>
                 <ArticleCard
                   article={art}
                   onPreview={handlePreview}
@@ -353,14 +332,13 @@ const Bookmarks = () => {
                       e.stopPropagation();
                       setMovingArticleId(movingArticleId === artId ? null : artId);
                     }}
-                    className="flex items-center gap-1 px-2 py-1 text-[10px] uppercase tracking-[0.2em] font-sans border border-ink/10 dark:border-paper/10 text-ink-muted dark:text-ink-faint hover:border-ink/30 dark:hover:border-paper/30 hover:text-ink dark:hover:text-paper bg-white/90 dark:bg-[#1a1a1a]/90 transition-colors"
+                    className="flex items-center gap-1 px-2 py-1 text-[10px] uppercase tracking-[0.18em] border border-[#e5e5e5] dark:border-[#222] text-gray-400 dark:text-[#666] hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white bg-white/90 dark:bg-[#111]/90 transition-colors"
                   >
                     <Folder size={10} />
                     <span className="hidden sm:inline">Move</span>
                     <ChevronDown size={10} />
                   </button>
 
-                  {/* Folder dropdown */}
                   <AnimatePresence>
                     {movingArticleId === artId && (
                       <motion.div
@@ -368,11 +346,11 @@ const Bookmarks = () => {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -4 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-[#1a1a1a] border border-ink/10 dark:border-paper/10 z-20"
+                        className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222] z-20"
                       >
                         <button
                           onClick={() => handleMoveToFolder(artId, null)}
-                          className="w-full text-left px-3 py-2 text-xs font-sans text-ink-muted dark:text-ink-faint hover:bg-ink/5 dark:hover:bg-paper/5 transition-colors"
+                          className="w-full text-left px-3 py-2 text-xs text-gray-500 dark:text-[#999] hover:bg-[#fafafa] dark:hover:bg-[#0a0a0a] transition-colors"
                         >
                           No folder
                         </button>
@@ -382,14 +360,14 @@ const Bookmarks = () => {
                             <button
                               key={fId}
                               onClick={() => handleMoveToFolder(artId, fId)}
-                              className="w-full text-left px-3 py-2 text-xs font-sans text-ink dark:text-paper hover:bg-ink/5 dark:hover:bg-paper/5 transition-colors"
+                              className="w-full text-left px-3 py-2 text-xs text-black dark:text-white hover:bg-[#fafafa] dark:hover:bg-[#0a0a0a] transition-colors"
                             >
                               {f.name}
                             </button>
                           );
                         })}
                         {folders.length === 0 && (
-                          <div className="px-3 py-2 text-xs font-sans text-ink-faint dark:text-ink-muted">
+                          <div className="px-3 py-2 text-xs text-gray-400 dark:text-[#666]">
                             No folders yet
                           </div>
                         )}

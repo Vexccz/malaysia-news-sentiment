@@ -158,7 +158,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const CARD = 'bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700/50 rounded-sm';
+  const CARD = 'bg-[#fafafa] dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222]';
 
 
   useEffect(() => {
@@ -207,13 +207,13 @@ const AdminDashboard = () => {
       {/* Header */}
       <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
         <div>
-          <div className="flex items-baseline gap-3 mb-1">
-            <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">
-              Admin Dashboard
-            </h1>
-          </div>
-          <div className="editorial-rule mb-2" />
-          <p className="text-sm text-ink-muted dark:text-ink-faint font-sans">System overview and analytics management</p>
+          <h1 className="font-['Playfair_Display'] text-2xl font-black text-ink dark:text-paper tracking-tight uppercase">
+            Admin Dashboard
+          </h1>
+          <p className="text-[10px] text-ink-muted dark:text-ink-faint mt-1 uppercase tracking-[0.2em]">
+            System overview and analytics management
+          </p>
+          <div className="border-b border-[#e5e5e5] dark:border-[#222] mt-2 mb-3" />
         </div>
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-green-700 dark:text-green-400 font-sans">
@@ -247,7 +247,7 @@ const AdminDashboard = () => {
         {activeTab === 'overview' && (
           <motion.div key="overview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
             {/* Stats — newspaper stat bar */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-paper-line dark:divide-paper-dark-line border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card mb-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 divide-[#e5e5e5] dark:divide-[#222] border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] mb-6">
               {[
                 { label: 'Total Articles', value: stats.overview.totalUnique.toLocaleString(), sub: 'In database' },
                 { label: 'Analyses Run', value: stats.overview.totalArticles.toLocaleString(), sub: 'Total processed' },
@@ -265,8 +265,8 @@ const AdminDashboard = () => {
             {/* Sentiment + Sources */}
             <div className="grid md:grid-cols-2 gap-0 mb-6">
               {/* Sentiment */}
-              <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
-                <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+              <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111]">
+                <div className="px-5 py-4 border-b border-[#e5e5e5] dark:border-[#222]">
                   <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">Sentiment Distribution</h3>
                 </div>
                 <div className="px-5 py-4 space-y-3">
@@ -299,8 +299,8 @@ const AdminDashboard = () => {
               </div>
 
               {/* Top Sources */}
-              <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card border-l-0 md:border-l-0">
-                <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+              <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] border-l-0 md:border-l-0">
+                <div className="px-5 py-4 border-b border-[#e5e5e5] dark:border-[#222]">
                   <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">Top Sources</h3>
                 </div>
                 <div className="divide-y divide-paper-line dark:divide-paper-dark-line">
@@ -320,8 +320,8 @@ const AdminDashboard = () => {
             {/* Topics + Recent Articles */}
             <div className="grid md:grid-cols-2 gap-0 mb-6">
               {/* Topics */}
-              <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
-                <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+              <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111]">
+                <div className="px-5 py-4 border-b border-[#e5e5e5] dark:border-[#222]">
                   <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">{t('popularTopics')}</h3>
                 </div>
                 <div className="px-5 py-4">
@@ -337,8 +337,8 @@ const AdminDashboard = () => {
               </div>
 
               {/* Recent Articles */}
-              <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card border-l-0 md:border-l-0">
-                <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+              <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] border-l-0 md:border-l-0">
+                <div className="px-5 py-4 border-b border-[#e5e5e5] dark:border-[#222]">
                   <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">{t('recentArticles')}</h3>
                 </div>
                 <div className="divide-y divide-paper-line dark:divide-paper-dark-line">
@@ -367,8 +367,8 @@ const AdminDashboard = () => {
                 };
               });
               return (
-                <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card mb-6">
-                  <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+                <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] mb-6">
+                  <div className="px-5 py-4 border-b border-[#e5e5e5] dark:border-[#222]">
                     <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">Activity by Hour</h3>
                     <p className="text-[11px] text-ink-faint mt-0.5 font-sans">Article analyses and user interactions over 24 hours</p>
                   </div>
@@ -423,8 +423,8 @@ const AdminDashboard = () => {
 
         {activeTab === 'users' && (
           <motion.div key="users" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-            <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
-              <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+            <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111]">
+              <div className="px-5 py-4 border-b border-[#e5e5e5] dark:border-[#222]">
                 <div className="flex items-center gap-3">
                   <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">{t('userManagement')}</h3>
                   <span className="text-[10px] font-bold text-ink-faint font-sans">{adminUsersTotal} Total · Page {adminUsersPage} of {adminUsersTotalPages || 1}</span>
@@ -432,7 +432,7 @@ const AdminDashboard = () => {
               </div>
 
               {/* Filters */}
-              <div className="px-5 py-3 border-b border-paper-line dark:border-paper-dark-line flex flex-col md:flex-row gap-3">
+              <div className="px-5 py-3 border-b border-[#e5e5e5] dark:border-[#222] flex flex-col md:flex-row gap-3">
                 <div className="flex-1">
                   <input
                     type="text"
@@ -468,7 +468,7 @@ const AdminDashboard = () => {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-paper-line dark:border-paper-dark-line">
+                    <tr className="border-b border-[#e5e5e5] dark:border-[#222]">
                       {[
                         { label: 'User', field: 'name' },
                         { label: 'Email', field: 'email' },
@@ -611,8 +611,8 @@ const AdminDashboard = () => {
         {activeTab === 'content' && (
           <motion.div key="content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
             <div className="grid md:grid-cols-2 gap-0">
-              <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
-                <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+              <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111]">
+                <div className="px-5 py-4 border-b border-[#e5e5e5] dark:border-[#222]">
                   <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">High Impact Articles</h3>
                 </div>
                 <div className="divide-y divide-paper-line dark:divide-paper-dark-line">
@@ -631,8 +631,8 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card border-l-0 md:border-l-0">
-                <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+              <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] border-l-0 md:border-l-0">
+                <div className="px-5 py-4 border-b border-[#e5e5e5] dark:border-[#222]">
                   <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">Source Distribution</h3>
                 </div>
                 <div className="px-5 py-4 space-y-3">
@@ -657,13 +657,13 @@ const AdminDashboard = () => {
         {activeTab === 'api' && (
           <motion.div key="api" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
             {metricsLoading || !metrics ? (
-              <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card py-10 text-center">
+              <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] py-10 text-center">
                 <div className="w-6 h-6 border-2 border-ink border-t-transparent rounded-full animate-spin mx-auto mb-3" />
                 <p className="text-xs text-ink-faint font-sans uppercase tracking-wider">Loading metrics</p>
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-paper-line dark:divide-paper-dark-line border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card mb-6">
+                <div className="grid grid-cols-2 lg:grid-cols-4 divide-[#e5e5e5] dark:divide-[#222] border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] mb-6">
                   {[
                     { label: 'Total API Calls', value: metrics.totalCalls.toLocaleString(), sub: `${metrics.requestsPerMinute} req/min` },
                     { label: 'Avg Response', value: `${metrics.avgResponseTime}ms`, sub: 'Server latency' },
@@ -679,8 +679,8 @@ const AdminDashboard = () => {
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-0">
-                  <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
-                    <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+                  <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111]">
+                    <div className="px-5 py-4 border-b border-[#e5e5e5] dark:border-[#222]">
                       <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">HTTP Methods</h3>
                     </div>
                     <div className="px-5 py-4 space-y-3">
@@ -710,8 +710,8 @@ const AdminDashboard = () => {
                     </div>
                   </div>
 
-                  <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card border-l-0 md:border-l-0">
-                    <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+                  <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] border-l-0 md:border-l-0">
+                    <div className="px-5 py-4 border-b border-[#e5e5e5] dark:border-[#222]">
                       <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">Top Endpoints</h3>
                     </div>
                     <div className="divide-y divide-paper-line dark:divide-paper-dark-line">
@@ -740,8 +740,8 @@ const AdminDashboard = () => {
 
         {activeTab === 'insights' && (
           <motion.div key="insights" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-            <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
-              <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
+            <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111]">
+              <div className="px-5 py-4 border-b border-[#e5e5e5] dark:border-[#222]">
                 <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">{t('strategicInsights')}</h3>
               </div>
               {insightsLoading ? (

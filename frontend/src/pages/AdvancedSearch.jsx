@@ -14,10 +14,10 @@ const SORT_OPTIONS = [
 ];
 
 const SkeletonCard = () => (
-  <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-5 animate-pulse">
-    <div className="h-4 bg-gray-200 dark:bg-white/10 rounded w-3/4 mb-3" />
-    <div className="h-3 bg-gray-200 dark:bg-white/10 rounded w-full mb-2" />
-    <div className="h-3 bg-gray-200 dark:bg-white/10 rounded w-2/3" />
+  <div className="bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line p-5 animate-pulse">
+    <div className="h-4 bg-gray-200 dark:bg-white/10 w-3/4 mb-3" />
+    <div className="h-3 bg-gray-200 dark:bg-white/10 w-full mb-2" />
+    <div className="h-3 bg-gray-200 dark:bg-white/10 w-2/3" />
   </div>
 );
 
@@ -126,9 +126,15 @@ const AdvancedSearch = () => {
   };
 
   const sentimentColor = (s) => {
-    if (s === 'Positive') return 'text-green-600 bg-transparent border-green-300 dark:border-green-500/30';
-    if (s === 'Negative') return 'text-red-600 bg-transparent border-red-300 dark:border-red-500/30';
-    return 'text-gray-600 bg-transparent border-gray-300 dark:border-white/10';
+    if (s === 'Positive') return 'border-l-2 border-l-green-500';
+    if (s === 'Negative') return 'border-l-2 border-l-red-500';
+    return 'border-l-2 border-l-gray-400';
+  };
+
+  const sentimentLabelColor = (s) => {
+    if (s === 'Positive') return 'text-green-700 dark:text-green-400 bg-transparent border-green-300 dark:border-green-500/30';
+    if (s === 'Negative') return 'text-red-700 dark:text-red-400 bg-transparent border-red-300 dark:border-red-500/30';
+    return 'text-gray-600 dark:text-gray-400 bg-transparent border-gray-300 dark:border-white/10';
   };
 
   return (
@@ -139,24 +145,21 @@ const AdvancedSearch = () => {
       className="max-w-7xl mx-auto space-y-6"
     >
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, x: -10 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.1 }}
-      >
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+      <div>
+        <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display flex items-center gap-2">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
           </svg>
           Advanced Search
         </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Search articles with powerful filters and facets</p>
-      </motion.div>
+        <div className="editorial-rule my-2" />
+        <p className="text-[10px] text-ink-muted dark:text-ink-faint uppercase tracking-[0.25em] font-sans">Search articles with powerful filters and facets</p>
+      </div>
 
       {/* Search Bar */}
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="flex-1 relative">
-          <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-faint" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
           </svg>
           <input
@@ -164,16 +167,16 @@ const AdvancedSearch = () => {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('searchArticlesPlaceholder')}
-            className="w-full pl-11 pr-4 py-3.5 rounded-sm bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent/30"
+            className="w-full pl-11 pr-4 py-3.5 bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line text-sm text-ink dark:text-paper placeholder-ink-faint focus:outline-none focus:ring-1 focus:ring-ink/20 dark:focus:ring-paper/20 font-sans"
           />
         </div>
         <div className="flex gap-2">
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className={`px-4 py-3 rounded-sm border text-sm font-medium transition-all ${
+          className={`px-4 py-3 border text-sm font-medium transition-all ${
             showFilters
-              ? 'bg-accent/10 border-accent/30 text-accent'
-              : 'bg-white dark:bg-[#1a1a1a] border-[#eee] dark:border-[#2a2a2a] text-gray-600 dark:text-gray-400'
+              ? 'bg-ink/5 dark:bg-paper/10 border-ink dark:border-paper text-ink dark:text-paper'
+              : 'bg-paper-card dark:bg-paper-dark-card border-paper-line dark:border-paper-dark-line text-ink-muted dark:text-ink-faint'
           }`}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -182,7 +185,7 @@ const AdvancedSearch = () => {
         </button>
         <button
           onClick={saveSearch}
-          className="px-4 py-3 rounded-sm bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-accent transition-colors"
+          className="px-4 py-3 bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line text-sm font-medium text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-colors"
           title="Save search"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -198,14 +201,14 @@ const AdvancedSearch = () => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-wrap items-center gap-2 bg-gray-50 dark:bg-[#1a1a1a] border-2 border-gray-200 dark:border-[#2a2a2a] p-3"
+          className="flex flex-wrap items-center gap-2 bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line p-3"
         >
-          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('filters')}:</span>
+          <span className="text-[10px] font-bold text-ink-muted dark:text-ink-faint uppercase tracking-[0.2em] font-sans">{t('filters')}:</span>
           {filters.sentiment.map(s => (
             <button
               key={s}
               onClick={() => toggleSentiment(s)}
-              className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-white dark:bg-[#0a0a0a] border-2 border-gray-300 dark:border-[#2a2a2a] text-gray-700 dark:text-gray-300 hover:border-red-500 transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-paper dark:bg-[#0a0a0a] border border-paper-line dark:border-[#222] text-ink dark:text-paper hover:border-ink dark:hover:border-paper transition-colors font-sans"
             >
               {s}
               <X size={12} />
@@ -214,7 +217,7 @@ const AdvancedSearch = () => {
           {filters.dateFrom && (
             <button
               onClick={() => setFilters(prev => ({ ...prev, dateFrom: '' }))}
-              className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-white dark:bg-[#0a0a0a] border-2 border-gray-300 dark:border-[#2a2a2a] text-gray-700 dark:text-gray-300 hover:border-red-500 transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-paper dark:bg-[#0a0a0a] border border-paper-line dark:border-[#222] text-ink dark:text-paper hover:border-ink dark:hover:border-paper transition-colors font-sans"
             >
               From: {filters.dateFrom}
               <X size={12} />
@@ -223,7 +226,7 @@ const AdvancedSearch = () => {
           {filters.dateTo && (
             <button
               onClick={() => setFilters(prev => ({ ...prev, dateTo: '' }))}
-              className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-white dark:bg-[#0a0a0a] border-2 border-gray-300 dark:border-[#2a2a2a] text-gray-700 dark:text-gray-300 hover:border-red-500 transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-paper dark:bg-[#0a0a0a] border border-paper-line dark:border-[#222] text-ink dark:text-paper hover:border-ink dark:hover:border-paper transition-colors font-sans"
             >
               To: {filters.dateTo}
               <X size={12} />
@@ -231,7 +234,7 @@ const AdvancedSearch = () => {
           )}
           <button
             onClick={clearAllFilters}
-            className="ml-auto px-3 py-1 text-xs font-bold bg-red-600 text-white border-2 border-red-700 hover:bg-red-700 transition-colors uppercase tracking-wide"
+            className="ml-auto px-3 py-1 text-[10px] font-bold bg-ink dark:bg-paper text-paper dark:text-ink border border-ink dark:border-paper hover:bg-ink/80 dark:hover:bg-paper/80 transition-colors uppercase tracking-[0.15em] font-sans"
           >
             Clear All
           </button>
@@ -249,8 +252,8 @@ const AdvancedSearch = () => {
               className="flex-shrink-0 space-y-5 overflow-hidden md:w-[260px]"
             >
               {/* Sentiment */}
-              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-4">
-                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">{t('sentiment')}</h3>
+              <div className="bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line p-4">
+                <h3 className="text-[10px] font-bold text-ink-muted dark:text-ink-faint uppercase tracking-[0.2em] mb-3 font-sans">{t('sentiment')}</h3>
                 <div className="space-y-2">
                   {SENTIMENTS.map(s => (
                     <label key={s} className="flex items-center gap-2 cursor-pointer">
@@ -258,11 +261,11 @@ const AdvancedSearch = () => {
                         type="checkbox"
                         checked={filters.sentiment.includes(s)}
                         onChange={() => toggleSentiment(s)}
-                        className="w-4 h-4 rounded border-gray-300 text-accent focus:ring-accent"
+                        className="w-4 h-4 border border-paper-line dark:border-paper-dark-line text-ink dark:text-paper focus:ring-ink/20 dark:focus:ring-paper/20"
                       />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">{s}</span>
+                      <span className="text-sm text-ink dark:text-paper font-sans">{s}</span>
                       {facets?.sentimentCounts?.[s] !== undefined && (
-                        <span className="ml-auto text-xs text-gray-400">({facets.sentimentCounts[s]})</span>
+                        <span className="ml-auto text-xs text-ink-faint font-sans">({facets.sentimentCounts[s]})</span>
                       )}
                     </label>
                   ))}
@@ -270,38 +273,38 @@ const AdvancedSearch = () => {
               </div>
 
               {/* Date Range */}
-              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-4">
-                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">{t('dateRange')}</h3>
+              <div className="bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line p-4">
+                <h3 className="text-[10px] font-bold text-ink-muted dark:text-ink-faint uppercase tracking-[0.2em] mb-3 font-sans">{t('dateRange')}</h3>
                 <div className="space-y-2">
                   <input
                     type="date"
                     value={filters.dateFrom}
                     onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
-                    className="w-full px-3 py-2 bg-gray-50 dark:bg-white/5 border border-[#eee] dark:border-[#2a2a2a] text-xs text-gray-700 dark:text-gray-300"
+                    className="w-full px-3 py-2 bg-paper dark:bg-white/5 border border-paper-line dark:border-paper-dark-line text-xs text-ink dark:text-paper font-sans"
                   />
                   <input
                     type="date"
                     value={filters.dateTo}
                     onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
-                    className="w-full px-3 py-2 bg-gray-50 dark:bg-white/5 border border-[#eee] dark:border-[#2a2a2a] text-xs text-gray-700 dark:text-gray-300"
+                    className="w-full px-3 py-2 bg-paper dark:bg-white/5 border border-paper-line dark:border-paper-dark-line text-xs text-ink dark:text-paper font-sans"
                   />
                 </div>
               </div>
 
               {/* Language */}
-              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-4">
-                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Language</h3>
+              <div className="bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line p-4">
+                <h3 className="text-[10px] font-bold text-ink-muted dark:text-ink-faint uppercase tracking-[0.2em] mb-3 font-sans">Language</h3>
                 <select
                   value={filters.language}
                   onChange={(e) => setFilters(prev => ({ ...prev, language: e.target.value }))}
-                  className="w-full px-3 py-2 bg-gray-50 dark:bg-white/5 border border-[#eee] dark:border-[#2a2a2a] text-xs text-gray-700 dark:text-gray-300"
+                  className="w-full px-3 py-2 bg-paper dark:bg-white/5 border border-paper-line dark:border-paper-dark-line text-xs text-ink dark:text-paper font-sans"
                 >
                   <option value="">All Languages</option>
                   <option value="en">English</option>
                   <option value="ms">Bahasa Malaysia</option>
                 </select>
                 {facets?.languageCounts && (
-                  <div className="flex gap-2 mt-2 text-xs text-gray-400">
+                  <div className="flex gap-2 mt-2 text-xs text-ink-faint font-sans">
                     {Object.entries(facets.languageCounts).map(([lang, count]) => (
                       <span key={lang}>{lang}: {count}</span>
                     ))}
@@ -310,8 +313,8 @@ const AdvancedSearch = () => {
               </div>
 
               {/* Confidence */}
-              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-4">
-                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+              <div className="bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line p-4">
+                <h3 className="text-[10px] font-bold text-ink-muted dark:text-ink-faint uppercase tracking-[0.2em] mb-3 font-sans">
                   Min Confidence: {Math.round(filters.minConfidence * 100)}%
                 </h3>
                 <input
@@ -326,12 +329,12 @@ const AdvancedSearch = () => {
               </div>
 
               {/* Sort */}
-              <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-4">
-                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">{t('sortBy')}</h3>
+              <div className="bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line p-4">
+                <h3 className="text-[10px] font-bold text-ink-muted dark:text-ink-faint uppercase tracking-[0.2em] mb-3 font-sans">{t('sortBy')}</h3>
                 <select
                   value={filters.sortBy}
                   onChange={(e) => setFilters(prev => ({ ...prev, sortBy: e.target.value }))}
-                  className="w-full px-3 py-2 bg-gray-50 dark:bg-white/5 border border-[#eee] dark:border-[#2a2a2a] text-xs text-gray-700 dark:text-gray-300"
+                  className="w-full px-3 py-2 bg-paper dark:bg-white/5 border border-paper-line dark:border-paper-dark-line text-xs text-ink dark:text-paper font-sans"
                 >
                   {SORT_OPTIONS.map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -341,14 +344,14 @@ const AdvancedSearch = () => {
 
               {/* Saved Searches */}
               {savedSearches.length > 0 && (
-                <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-4">
-                  <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Saved Searches</h3>
+                <div className="bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line p-4">
+                  <h3 className="text-[10px] font-bold text-ink-muted dark:text-ink-faint uppercase tracking-[0.2em] mb-3 font-sans">Saved Searches</h3>
                   <div className="space-y-1.5">
                     {savedSearches.slice(0, 5).map((s, i) => (
                       <button
                         key={i}
                         onClick={() => loadSearch(s)}
-                        className="w-full text-left px-3 py-2 text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors truncate border-b border-gray-100 dark:border-[#2a2a2a] last:border-0"
+                        className="w-full text-left px-3 py-2 text-xs text-ink dark:text-paper hover:bg-paper dark:hover:bg-white/5 transition-colors truncate border-b border-paper-line dark:border-paper-dark-line last:border-0 font-sans"
                       >
                         {s.query || 'All articles'}
                       </button>
@@ -365,9 +368,9 @@ const AdvancedSearch = () => {
           {/* Results count */}
           {results && (
             <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-[10px] text-ink-muted dark:text-ink-faint uppercase tracking-[0.15em] font-sans">
                 {results.total} results found
-                {query && <span> for "<strong className="text-gray-700 dark:text-gray-200">{query}</strong>"</span>}
+                {query && <span> for "<strong className="text-ink dark:text-paper">{query}</strong>"</span>}
               </p>
             </div>
           )}
@@ -388,18 +391,18 @@ const AdvancedSearch = () => {
                     href={article.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-5 hover:border-accent/30 transition-all no-underline"
+                    className={`block bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line p-5 hover:border-ink/30 dark:hover:border-paper/30 transition-all no-underline ${sentimentColor(article.sentiment)}`}
                   >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 mb-1.5">
+                      <h3 className="text-[13px] font-semibold text-ink dark:text-paper line-clamp-2 mb-1.5 font-sans">
                         {article.title}
                       </h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-2">
+                      <p className="text-xs text-ink-muted dark:text-ink-faint line-clamp-2 mb-2 font-sans">
                         {article.description}
                       </p>
-                      <div className="flex items-center gap-3 text-xs text-gray-400">
-                        <span>{article.source}</span>
+                      <div className="flex items-center gap-3 text-[10px] text-ink-faint font-sans">
+                        <span className="uppercase tracking-[0.15em] font-bold">{article.source}</span>
                         <span>•</span>
                         <span>{new Date(article.publishedAt).toLocaleDateString()}</span>
                         {article.confidence > 0 && (
@@ -410,7 +413,7 @@ const AdvancedSearch = () => {
                         )}
                       </div>
                     </div>
-                    <span className={`flex-shrink-0 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider border ${sentimentColor(article.sentiment)}`}>
+                    <span className={`flex-shrink-0 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider border font-sans ${sentimentLabelColor(article.sentiment)}`}>
                       {article.sentiment}
                     </span>
                   </div>
@@ -425,20 +428,20 @@ const AdvancedSearch = () => {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] p-12 text-center"
+              className="bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line p-12 text-center"
             >
               <div className="max-w-[60px] mx-auto mb-5 flex flex-col items-center gap-0.5">
-                <div className="w-full h-[2px] bg-gray-200 dark:bg-gray-700" />
-                <div className="w-full h-px bg-gray-100 dark:bg-gray-800" />
+                <div className="w-full h-[2px] bg-ink/20 dark:bg-paper/20" />
+                <div className="w-full h-px bg-ink/10 dark:bg-paper/10" />
               </div>
-              <h3 className="font-['Playfair_Display'] text-xl font-bold text-gray-900 dark:text-white mb-3">{t('noArticlesFound')}</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 italic font-serif max-w-sm mx-auto mb-5">
+              <h3 className="font-display text-xl font-bold text-ink dark:text-paper mb-3">{t('noArticlesFound')}</h3>
+              <p className="text-sm text-ink-muted dark:text-ink-faint italic font-serif max-w-sm mx-auto mb-5">
                 "The news you seek has not yet been written."
               </p>
-              <div className="max-w-[40px] mx-auto mb-5 h-px bg-gray-200 dark:bg-gray-700" />
+              <div className="max-w-[40px] mx-auto mb-5 h-px bg-ink/20 dark:bg-paper/20" />
               <button
                 onClick={clearAllFilters}
-                className="px-5 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-[11px] font-bold uppercase tracking-[0.15em] hover:bg-accent transition-colors"
+                className="px-5 py-2.5 bg-ink dark:bg-paper text-paper dark:text-ink text-[11px] font-bold uppercase tracking-[0.15em] hover:bg-ink/80 dark:hover:bg-paper/80 transition-colors font-sans"
               >
                 Clear Filters
               </button>
@@ -450,17 +453,17 @@ const AdvancedSearch = () => {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] p-12 text-center"
+              className="bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line p-12 text-center"
             >
               <div className="max-w-[60px] mx-auto mb-5 flex flex-col items-center gap-0.5">
-                <div className="w-full h-[2px] bg-gray-200 dark:bg-gray-700" />
-                <div className="w-full h-px bg-gray-100 dark:bg-gray-800" />
+                <div className="w-full h-[2px] bg-ink/20 dark:bg-paper/20" />
+                <div className="w-full h-px bg-ink/10 dark:bg-paper/10" />
               </div>
-              <svg className="w-10 h-10 mx-auto mb-4 text-gray-200 dark:text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="w-10 h-10 mx-auto mb-4 text-ink-faint" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
               </svg>
-              <h3 className="font-['Playfair_Display'] text-xl font-bold text-gray-900 dark:text-white mb-3">Begin Your Search</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 italic font-serif max-w-sm mx-auto">
+              <h3 className="font-display text-xl font-bold text-ink dark:text-paper mb-3">Begin Your Search</h3>
+              <p className="text-sm text-ink-muted dark:text-ink-faint italic font-serif max-w-sm mx-auto">
                 "Enter a keyword or apply filters to discover Malaysian news sentiment."
               </p>
             </motion.div>
@@ -474,11 +477,11 @@ const AdvancedSearch = () => {
                 whileTap={{ scale: 0.98 }}
                 onClick={() => performSearch(page - 1)}
                 disabled={page <= 1}
-                className="px-3 py-2 text-sm bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] disabled:opacity-30 hover:border-accent/30 transition-colors"
+                className="px-3 py-2 text-sm bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line disabled:opacity-30 hover:border-ink/30 dark:hover:border-paper/30 transition-colors font-sans"
               >
                 ← Prev
               </motion.button>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
+              <span className="text-sm text-ink-muted dark:text-ink-faint font-sans">
                 Page {results.page} of {results.totalPages}
               </span>
               <motion.button
@@ -486,7 +489,7 @@ const AdvancedSearch = () => {
                 whileTap={{ scale: 0.98 }}
                 onClick={() => performSearch(page + 1)}
                 disabled={page >= results.totalPages}
-                className="px-3 py-2 text-sm bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] disabled:opacity-30 hover:border-accent/30 transition-colors"
+                className="px-3 py-2 text-sm bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line disabled:opacity-30 hover:border-ink/30 dark:hover:border-paper/30 transition-colors font-sans"
               >
                 Next →
               </motion.button>

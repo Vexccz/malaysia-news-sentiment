@@ -41,7 +41,7 @@ const Trending = () => {
             </h1>
           </div>
           <div className="editorial-rule mb-2" />
-          <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed font-sans">
+          <p className="text-[10px] text-ink-muted dark:text-ink-faint uppercase tracking-[0.25em] font-sans">
             Most-read stories across Malaysian media, ranked by reader engagement.
           </p>
         </div>
@@ -104,11 +104,11 @@ const Trending = () => {
           {articles.map((art, idx) => (
             <div key={art._id} className="flex items-start gap-4">
               {/* Rank number — editorial style */}
-              <div className="flex-shrink-0 w-10 text-center pt-4">
-                <span className={`text-lg font-black font-display ${
+              <div className="flex-shrink-0 w-12 text-center pt-4 border-r border-paper-line dark:border-paper-dark-line">
+                <span className={`text-xl font-black font-display italic ${
                   idx < 3 ? 'text-ink dark:text-paper' : 'text-ink-faint'
                 }`}>
-                  {idx + 1}
+                  #{idx + 1}
                 </span>
               </div>
 

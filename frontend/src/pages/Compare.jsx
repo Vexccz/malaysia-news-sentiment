@@ -68,16 +68,17 @@ const Compare = () => {
     <div className="max-w-5xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="font-display text-3xl font-bold text-ink dark:text-paper tracking-tight">
+        <h1 className="font-['Playfair_Display'] text-2xl font-black text-ink dark:text-paper tracking-tight uppercase">
           Comparative Analysis
         </h1>
-        <p className="text-sm text-ink-muted dark:text-ink-faint mt-1 font-sans">
+        <p className="text-[10px] text-ink-muted dark:text-ink-faint mt-1 uppercase tracking-[0.2em]">
           Compare sentiment across multiple topics
         </p>
+        <div className="border-b border-[#e5e5e5] dark:border-[#222] mt-2 mb-3" />
       </div>
 
       {/* Input Section */}
-      <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card mb-6">
+      <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] mb-6">
         <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
           <h2 className="text-xs font-semibold text-ink-muted dark:text-ink-faint uppercase tracking-widest font-sans">
             Topics to Compare
@@ -163,7 +164,7 @@ const Compare = () => {
           {/* Charts Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* Radar Chart */}
-            <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
+            <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111]">
               <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
                 <h3 className="text-xs font-semibold text-ink-muted dark:text-ink-faint uppercase tracking-widest font-sans">
                   Multi-Dimension Comparison
@@ -196,7 +197,7 @@ const Compare = () => {
             </div>
 
             {/* Bar Chart */}
-            <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
+            <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111]">
               <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
                 <h3 className="text-xs font-semibold text-ink-muted dark:text-ink-faint uppercase tracking-widest font-sans">
                   Sentiment Distribution
@@ -220,7 +221,7 @@ const Compare = () => {
           </div>
 
           {/* Stats Table */}
-          <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
+          <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111]">
             <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
               <h3 className="text-xs font-semibold text-ink-muted dark:text-ink-faint uppercase tracking-widest font-sans">
                 Detailed Statistics
@@ -271,7 +272,7 @@ const Compare = () => {
 
       {/* Empty State */}
       {!results && !loading && (
-        <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card text-center py-16">
+        <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] text-center py-16">
           <p className="text-sm text-ink-muted dark:text-ink-faint font-sans">
             Enter at least 2 topics above and click Compare to see results.
           </p>

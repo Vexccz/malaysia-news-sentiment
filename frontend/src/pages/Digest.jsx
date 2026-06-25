@@ -125,24 +125,17 @@ const Digest = () => {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="max-w-4xl mx-auto space-y-6"
-    >
-      {/* Header - editorial style */}
-      <div className="hidden sm:block editorial-rule mb-2" />
-      <div className="pb-4">
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Header — editorial style */}
+      <div className="mb-4">
+        <h1 className="font-['Playfair_Display'] text-2xl font-black text-ink dark:text-paper tracking-tight uppercase">
+          News Digest
+        </h1>
+        <p className="text-[10px] text-ink-muted dark:text-ink-faint mt-1 uppercase tracking-[0.2em]">
+          {formatDate()}
+        </p>
+        <div className="border-b border-[#e5e5e5] dark:border-[#222] mt-2 mb-3" />
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
-          <div>
-            <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">
-              News Digest
-            </h1>
-            <p className="text-xs text-ink-muted dark:text-ink-faint mt-1 tracking-wide uppercase">
-              {formatDate()}
-            </p>
-          </div>
           {currentData && (
             <div className="flex items-center gap-4 text-xs text-ink-muted">
               <span>{currentData.articleCount} articles</span>
@@ -169,7 +162,7 @@ const Digest = () => {
 
 
       {/* Tabs - editorial style */}
-      <div className="flex gap-6 border-b border-paper-line">
+      <div className="flex gap-6 border-b border-[#e5e5e5] dark:border-[#222]">
         {['daily', 'weekly', 'topic', 'schedule'].map(tab => (
           <button
             key={tab}
@@ -213,7 +206,7 @@ const Digest = () => {
                 )}
 
                 {/* Main Digest - editorial card */}
-                <div className="bg-paper-card border border-paper-line rounded-md p-6 space-y-3">
+                <div className="bg-[#fafafa] dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222] p-6 space-y-3">
                   <div className="flex items-center justify-between">
                     <h2 className="text-sm font-bold text-ink dark:text-paper uppercase tracking-wide">
                       {activeTab === 'daily' ? 'Today\'s Summary' : 'Weekly Roundup'}
@@ -232,7 +225,7 @@ const Digest = () => {
 
                 {/* Highlights - editorial card */}
                 {currentData.highlights && currentData.highlights.length > 0 && (
-                  <div className="bg-paper-card border border-paper-line rounded-md p-6">
+                  <div className="bg-[#fafafa] dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222] p-6">
                     <h3 className="text-sm font-bold text-ink dark:text-paper uppercase tracking-wide mb-3">
                       Key Stories
                     </h3>
@@ -263,7 +256,7 @@ const Digest = () => {
 
                 {/* Top Sources (weekly) - editorial card */}
                 {currentData.topSources && (
-                  <div className="bg-paper-card border border-paper-line rounded-md p-6">
+                  <div className="bg-[#fafafa] dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222] p-6">
                     <h3 className="text-sm font-bold text-ink dark:text-paper uppercase tracking-wide mb-3">
                       Sources
                     </h3>
@@ -299,12 +292,12 @@ const Digest = () => {
               value={topicInput}
               onChange={(e) => setTopicInput(e.target.value)}
               placeholder="Enter a topic..."
-              className="flex-1 px-4 py-2.5 text-sm bg-paper-card border border-paper-line rounded-md text-ink dark:text-paper placeholder-ink-muted focus:outline-none focus:border-ink dark:focus:border-paper"
+              className="flex-1 px-4 py-2.5 text-sm bg-[#fafafa] dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222] text-ink dark:text-paper placeholder-ink-muted focus:outline-none focus:border-ink dark:focus:border-paper"
             />
             <button
               type="submit"
               disabled={topicLoading || !topicInput.trim()}
-              className="px-5 py-2.5 text-xs font-medium uppercase tracking-widest bg-ink dark:bg-paper text-paper dark:text-ink rounded-md hover:opacity-90 disabled:opacity-40 transition-all"
+              className="px-5 py-2.5 text-xs font-medium uppercase tracking-widest bg-ink dark:bg-paper text-paper dark:text-ink hover:opacity-90 disabled:opacity-40 transition-all"
             >
               {topicLoading ? (
                 <div className="w-4 h-4 border-2 border-paper dark:border-ink border-t-transparent rounded-full animate-spin" />
@@ -319,7 +312,7 @@ const Digest = () => {
               className="space-y-4"
             >
               {/* Topic result header - editorial card */}
-              <div className="bg-paper-card border border-paper-line rounded-md p-6">
+              <div className="bg-[#fafafa] dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222] p-6">
                 <div className="flex items-end justify-between border-b border-paper-line pb-3 mb-4">
                   <div>
                     <h3 className="text-lg font-bold text-ink dark:text-paper font-display">
@@ -390,7 +383,7 @@ const Digest = () => {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               onSubmit={createSchedule}
-              className="border border-ink/10 dark:border-paper/10 p-5 space-y-4"
+              className="border border-[#e5e5e5] dark:border-[#222] p-5 space-y-4"
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -508,7 +501,7 @@ const Digest = () => {
           )}
         </motion.div>
       )}
-    </motion.div>
+    </div>
   );
 };
 

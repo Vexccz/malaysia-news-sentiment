@@ -27,7 +27,7 @@ const navItems = [
       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
     </svg>
   )},
-  { path: '/entities', labelKey: 'entities', tourId: 'entities', icon: (
+  { path: '/entities', labelKey: 'entities', tourId: 'entities', labelOverride: 'Entities', icon: (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3"/><circle cx="4" cy="6" r="2"/><circle cx="20" cy="6" r="2"/><circle cx="4" cy="18" r="2"/><circle cx="20" cy="18" r="2"/>
       <line x1="6" y1="7" x2="10" y2="10"/><line x1="18" y1="7" x2="14" y2="10"/><line x1="6" y1="17" x2="10" y2="14"/><line x1="18" y1="17" x2="14" y2="14"/>
@@ -158,8 +158,9 @@ const Layout = ({ children }) => {
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
-          <p className="editorial-kicker px-3 pb-2 pt-1">{t('sections')}</p>
-          {navItems.map(item => {
+          <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint px-3 pb-2 pt-1 font-sans">{t('sections')}</p>
+          {/* Primary nav group */}
+          {navItems.slice(0, 4).map(item => {
             const active = location.pathname === item.path;
             return (
               <Link
@@ -167,28 +168,58 @@ const Layout = ({ children }) => {
                 to={item.path}
                 data-tour={item.tourId || undefined}
                 className={`
-                  flex items-center gap-3 px-3 py-2 text-[13px] no-underline transition-colors border-l-2
+                  flex items-center gap-3 px-3 py-2 text-[13px] no-underline transition-colors border-l-2 font-sans
                   ${active
-                    ? 'border-accent text-accent font-semibold bg-accent/5'
-                    : 'border-transparent text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper hover:border-ink/30 dark:hover:border-paper/30'
+                    ? 'border-ink dark:border-paper bg-paper dark:bg-[#111] text-ink dark:text-paper font-semibold'
+                    : 'border-transparent text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper hover:border-ink/20 dark:hover:border-paper/20'
                   }
                 `}
               >
-                <span className={active ? 'text-accent' : ''}>{item.icon}</span>
-                {t(item.labelKey)}
+                <span className={active ? 'text-ink dark:text-paper' : ''}>{item.icon}</span>
+                {item.labelOverride || t(item.labelKey)}
               </Link>
             );
           })}
+
+          {/* Section separator */}
+          <div className="my-3 mx-3 border-t border-paper-line dark:border-paper-dark-line" />
+
+          {/* Secondary nav group */}
+          {navItems.slice(4).map(item => {
+            const active = location.pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                data-tour={item.tourId || undefined}
+                className={`
+                  flex items-center gap-3 px-3 py-2 text-[13px] no-underline transition-colors border-l-2 font-sans
+                  ${active
+                    ? 'border-ink dark:border-paper bg-paper dark:bg-[#111] text-ink dark:text-paper font-semibold'
+                    : 'border-transparent text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper hover:border-ink/20 dark:hover:border-paper/20'
+                  }
+                `}
+              >
+                <span className={active ? 'text-ink dark:text-paper' : ''}>{item.icon}</span>
+                {item.labelOverride || t(item.labelKey)}
+              </Link>
+            );
+          })}
+
+          {/* Section separator before admin */}
+          {user?.role === 'admin' && (
+            <div className="my-3 mx-3 border-t border-paper-line dark:border-paper-dark-line" />
+          )}
 
           {/* Admin link */}
           {user?.role === 'admin' && (
             <Link
               to="/admin"
               className={`
-                flex items-center gap-3 px-3 py-2 text-[13px] no-underline transition-colors border-l-2 mt-2
+                flex items-center gap-3 px-3 py-2 text-[13px] no-underline transition-colors border-l-2 mt-2 font-sans
                 ${location.pathname === '/admin'
-                  ? 'border-accent text-accent font-semibold bg-accent/5'
-                  : 'border-transparent text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper hover:border-ink/30 dark:hover:border-paper/30'
+                  ? 'border-ink dark:border-paper bg-paper dark:bg-[#111] text-ink dark:text-paper font-semibold'
+                  : 'border-transparent text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper hover:border-ink/20 dark:hover:border-paper/20'
                 }
               `}
             >

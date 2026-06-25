@@ -26,7 +26,6 @@ const History = () => {
   const [searchInput, setSearchInput] = useState('');
   const debounceRef = useRef(null);
 
-  // Bulk selection state
   const [selectedIds, setSelectedIds] = useState(new Set());
 
   const handleSearchChange = (value) => {
@@ -113,7 +112,6 @@ const History = () => {
     toast.success('Export started');
   };
 
-  // Bulk selection handlers
   const toggleSelect = (id) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
@@ -162,42 +160,40 @@ const History = () => {
     <div className="max-w-5xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-baseline gap-3 mb-1">
-          <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">
-            History
-          </h1>
-        </div>
-        <div className="editorial-rule mb-3" />
-        <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed max-w-xl font-sans">
-          Your past searches and sentiment analyses across Malaysian news sources.
+        <h1 className="text-3xl font-bold text-black dark:text-white tracking-tight" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+          {t('history')}
+        </h1>
+        <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500 dark:text-[#999] mt-1">
+          Your past searches and sentiment analyses across Malaysian news sources
         </p>
+        <div className="mt-3 border-b border-[#e5e5e5] dark:border-[#222]" />
       </div>
 
       {error && (
-        <div className="border-l-3 border-red-600 bg-red-50 dark:bg-red-950/30 px-4 py-3 mb-6">
-          <p className="text-sm text-red-700 dark:text-red-400 font-sans">{error}</p>
+        <div className="border-l-2 border-[#FB7185] bg-white dark:bg-[#111] px-4 py-3 mb-6 border border-[#e5e5e5] dark:border-[#222]">
+          <p className="text-sm text-[#FB7185]">{error}</p>
         </div>
       )}
 
-      {/* KPI Strip — newspaper stat bar */}
+      {/* KPI Strip */}
       {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-paper-line dark:divide-paper-dark-line border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card mb-6">
-          {KPI.map(c => (
+        <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-[#e5e5e5] dark:divide-[#222] border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#111] mb-6">
+          {KPI.map((c, i) => (
             <div key={c.label} className="px-4 py-3">
-              <div className="text-[10px] font-semibold uppercase tracking-widest text-ink-muted dark:text-ink-faint mb-1 font-sans">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-[#999] mb-1">
                 {c.label}
               </div>
-              <div className="text-xl font-bold text-ink dark:text-paper font-display">
+              <div className="text-xl font-bold text-black dark:text-white" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
                 {c.value}
               </div>
-              <div className="text-[10px] text-ink-faint font-sans mt-0.5">{c.sub}</div>
+              <div className="text-[10px] text-gray-400 dark:text-[#666] mt-0.5">{c.sub}</div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Toolbar — editorial filter strip */}
-      <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card mb-6">
+      {/* Toolbar */}
+      <div className="border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#111] mb-6">
         <div className="flex flex-wrap items-center gap-3 px-4 py-3">
           {/* Search */}
           <div className="relative flex-1 min-w-[180px]">
@@ -206,7 +202,7 @@ const History = () => {
               placeholder="Search history..." 
               value={searchInput}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-paper-line dark:border-paper-dark-line bg-paper dark:bg-paper-dark text-ink dark:text-paper placeholder:text-ink-faint focus:outline-none focus:border-accent transition-colors font-sans"
+              className="w-full px-3 py-2 text-sm border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#0a0a0a] text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-[#666] focus:outline-none focus:border-black dark:focus:border-white transition-colors"
             />
           </div>
 
@@ -214,7 +210,7 @@ const History = () => {
           <select
             value={params.sentiment}
             onChange={(e) => handleParamChange('sentiment', e.target.value)}
-            className="px-3 py-2 text-xs font-medium border border-paper-line dark:border-paper-dark-line bg-paper dark:bg-paper-dark text-ink dark:text-paper focus:outline-none focus:border-accent transition-colors font-sans uppercase tracking-wider"
+            className="px-3 py-2 text-[11px] font-medium border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#0a0a0a] text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-colors uppercase tracking-[0.18em]"
           >
             <option value="">All Sentiment</option>
             <option value="Positive">Positive</option>
@@ -224,24 +220,24 @@ const History = () => {
 
           {/* Date Range */}
           <div className="flex items-center gap-2">
-            <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">
+            <label className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-[#999]">
               From
             </label>
             <input
               type="date"
               value={params.from}
               onChange={(e) => handleParamChange('from', e.target.value)}
-              className="px-2.5 py-2 text-xs border-2 border-ink dark:border-paper bg-paper dark:bg-paper-dark text-ink dark:text-paper focus:outline-none focus:border-accent transition-colors font-sans"
+              className="px-2.5 py-2 text-xs border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#0a0a0a] text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-colors"
               title="From Date"
             />
-            <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">
+            <label className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-[#999]">
               To
             </label>
             <input
               type="date"
               value={params.to}
               onChange={(e) => handleParamChange('to', e.target.value)}
-              className="px-2.5 py-2 text-xs border-2 border-ink dark:border-paper bg-paper dark:bg-paper-dark text-ink dark:text-paper focus:outline-none focus:border-accent transition-colors font-sans"
+              className="px-2.5 py-2 text-xs border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#0a0a0a] text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-colors"
               title="To Date"
             />
           </div>
@@ -249,7 +245,7 @@ const History = () => {
           {/* Export */}
           <button
             onClick={handleExport}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-ink dark:text-paper border border-ink dark:border-paper hover:bg-paper dark:hover:bg-paper-dark transition-colors font-sans"
+            className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-black dark:text-white border border-black dark:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
@@ -261,14 +257,14 @@ const History = () => {
 
       {/* Bulk Action Bar */}
       {isSomeSelected && (
-        <div className="border border-ink dark:border-paper bg-paper-card dark:bg-paper-dark-card px-4 py-3 mb-4 flex items-center gap-4">
-          <span className="text-xs font-semibold text-ink dark:text-paper font-sans uppercase tracking-wider">
+        <div className="border border-black dark:border-white bg-white dark:bg-[#111] px-4 py-3 mb-4 flex items-center gap-4">
+          <span className="text-[11px] font-semibold text-black dark:text-white uppercase tracking-[0.18em]">
             {selectedIds.size} selected
           </span>
           <button
             onClick={handleBulkDelete}
             disabled={bulkDeleteMutation.isLoading}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-red-700 dark:text-red-400 border border-red-700 dark:border-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors font-sans disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#FB7185] border border-[#FB7185] hover:bg-[#FB7185] hover:text-white transition-colors disabled:opacity-50"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
@@ -277,7 +273,7 @@ const History = () => {
           </button>
           <button
             onClick={handleBulkExport}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-ink dark:text-paper border border-ink dark:border-paper hover:bg-paper dark:hover:bg-paper-dark transition-colors font-sans"
+            className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-black dark:text-white border border-black dark:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
@@ -286,7 +282,7 @@ const History = () => {
           </button>
           <button
             onClick={() => setSelectedIds(new Set())}
-            className="text-xs font-medium text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-colors font-sans ml-auto"
+            className="text-[10px] font-medium text-gray-400 dark:text-[#666] hover:text-black dark:hover:text-white transition-colors uppercase tracking-[0.18em] ml-auto"
           >
             Clear selection
           </button>
@@ -296,60 +292,55 @@ const History = () => {
       {/* Articles */}
       <div>
         {loading ? (
-          <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card divide-y divide-paper-line dark:divide-paper-dark-line">
+          <div className="border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#111] divide-y divide-[#e5e5e5] dark:divide-[#222]">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="px-5 py-4 animate-pulse">
-                <div className="h-3.5 bg-gray-200 dark:bg-gray-700 w-3/4 mb-2.5" />
-                <div className="h-3 bg-gray-100 dark:bg-gray-800 w-full mb-2" />
+                <div className="h-3.5 bg-gray-200 dark:bg-[#222] w-3/4 mb-2.5" />
+                <div className="h-3 bg-gray-100 dark:bg-[#1a1a1a] w-full mb-2" />
                 <div className="flex gap-2">
-                  <div className="h-2.5 w-16 bg-gray-200 dark:bg-gray-700" />
-                  <div className="h-2.5 w-10 bg-gray-200 dark:bg-gray-700" />
+                  <div className="h-2.5 w-16 bg-gray-200 dark:bg-[#222]" />
+                  <div className="h-2.5 w-10 bg-gray-200 dark:bg-[#222]" />
                 </div>
               </div>
             ))}
           </div>
         ) : articles.length === 0 ? (
-          <div className="text-center py-20 border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
-            <div className="max-w-[60px] mx-auto mb-5 flex flex-col items-center gap-0.5">
-              <div className="w-full h-[2px] bg-ink/10 dark:bg-paper/10" />
-              <div className="w-full h-px bg-ink/5 dark:bg-paper/5" />
-            </div>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto text-ink/15 dark:text-paper/15 mb-4">
-              <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
-            </svg>
-            <h3 className="font-['Playfair_Display'] text-xl font-bold text-ink dark:text-paper mb-3">
+          <div className="text-center py-20 border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#111]">
+            <h3 className="text-xl font-bold text-black dark:text-white mb-3" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
               No Stories Found
             </h3>
-            <p className="text-sm text-ink-muted dark:text-ink-faint italic font-serif max-w-sm mx-auto">
+            <p className="text-sm text-gray-500 dark:text-[#999] italic max-w-sm mx-auto">
               "Adjust your filters or search for past analyses."
             </p>
           </div>
         ) : (
           <>
             {/* Select All header */}
-            <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card px-5 py-2.5 flex items-center gap-3">
+            <div className="border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#111] px-5 py-2.5 flex items-center gap-3">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={isAllSelected}
                   onChange={toggleSelectAll}
-                  className="w-4 h-4 border-2 border-ink dark:border-paper bg-paper dark:bg-paper-dark checked:bg-ink dark:checked:bg-paper accent-ink dark:accent-paper cursor-pointer"
+                  className="w-4 h-4 border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#0a0a0a] accent-black dark:accent-white cursor-pointer"
                 />
-                <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-[#999]">
                   Select All
                 </span>
               </label>
-              <span className="text-[10px] text-ink-faint font-sans ml-auto">
+              <span className="text-[10px] text-gray-400 dark:text-[#666] ml-auto">
                 {totalCount} item{totalCount !== 1 ? 's' : ''}
               </span>
             </div>
 
-            <StaggerList className="border border-t-0 border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card divide-y divide-paper-line dark:divide-paper-dark-line">
+            <StaggerList className="border border-t-0 border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#111] divide-y divide-[#e5e5e5] dark:divide-[#222]">
               {articles.map((article, i) => {
                 const articleId = article._id || article.id;
                 const isSelected = selectedIds.has(articleId);
+                const sentimentBorderColor = article.sentiment === 'Positive' ? 'border-l-[#4ADE80]' :
+                  article.sentiment === 'Negative' ? 'border-l-[#FB7185]' : 'border-l-[#FBBF24]';
                 return (
-                  <StaggerItem key={articleId} className="flex items-start gap-0 border-b border-paper-line dark:border-paper-dark-line last:border-b-0">
+                  <StaggerItem key={articleId} className={`flex items-start gap-0 border-l-2 ${sentimentBorderColor}`}>
                     {/* Checkbox column */}
                     <div className="flex-shrink-0 flex items-start pt-4 pl-4">
                       <input
@@ -357,7 +348,7 @@ const History = () => {
                         checked={isSelected}
                         onChange={() => toggleSelect(articleId)}
                         onClick={(e) => e.stopPropagation()}
-                        className="w-4 h-4 border-2 border-ink dark:border-paper bg-paper dark:bg-paper-dark checked:bg-ink dark:checked:bg-paper accent-ink dark:accent-paper cursor-pointer mt-1"
+                        className="w-4 h-4 border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#0a0a0a] accent-black dark:accent-white cursor-pointer mt-1"
                       />
                     </div>
                     {/* Article card wrapper */}
@@ -373,24 +364,24 @@ const History = () => {
               })}
             </StaggerList>
 
-            {/* Pagination — editorial style */}
+            {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between mt-6 px-1">
                 <button 
                   disabled={params.page === 1} 
                   onClick={() => handleParamChange('page', params.page - 1)}
-                  className="text-xs font-medium uppercase tracking-wider text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper disabled:opacity-30 transition-colors font-sans"
+                  className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-[#999] hover:text-black dark:hover:text-white disabled:opacity-30 transition-colors"
                 >
                   ← Previous
                 </button>
-                <div className="text-xs text-ink-faint font-sans">
-                  Page <strong className="text-ink dark:text-paper">{params.page}</strong> of {totalPages}
+                <div className="text-xs text-gray-400 dark:text-[#666]">
+                  Page <strong className="text-black dark:text-white">{params.page}</strong> of {totalPages}
                   <span className="ml-2">({totalCount} items)</span>
                 </div>
                 <button 
                   disabled={params.page === totalPages} 
                   onClick={() => handleParamChange('page', params.page + 1)}
-                  className="text-xs font-medium uppercase tracking-wider text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper disabled:opacity-30 transition-colors font-sans"
+                  className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-[#999] hover:text-black dark:hover:text-white disabled:opacity-30 transition-colors"
                 >
                   Next →
                 </button>

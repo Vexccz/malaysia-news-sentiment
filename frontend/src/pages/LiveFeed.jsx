@@ -49,7 +49,11 @@ const LiveTicker = ({ articles }) => {
   if (!articles.length) return null;
   const doubled = [...articles, ...articles];
   return (
-    <div className="w-full overflow-hidden border-y border-ink/10 dark:border-paper/10 bg-ink dark:bg-paper">
+    <div className="w-full overflow-hidden border-y-2 border-ink dark:border-paper bg-ink dark:bg-paper">
+      <div className="flex items-center">
+        <span className="flex-shrink-0 px-3 py-2 text-[9px] font-black uppercase tracking-[0.3em] text-white/70 dark:text-black/70 font-sans border-r border-white/20 dark:border-black/20 bg-ink dark:bg-paper">
+          WIRE
+        </span>
       <motion.div
         className="flex gap-0 whitespace-nowrap"
         animate={{ x: ['0%', '-50%'] }}
@@ -64,15 +68,16 @@ const LiveTicker = ({ articles }) => {
             className="inline-flex items-center gap-3 px-5 py-2 no-underline border-r border-white/20 dark:border-black/20"
           >
             <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${sentimentDot(a.sentiment)}`} />
-            <span className="text-[11px] font-semibold text-white dark:text-black font-sans tracking-wide line-clamp-1 max-w-xs">
+            <span className="text-[10px] font-bold text-white dark:text-black font-sans tracking-wide line-clamp-1 max-w-xs uppercase">
               {a.title}
             </span>
-            <span className="text-[9px] uppercase tracking-[0.15em] text-white/50 dark:text-black/50 font-sans flex-shrink-0">
+            <span className="text-[9px] font-black uppercase tracking-[0.25em] text-white/50 dark:text-black/50 font-sans flex-shrink-0">
               {a.source}
             </span>
           </a>
         ))}
       </motion.div>
+      </div>
     </div>
   );
 };
@@ -411,7 +416,7 @@ const LiveFeed = () => {
           </span>
         </div>
         <div className="editorial-rule mb-3" />
-        <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed max-w-xl font-sans">
+        <p className="text-[10px] text-ink-muted dark:text-ink-faint uppercase tracking-[0.25em] max-w-xl font-sans">
           {t('liveFeedDesc')}
         </p>
       </div>

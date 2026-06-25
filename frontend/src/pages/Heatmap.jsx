@@ -7,10 +7,8 @@ import api from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 
-// Malaysia GeoJSON from public source
 const GEOJSON_URL = 'https://raw.githubusercontent.com/dosm-malaysia/data-open/main/datasets/geodata/administrative_1_state.geojson';
 
-// Fallback: simplified state name mapping (GeoJSON name → backend name)
 const STATE_NAME_MAP = {
   'Johor': 'Johor',
   'Kedah': 'Kedah',
@@ -32,11 +30,11 @@ const STATE_NAME_MAP = {
 
 const getSentimentColor = (val) => {
   if (val === null || val === undefined) return '#6b7280';
-  if (val > 0.3) return '#16a34a';
-  if (val > 0.1) return '#22c55e';
-  if (val > -0.1) return '#eab308';
-  if (val > -0.3) return '#f97316';
-  return '#ef4444';
+  if (val > 0.3) return '#4ADE80';
+  if (val > 0.1) return '#4ADE80';
+  if (val > -0.1) return '#FBBF24';
+  if (val > -0.3) return '#FB7185';
+  return '#FB7185';
 };
 
 const getSentimentLabel = (val) => {
@@ -66,7 +64,6 @@ const Heatmap = () => {
   const dataRef = useRef([]);
   const geojsonRef = useRef(null);
 
-  // Fetch sentiment data
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -84,12 +81,10 @@ const Heatmap = () => {
     fetchData();
   }, [days]);
 
-  // Build state data lookup
   const getStateData = useCallback((stateName) => {
     return data.find(d => d.state === stateName) || { avgSentiment: null, articleCount: 0, topTopic: 'N/A' };
   }, [data]);
 
-  // Init map
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
 
@@ -125,7 +120,6 @@ const Heatmap = () => {
     };
   }, []);
 
-  // Switch map style on theme change
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.loaded()) return;
@@ -140,14 +134,12 @@ const Heatmap = () => {
     map.setStyle(newStyle);
   }, [isDark]);
 
-  // Load GeoJSON and add layers
   const loadGeoJSON = async (map) => {
     try {
       const res = await fetch(GEOJSON_URL);
       if (!res.ok) throw new Error('GeoJSON fetch failed');
       const geojson = await res.json();
 
-      // Normalize state names
       geojson.features.forEach((f, i) => {
         const rawName = f.properties.state || f.properties.name || '';
         f.properties._normalizedName = STATE_NAME_MAP[rawName] || rawName;
@@ -191,12 +183,11 @@ const Heatmap = () => {
         type: 'line',
         source: 'states',
         paint: {
-          'line-color': isDark ? '#555' : '#999',
+          'line-color': isDark ? '#333' : '#e5e5e5',
           'line-width': 1,
         },
       });
 
-      // Hover — only rebuild popup DOM when state changes
       map.on('mousemove', 'state-fills', (e) => {
         if (e.features.length === 0) return;
         map.getCanvas().style.cursor = 'pointer';
@@ -204,53 +195,48 @@ const Heatmap = () => {
         const feat = e.features[0];
         const name = feat.properties._normalizedName;
 
-        // Update hover highlight only when state changes
         if (hoveredIdRef.current !== feat.id) {
           hoveredIdRef.current = feat.id;
           map.setFilter('state-fills-hover', ['==', ['id'], feat.id]);
         }
 
-        // Update popup position always (cheap)
         const popup = popupRef.current;
         popup.setLngLat(e.lngLat);
 
-        // Only rebuild popup HTML when entering a NEW state
         if (hoveredNameRef.current !== name) {
           hoveredNameRef.current = name;
           const sd = dataRef.current.find(d => d.state === name) || { avgSentiment: null, articleCount: 0, topTopic: 'N/A' };
           const sentLabel = getSentimentLabel(sd.avgSentiment);
           const sentVal = sd.avgSentiment !== null ? (sd.avgSentiment > 0 ? '+' : '') + sd.avgSentiment.toFixed(2) : 'N/A';
-
           const sentColor = getSentimentColor(sd.avgSentiment);
-          const posPct = sd.posPct !== undefined ? sd.posPct : Math.max(0, Math.round((sd.avgSentiment > 0 ? 40 + sd.avgSentiment * 60 : 20) ));
-          const negPct = sd.negPct !== undefined ? sd.negPct : Math.max(0, Math.round((sd.avgSentiment < 0 ? 40 + Math.abs(sd.avgSentiment) * 60 : 20) ));
+          const posPct = sd.posPct !== undefined ? sd.posPct : Math.max(0, Math.round((sd.avgSentiment > 0 ? 40 + sd.avgSentiment * 60 : 20)));
+          const negPct = sd.negPct !== undefined ? sd.negPct : Math.max(0, Math.round((sd.avgSentiment < 0 ? 40 + Math.abs(sd.avgSentiment) * 60 : 20)));
           const neuPct = Math.max(0, 100 - posPct - negPct);
 
           popup.setHTML(`
             <div style="font-family:system-ui;min-width:180px;padding:2px 0">
-              <div style="font-weight:800;font-size:15px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">${name}</div>
+              <div style="font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;color:${isDark ? '#fff' : '#000'}">${name}</div>
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
                 <span style="font-size:22px;font-weight:800;color:${sentColor}">${sentVal}</span>
-                <span style="font-size:11px;font-weight:600;text-transform:uppercase;color:${sentColor};letter-spacing:0.5px">${sentLabel}</span>
+                <span style="font-size:10px;font-weight:600;text-transform:uppercase;color:${sentColor};letter-spacing:0.08em">${sentLabel}</span>
               </div>
-              <div style="height:6px;background:#e5e7eb;border-radius:0;display:flex;overflow:hidden;margin-bottom:8px">
-                <div style="width:${posPct}%;background:#22c55e"></div>
-                <div style="width:${neuPct}%;background:#eab308"></div>
-                <div style="width:${negPct}%;background:#ef4444"></div>
+              <div style="height:4px;background:${isDark ? '#222' : '#e5e5e5'};display:flex;overflow:hidden;margin-bottom:8px">
+                <div style="width:${posPct}%;background:#4ADE80"></div>
+                <div style="width:${neuPct}%;background:#FBBF24"></div>
+                <div style="width:${negPct}%;background:#FB7185"></div>
               </div>
-              <div style="display:flex;justify-content:space-between;font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">
+              <div style="display:flex;justify-content:space-between;font-size:10px;color:${isDark ? '#666' : '#999'};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">
                 <span>${posPct}% pos</span>
                 <span>${neuPct}% neu</span>
                 <span>${negPct}% neg</span>
               </div>
-              <div style="border-top:1px solid #e5e7eb;padding-top:6px;font-size:11px;color:#6b7280">
-                <div style="margin-bottom:2px">Articles: <strong style="color:#111">${sd.articleCount}</strong></div>
-                <div>Top: <strong style="color:#111">${sd.topTopic}</strong></div>
+              <div style="border-top:1px solid ${isDark ? '#222' : '#e5e5e5'};padding-top:6px;font-size:10px;color:${isDark ? '#666' : '#999'}">
+                <div style="margin-bottom:2px">Articles: <strong style="color:${isDark ? '#fff' : '#000'}">${sd.articleCount}</strong></div>
+                <div>Top: <strong style="color:${isDark ? '#fff' : '#000'}">${sd.topTopic}</strong></div>
               </div>
             </div>
           `);
 
-          // Add to map only once (after first state hover)
           if (!popup.isOpen()) {
             popup.addTo(map);
           }
@@ -264,7 +250,6 @@ const Heatmap = () => {
         popupRef.current.remove();
       });
 
-      // Click
       map.on('click', 'state-fills', (e) => {
         if (e.features.length === 0) return;
         const name = e.features[0].properties._normalizedName;
@@ -279,7 +264,6 @@ const Heatmap = () => {
     }
   };
 
-  // Update fill colors when data changes
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.loaded() || !map.getSource('states')) return;
@@ -287,7 +271,6 @@ const Heatmap = () => {
     const geojson = geojsonRef.current;
     if (!geojson || !geojson.features) return;
 
-    // Build color expression
     const colorExpr = ['match', ['get', '_normalizedName']];
     geojson.features.forEach(f => {
       const name = f.properties._normalizedName;
@@ -297,7 +280,7 @@ const Heatmap = () => {
         : '#6b7280';
       colorExpr.push(name, color);
     });
-    colorExpr.push('#6b7280'); // default
+    colorExpr.push('#6b7280');
 
     try {
       map.setPaintProperty('state-fills', 'fill-color', colorExpr);
@@ -317,14 +300,16 @@ const Heatmap = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <div className="flex items-baseline gap-3 mb-1">
-            <h1 className="text-2xl sm:text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">Sentiment Heatmap</h1>
-          </div>
-          <div className="editorial-rule mb-2" />
-          <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed font-sans">Geographic sentiment distribution across Malaysian states.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-black dark:text-white tracking-tight" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+            Sentiment Heatmap
+          </h1>
+          <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500 dark:text-[#999] mt-1">
+            Geographic sentiment distribution across Malaysian states
+          </p>
+          <div className="mt-3 border-b border-[#e5e5e5] dark:border-[#222]" />
         </div>
         <div className="flex items-center gap-1">
-          <span className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mr-2">Range</span>
+          <span className="text-[10px] uppercase tracking-[0.18em] text-gray-500 dark:text-[#999] mr-2">Range</span>
           {[
             { label: '7d', value: 7 },
             { label: '30d', value: 30 },
@@ -334,10 +319,10 @@ const Heatmap = () => {
             <button
               key={opt.value}
               onClick={() => setDays(opt.value)}
-              className={`px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.15em] border transition-colors font-sans ${
+              className={`px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.18em] border transition-colors ${
                 days === opt.value
-                  ? 'border-ink dark:border-paper text-ink dark:text-paper bg-ink/5 dark:bg-paper/10'
-                  : 'border-ink/20 dark:border-paper/20 text-ink-muted dark:text-ink-faint hover:border-ink/50 dark:hover:border-paper/50'
+                  ? 'border-black dark:border-white text-white dark:text-black bg-black dark:bg-white'
+                  : 'border-[#e5e5e5] dark:border-[#222] text-gray-500 dark:text-[#999] hover:border-black dark:hover:border-white'
               }`}
             >
               {opt.label}
@@ -348,25 +333,25 @@ const Heatmap = () => {
 
       {/* Map */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         transition={{ delay: 0.1 }}
-        className="bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line overflow-hidden relative"
+        className="bg-white dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222] overflow-hidden relative"
       >
         {loading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 dark:bg-black/40 rounded-sm">
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 dark:bg-black/40">
             <div className="flex items-center gap-3">
-              <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-              <span className="text-sm text-ink-muted dark:text-ink-faint">Loading sentiment data...</span>
+              <div className="w-5 h-5 border-2 border-black dark:border-white border-t-transparent animate-spin" />
+              <span className="text-sm text-gray-500 dark:text-[#999]">Loading sentiment data...</span>
             </div>
           </div>
         )}
 
         {geoError && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80 dark:bg-black/60 rounded-sm">
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80 dark:bg-black/60">
             <div className="text-center p-6">
-              <p className="text-sm text-red-500 font-medium">Failed to load map boundaries</p>
-              <p className="text-xs text-ink-faint mt-1">Check your internet connection</p>
+              <p className="text-sm text-[#FB7185] font-medium">Failed to load map boundaries</p>
+              <p className="text-xs text-gray-400 dark:text-[#666] mt-1">Check your internet connection</p>
             </div>
           </div>
         )}
@@ -374,16 +359,16 @@ const Heatmap = () => {
         <div ref={mapContainer} className="w-full h-[320px] sm:h-[480px]" />
 
         {/* Legend */}
-        <div className="flex items-center justify-center gap-4 py-3 border-t border-[#eee] dark:border-[#2a2a2a] flex-wrap">
+        <div className="flex items-center justify-center gap-4 py-3 border-t border-[#e5e5e5] dark:border-[#222] flex-wrap">
           {[
-            { color: '#22c55e', label: 'Positive' },
-            { color: '#eab308', label: 'Neutral' },
-            { color: '#ef4444', label: 'Negative' },
+            { color: '#4ADE80', label: 'Positive' },
+            { color: '#FBBF24', label: 'Neutral' },
+            { color: '#FB7185', label: 'Negative' },
             { color: '#6b7280', label: 'No data' },
           ].map(item => (
             <div key={item.label} className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: item.color }} />
-              <span className="text-xs text-gray-600 dark:text-ink-faint">{item.label}</span>
+              <div className="w-3 h-3" style={{ backgroundColor: item.color }} />
+              <span className="text-[10px] text-gray-500 dark:text-[#999] uppercase tracking-[0.18em]">{item.label}</span>
             </div>
           ))}
         </div>
@@ -398,39 +383,39 @@ const Heatmap = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className="bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line p-5"
+              className="bg-white dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222] p-5"
             >
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-ink dark:text-paper">{selectedState}</h2>
+                <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-black dark:text-white" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>{selectedState}</h2>
                 <button
                   onClick={() => setSelectedState(null)}
-                  className="text-ink-faint hover:text-gray-600 dark:hover:text-gray-200"
+                  className="text-gray-400 dark:text-[#666] hover:text-black dark:hover:text-white"
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                   </svg>
                 </button>
               </div>
-              <div className="grid grid-cols-3 gap-2 sm:gap-4">
-                <div className="text-center p-3 bg-paper dark:bg-paper-dark border border-paper-line dark:border-paper-dark-line">
-                  <p className="text-xl font-bold font-display text-ink dark:text-paper">{sd.articleCount}</p>
-                  <p className="text-[10px] text-ink-faint font-sans">Articles</p>
+              <div className="grid grid-cols-3 gap-0 divide-x divide-[#e5e5e5] dark:divide-[#222] border border-[#e5e5e5] dark:border-[#222]">
+                <div className="text-center p-3 bg-[#fafafa] dark:bg-[#0a0a0a]">
+                  <p className="text-xl font-bold text-black dark:text-white" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>{sd.articleCount}</p>
+                  <p className="text-[10px] text-gray-500 dark:text-[#999] uppercase tracking-[0.18em]">Articles</p>
                 </div>
-                <div className="text-center p-3 bg-paper dark:bg-paper-dark border border-paper-line dark:border-paper-dark-line">
-                  <p className={`text-xl font-bold font-display ${sd.avgSentiment > 0 ? 'text-green-500' : sd.avgSentiment < 0 ? 'text-red-500' : 'text-yellow-500'}`}>
+                <div className="text-center p-3 bg-[#fafafa] dark:bg-[#0a0a0a]">
+                  <p className={`text-xl font-bold ${sd.avgSentiment > 0 ? 'text-[#4ADE80]' : sd.avgSentiment < 0 ? 'text-[#FB7185]' : 'text-[#FBBF24]'}`} style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
                     {sd.avgSentiment !== null ? (sd.avgSentiment > 0 ? '+' : '') + sd.avgSentiment.toFixed(2) : 'N/A'}
                   </p>
-                  <p className="text-[10px] text-ink-faint font-sans">Avg Sentiment</p>
+                  <p className="text-[10px] text-gray-500 dark:text-[#999] uppercase tracking-[0.18em]">Avg Sentiment</p>
                 </div>
-                <div className="text-center p-3 bg-paper dark:bg-paper-dark border border-paper-line dark:border-paper-dark-line">
-                  <p className="text-xl font-bold font-display text-ink dark:text-paper capitalize">{sd.topTopic}</p>
-                  <p className="text-[10px] text-ink-faint font-sans">Top Topic</p>
+                <div className="text-center p-3 bg-[#fafafa] dark:bg-[#0a0a0a]">
+                  <p className="text-xl font-bold text-black dark:text-white capitalize" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>{sd.topTopic}</p>
+                  <p className="text-[10px] text-gray-500 dark:text-[#999] uppercase tracking-[0.18em]">Top Topic</p>
                 </div>
               </div>
               <div className="mt-4 flex justify-end">
                 <button
                   onClick={() => navigate(`/search?state=${encodeURIComponent(selectedState)}`)}
-                  className="px-4 py-2 text-[11px] font-medium uppercase tracking-[0.15em] border border-ink dark:border-paper text-ink dark:text-paper hover:bg-ink hover:text-paper dark:hover:bg-paper dark:hover:text-ink transition-colors font-sans"
+                  className="px-4 py-2 text-[11px] font-medium uppercase tracking-[0.18em] border border-black dark:border-white text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors"
                 >
                   View Articles
                 </button>
@@ -445,50 +430,52 @@ const Heatmap = () => {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="bg-paper-card dark:bg-paper-dark-card border border-paper-line dark:border-paper-dark-line p-5"
+        className="bg-white dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222]"
       >
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-ink dark:text-paper mb-4">State Summary</h2>
+        <div className="px-5 pt-5 pb-3 border-b border-[#e5e5e5] dark:border-[#222]">
+          <h2 className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-[#999]">State Summary</h2>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-paper-line dark:border-paper-dark-line">
-                <th className="text-left py-2 text-ink-muted dark:text-ink-faint font-medium">State</th>
-                <th className="text-center py-2 text-ink-muted dark:text-ink-faint font-medium">Articles</th>
-                <th className="text-center py-2 text-ink-muted dark:text-ink-faint font-medium">Sentiment</th>
-                <th className="text-center py-2 text-ink-muted dark:text-ink-faint font-medium">Top Topic</th>
+              <tr className="border-b border-[#e5e5e5] dark:border-[#222]">
+                <th className="text-left px-5 py-3 text-[10px] text-gray-500 dark:text-[#999] font-medium uppercase tracking-[0.18em]">State</th>
+                <th className="text-center px-3 py-3 text-[10px] text-gray-500 dark:text-[#999] font-medium uppercase tracking-[0.18em]">Articles</th>
+                <th className="text-center px-3 py-3 text-[10px] text-gray-500 dark:text-[#999] font-medium uppercase tracking-[0.18em]">Sentiment</th>
+                <th className="text-center px-3 py-3 text-[10px] text-gray-500 dark:text-[#999] font-medium uppercase tracking-[0.18em]">Top Topic</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-[#e5e5e5] dark:divide-[#222]">
               {data
                 .filter(d => d.articleCount > 0)
                 .sort((a, b) => b.articleCount - a.articleCount)
                 .map((d, i) => (
                   <motion.tr
                     key={d.state}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
                     transition={{ delay: i * 0.03 }}
-                    className="border-b border-b border-paper-line dark:border-paper-dark-line hover:bg-paper/50 dark:hover:bg-paper-dark/50 cursor-pointer transition-colors"
+                    className="hover:bg-[#fafafa] dark:hover:bg-[#0a0a0a] cursor-pointer transition-colors"
                     onClick={() => setSelectedState(d.state)}
                   >
-                    <td className="py-2.5 text-ink dark:text-paper font-medium">{d.state}</td>
-                    <td className="py-2.5 text-center text-gray-600 dark:text-gray-300">{d.articleCount}</td>
-                    <td className="py-2.5 text-center">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-                        d.avgSentiment > 0.1 ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400' :
-                        d.avgSentiment < -0.1 ? 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400' :
-                        'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400'
+                    <td className="px-5 py-2.5 text-black dark:text-white font-medium">{d.state}</td>
+                    <td className="px-3 py-2.5 text-center text-gray-600 dark:text-[#999]">{d.articleCount}</td>
+                    <td className="px-3 py-2.5 text-center">
+                      <span className={`inline-block px-2 py-0.5 text-xs font-mono ${
+                        d.avgSentiment > 0.1 ? 'text-[#4ADE80]' :
+                        d.avgSentiment < -0.1 ? 'text-[#FB7185]' :
+                        'text-[#FBBF24]'
                       }`}>
                         {d.avgSentiment > 0 ? '+' : ''}{d.avgSentiment.toFixed(2)}
                       </span>
                     </td>
-                    <td className="py-2.5 text-center text-gray-600 dark:text-gray-300 capitalize">{d.topTopic}</td>
+                    <td className="px-3 py-2.5 text-center text-gray-600 dark:text-[#999] capitalize">{d.topTopic}</td>
                   </motion.tr>
                 ))}
             </tbody>
           </table>
           {data.filter(d => d.articleCount > 0).length === 0 && !loading && (
-            <p className="text-center text-sm text-ink-faint py-8">No geographic data available for this period</p>
+            <p className="text-center text-sm text-gray-400 dark:text-[#666] py-8">No geographic data available for this period</p>
           )}
         </div>
       </motion.div>
@@ -496,15 +483,15 @@ const Heatmap = () => {
       {/* Custom popup styles */}
       <style>{`
         .sentiment-popup .maplibregl-popup-content {
-          background: ${isDark ? '#1a1a1a' : '#fff'};
-          color: ${isDark ? '#fff' : '#111'};
-          border: 1px solid ${isDark ? '#333' : '#eee'};
+          background: ${isDark ? '#111' : '#fff'};
+          color: ${isDark ? '#fff' : '#000'};
+          border: 1px solid ${isDark ? '#222' : '#e5e5e5'};
           border-radius: 0;
           padding: 10px 14px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          box-shadow: none;
         }
         .sentiment-popup .maplibregl-popup-tip {
-          border-top-color: ${isDark ? '#1a1a1a' : '#fff'};
+          border-top-color: ${isDark ? '#111' : '#fff'};
         }
         .maplibregl-ctrl-attrib {
           font-size: 10px !important;

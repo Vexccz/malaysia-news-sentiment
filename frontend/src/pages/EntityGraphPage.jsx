@@ -520,7 +520,7 @@ export default function EntityGraphPage() {
           right: 12px !important;
           border-radius: 8px !important;
           overflow: hidden !important;
-          border: 1px solid ${isDark ? '#2a2a2a' : '#eee'} !important;
+          border: 1px solid ${isDark ? '#222' : '#e5e5e5'} !important;
           box-shadow: 0 2px 12px rgba(0,0,0,0.15) !important;
           z-index: 10 !important;
         }
@@ -546,18 +546,16 @@ export default function EntityGraphPage() {
         input[type="range"].accent-purple-500::-webkit-slider-thumb { background: #a855f7; }
         input[type="range"].accent-cyan-500::-webkit-slider-thumb { background: #06b6d4; }
       `}</style>
-      {/* Header */}
+      {/* Header — editorial style */}
       <div className="mb-4">
-        <div className="flex items-baseline gap-3 mb-1">
-          <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display flex items-center gap-2">
-            <Network size={24} className="text-blue-600" />
-            Entity Graph
-          </h1>
-        </div>
-        <p className="text-xs text-ink-muted dark:text-ink-faint tracking-wide uppercase font-sans">
+        <h1 className="font-['Playfair_Display'] text-2xl font-black text-ink dark:text-paper tracking-tight uppercase flex items-center gap-2">
+          <Network size={20} className="text-ink-muted dark:text-ink-faint" />
+          Entity Graph
+        </h1>
+        <p className="text-[10px] text-ink-muted dark:text-ink-faint mt-1 uppercase tracking-[0.2em]">
           Explore relationships between entities in the news
         </p>
-        <div className="editorial-rule mb-3"></div>
+        <div className="border-b border-[#e5e5e5] dark:border-[#222] mt-2 mb-3" />
       </div>
 
       {/* Toolbar */}
@@ -566,7 +564,7 @@ export default function EntityGraphPage() {
         <div className="relative w-full sm:w-auto">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
-            className="pl-8 pr-3 py-2 text-sm bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm outline-none focus:border-blue-500 dark:focus:border-blue-500 transition-colors w-full sm:w-52 text-gray-900 dark:text-white placeholder:text-gray-400"
+            className="pl-8 pr-3 py-2 text-sm bg-white dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222] outline-none focus:border-ink dark:focus:border-paper transition-colors w-full sm:w-52 text-ink dark:text-paper placeholder:text-ink-faint font-sans"
             placeholder={t('searchEntities')}
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -575,7 +573,7 @@ export default function EntityGraphPage() {
         </div>
 
         {/* Type Filter */}
-        <div className="flex gap-1 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-0.5">
+        <div className="flex gap-1 bg-white dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222] p-0.5">
           {['', 'politicians', 'parties', 'organizations', 'locations'].map(t => (
             <button
               key={t}
@@ -592,7 +590,7 @@ export default function EntityGraphPage() {
         </div>
 
         {/* Time Filter */}
-        <div className="flex gap-1 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-0.5">
+        <div className="flex gap-1 bg-white dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222] p-0.5">
           {[{ k: '', l: 'All Time' }, { k: '24h', l: '24H' }, { k: '7d', l: '7D' }, { k: '30d', l: '30D' }].map(o => (
             <button
               key={o.k}
@@ -655,7 +653,7 @@ export default function EntityGraphPage() {
             className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all border ${
               showPhysics
                 ? 'bg-purple-50 dark:bg-purple-500/15 text-purple-600 border-purple-200 dark:border-purple-500/30'
-                : 'bg-white dark:bg-[#1a1a1a] text-gray-500 dark:text-gray-400 border-[#eee] dark:border-[#2a2a2a] hover:text-gray-700 dark:hover:text-gray-200'
+                : 'bg-white dark:bg-[#111] text-ink-muted dark:text-ink-faint border-[#e5e5e5] dark:border-[#222] hover:text-ink dark:hover:text-paper'
             }`}
           >
             <span className="flex items-center gap-1"><BarChart3 size={12} /> Physics</span>
@@ -667,7 +665,7 @@ export default function EntityGraphPage() {
             className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all border ${
               pathMode
                 ? 'bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 border-indigo-200 dark:border-indigo-500/30'
-                : 'bg-white dark:bg-[#1a1a1a] text-gray-500 dark:text-gray-400 border-[#eee] dark:border-[#2a2a2a] hover:text-gray-700 dark:hover:text-gray-200'
+                : 'bg-white dark:bg-[#111] text-ink-muted dark:text-ink-faint border-[#e5e5e5] dark:border-[#222] hover:text-ink dark:hover:text-paper'
             }`}
           >
             <span className="flex items-center gap-1"><Share2 size={12} /> Path Mode {pathMode ? 'ON' : ''}</span>
@@ -696,7 +694,7 @@ export default function EntityGraphPage() {
             className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all border ${
               timelineValue < 100
                 ? 'bg-cyan-50 dark:bg-cyan-500/15 text-cyan-600 border-cyan-200 dark:border-cyan-500/30'
-                : 'bg-white dark:bg-[#1a1a1a] text-gray-500 dark:text-gray-400 border-[#eee] dark:border-[#2a2a2a] hover:text-gray-700 dark:hover:text-gray-200'
+                : 'bg-white dark:bg-[#111] text-ink-muted dark:text-ink-faint border-[#e5e5e5] dark:border-[#222] hover:text-ink dark:hover:text-paper'
             }`}
           >
             <span className="flex items-center gap-1"><TrendingUp size={12} /> Timeline</span>
@@ -715,7 +713,7 @@ export default function EntityGraphPage() {
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: 'auto', opacity: 1 }}
           exit={{ height: 0, opacity: 0 }}
-          className="flex flex-wrap items-center gap-4 mb-3 px-4 py-2.5 bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm"
+          className="flex flex-wrap items-center gap-4 mb-3 px-4 py-2.5 bg-[#fafafa] dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222]"
         >
           <div className="flex items-center gap-2 flex-1 min-w-[200px]">
             <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap">Link Distance</label>
@@ -800,7 +798,7 @@ export default function EntityGraphPage() {
       )}
 
       {/* Graph + Sidebar Container */}
-      <div className="flex-1 flex flex-col md:flex-row rounded-sm overflow-hidden border border-[#eee] dark:border-[#2a2a2a] bg-[#fafaf9] dark:bg-[#0f0f0f] relative min-h-[300px] md:min-h-[400px]">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#0a0a0a] relative min-h-[300px] md:min-h-[400px]">
         {/* Background fill */}
         {isDark && <div className="absolute inset-0 pointer-events-none z-0 bg-[#0f0f0f]" />}
 
@@ -817,7 +815,7 @@ export default function EntityGraphPage() {
                     key={node.id}
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-3 cursor-pointer hover:border-blue-300 dark:hover:border-blue-500/30 transition-colors"
+                    className="bg-[#fafafa] dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222] p-3 cursor-pointer hover:border-ink dark:hover:border-paper transition-colors"
                     onClick={() => handleNodeClick(node.id)}
                   >
                     <div className="flex items-center justify-between">
@@ -875,7 +873,7 @@ export default function EntityGraphPage() {
               animate={{ width: isMobile ? '100%' : 340, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-              className="border-l border-[#eee] dark:border-[#2a2a2a] bg-white dark:bg-[#111] overflow-y-auto overflow-x-hidden z-[2] p-5"
+              className="border-l border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] overflow-y-auto overflow-x-hidden z-[2] p-5"
             >
               {/* Close button */}
               <button
@@ -930,7 +928,7 @@ export default function EntityGraphPage() {
                       <div className="text-[11px] font-semibold text-gray-900 dark:text-white mb-2">Connected Entities</div>
                       <div className="space-y-1">
                         {detail.connectedEntities.slice(0, 8).map(c => (
-                          <div key={c.name} className="flex justify-between py-1.5 text-[11px] border-b border-[#eee] dark:border-[#2a2a2a] last:border-0">
+                          <div key={c.name} className="flex justify-between py-1.5 text-[11px] border-b border-[#e5e5e5] dark:border-[#222] last:border-0">
                             <span className="text-blue-600 cursor-pointer hover:underline" onClick={() => handleNodeClick(c.name)}>{c.name}</span>
                             <span className="text-gray-400">{c.coOccurrences}x</span>
                           </div>
@@ -945,7 +943,7 @@ export default function EntityGraphPage() {
                       <div className="text-[11px] font-semibold text-gray-900 dark:text-white mb-2">Recent Articles</div>
                       <div className="space-y-2">
                         {detail.articles.slice(0, 8).map((a, i) => (
-                          <div key={i} className="py-2 border-b border-[#eee] dark:border-[#2a2a2a] last:border-0">
+                          <div key={i} className="py-2 border-b border-[#e5e5e5] dark:border-[#222] last:border-0">
                             <div className="text-[11px] font-medium text-gray-900 dark:text-white leading-snug">{a.title?.slice(0, 60)}{a.title?.length > 60 ? '...' : ''}</div>
                             <div className="flex gap-2 mt-1">
                               <span className="text-[10px] font-semibold" style={{ color: SENTIMENT_COLORS[a.sentiment] }}>{a.sentiment}</span>

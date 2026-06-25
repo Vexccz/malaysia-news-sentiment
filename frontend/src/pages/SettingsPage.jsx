@@ -6,11 +6,11 @@ import { useLanguage } from '../context/LanguageContext';
 import { settingsTranslations } from '../services/settingsTranslations';
 
 const Section = ({ title, children }) => (
-  <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card mb-6">
-    <div className="px-5 py-3 border-b border-paper-line dark:border-paper-dark-line">
+  <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] mb-6">
+    <div className="px-5 py-3 border-b border-[#e5e5e5] dark:border-[#222]">
       <h2 className="text-xs font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">{title}</h2>
     </div>
-    <div className="divide-y divide-paper-line dark:divide-paper-dark-line">{children}</div>
+    <div className="divide-y divide-[#e5e5e5] dark:divide-[#222]">{children}</div>
   </div>
 );
 
@@ -154,13 +154,11 @@ const SettingsPage = () => {
     <div className="max-w-2xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-baseline gap-3 mb-1">
-          <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">Settings</h1>
-        </div>
-        <div className="editorial-rule mb-3" />
-        <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed font-sans">
-          Manage your preferences and account settings.
+        <h1 className="font-['Playfair_Display'] text-2xl font-black text-ink dark:text-paper tracking-tight uppercase">Settings</h1>
+        <p className="text-[10px] text-ink-muted dark:text-ink-faint mt-1 uppercase tracking-[0.2em]">
+          Manage your preferences and account settings
         </p>
+        <div className="border-b border-[#e5e5e5] dark:border-[#222] mt-2 mb-3" />
       </div>
 
       {/* Appearance */}
@@ -332,7 +330,7 @@ const SettingsPage = () => {
       </Section>
 
       {/* Session */}
-      <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card mb-6">
+      <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] mb-6">
         <div className="px-5 py-4">
           {isGuest ? (
             <div className="flex items-center justify-between">

@@ -54,15 +54,13 @@ const Forecast = () => {
     <div className="max-w-4xl mx-auto">
       {/* Header — newspaper section title */}
       <div className="mb-8">
-        <div className="flex items-baseline gap-3 mb-1">
-          <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">
-            Sentiment Forecast
-          </h1>
-          <span className="text-xs font-medium uppercase tracking-widest text-ink-muted dark:text-ink-faint font-sans">
-            AI-Powered
-          </span>
-        </div>
-        <div className="editorial-rule mb-3" />
+        <h1 className="font-['Playfair_Display'] text-2xl font-black text-ink dark:text-paper tracking-tight uppercase">
+          Sentiment Forecast
+        </h1>
+        <p className="text-[10px] text-ink-muted dark:text-ink-faint mt-1 uppercase tracking-[0.2em]">
+          AI-Powered Predictions
+        </p>
+        <div className="border-b border-[#e5e5e5] dark:border-[#222] mt-2 mb-3" />
         <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed max-w-xl font-sans">
           Predict future sentiment trends from historical news analysis across Malaysian media sources.
         </p>
@@ -70,7 +68,7 @@ const Forecast = () => {
 
       {/* Search Form — flat editorial card */}
       <form onSubmit={handleSubmit} className="mb-8">
-        <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
+        <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111]">
           <div className="border-l-3 border-accent px-5 py-5">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
@@ -143,7 +141,7 @@ const Forecast = () => {
             className="space-y-6"
           >
             {/* Summary strip — plain language stats */}
-            <div className="grid grid-cols-3 divide-x divide-paper-line dark:divide-paper-dark-line border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
+            <div className="grid grid-cols-3 divide-x divide-[#e5e5e5] dark:divide-[#222] border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111]">
               <div className="px-5 py-4">
                 <div className="text-[10px] font-semibold uppercase tracking-widest text-ink-muted dark:text-ink-faint mb-1 font-sans">
                   Expected Trend
@@ -181,7 +179,7 @@ const Forecast = () => {
 
             {/* Chart — non-technical friendly */}
             {chartData.length > 0 && (
-              <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
+              <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111]">
                 <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
                   <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">
                     Forecast Projection
@@ -324,7 +322,7 @@ const Forecast = () => {
 
             {/* AI Insight — editorial pull-quote style */}
             {data.aiInsight && (
-              <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
+              <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111]">
                 <div className="border-l-3 border-accent px-5 py-4">
                   <div className="text-[10px] font-semibold uppercase tracking-widest text-accent mb-2 font-sans">
                     Analysis
@@ -341,7 +339,7 @@ const Forecast = () => {
 
       {/* Empty state — clean editorial */}
       {!data && !loading && !error && (
-        <div className="text-center py-20 border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card">
+        <div className="text-center py-20 border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111]">
           <div className="text-4xl mb-4 opacity-20">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="mx-auto text-ink-muted dark:text-ink-faint">
               <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
