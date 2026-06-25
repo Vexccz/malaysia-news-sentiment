@@ -7,7 +7,7 @@ import { exportToCSV } from '../services/exportUtils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../context/LanguageContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Trash2, Clock, Eye, TrendingUp, Download, Filter, BarChart3, ChevronLeft, ChevronRight, ExternalLink, ArrowUpRight } from 'lucide-react';
+import { Trash2, Clock, Eye, TrendingUp, Download, Filter, BarChart3, ChevronLeft, ChevronRight, ExternalLink, ArrowUpRight, Share2 } from 'lucide-react';
 import { formatRelativeTime } from '../utils/dateFormat';
 import { Link } from 'react-router-dom';
 
@@ -111,6 +111,23 @@ const History = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('Permanently remove this analysis from history?')) return;
     deleteMutation.mutate(id);
+  };
+
+  const handleShare = async (e, article) => {
+    e.stopPropagation();
+    const shareData = {
+      title: article.title,
+      text: article.description?.slice(0, 100) || article.title,
+      url: article.url || window.location.origin + "/articles/" + (article._id || article.id),
+    };
+    if (navigator.share) {
+      try { await navigator.share(shareData); } catch {}
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareData.url);
+        toast.success("Link copied!");
+      } catch {}
+    }
   };
 
   const handleExport = () => {
@@ -487,6 +504,13 @@ const History = () => {
                             >
                               Details <ArrowUpRight size={10} />
                             </Link>
+                            <button 
+                              onClick={(e) => handleShare(e, article)}
+                              className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-gray-500 dark:text-[#888] hover:text-blue-500 border border-transparent hover:border-blue-200 dark:hover:border-blue-900 transition-all"
+                              title="Share article"
+                            >
+                              <Share2 size={10} /> Share
+                            </button>
                             {article.url && (
                               <a 
                                 href={article.url} 
