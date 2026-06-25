@@ -356,10 +356,6 @@ export default function EntityGraphPage() {
     const baseNodeSize = mobileGraphMode ? 18 : 24;
     const sizeRange = mobileGraphMode ? 30 : 70;
 
-    // Feature: Focus neighborhood - compute connected nodes
-      }
-    }
-
     const g6Data = {
       nodes: graphNodes.map(n => {
         const color = SENTIMENT_COLORS[n.sentiment] || SENTIMENT_COLORS.Neutral;
