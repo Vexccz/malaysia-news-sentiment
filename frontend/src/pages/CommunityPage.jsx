@@ -390,6 +390,10 @@ const CommunityPage = () => {
   const [postAnonymous, setPostAnonymous] = useState(false);
   const [posting, setPosting] = useState(false);
   const [activeTab, setActiveTab] = useState('discussions'); // 'discussions' | 'posts'
+  const [polls, setPolls] = useState([]);
+  const [showCreatePoll, setShowCreatePoll] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState(['', '']);
 
   useEffect(() => {
     let cancelled = false;
@@ -403,6 +407,7 @@ const CommunityPage = () => {
           api.get('/collab/sentiment-pulse?days=7'),
           api.get('/collab/leaderboard?days=7&limit=5'),
           api.get('/collab/posts?limit=10'),
+          api.get('/collab/polls?limit=3'),
         ]);
         if (!cancelled) {
           setDiscussions(discRes.data.discussions || []);
@@ -412,6 +417,7 @@ const CommunityPage = () => {
           setSentimentPulse(spRes.data || null);
           setLeaderboard(lbRes.data.leaderboard || []);
           setCommunityPosts(postsRes.data.posts || []);
+          setPolls(pollsRes.data.polls || []);
         }
       } catch (err) {
         console.error('Community fetch failed:', err);
@@ -503,6 +509,31 @@ const CommunityPage = () => {
       setPostAnonymous(false);
     } catch {}
     finally { setPosting(false); }
+  };
+
+  const votePoll = async (pollId, optionIndex) => {
+    try {
+      const { data } = await api.post(`/collab/polls/${pollId}/vote`, { optionIndex });
+      setPolls(prev => prev.map(p =>
+        p._id === pollId ? { ...p, options: data.options, totalVotes: data.totalVotes } : p
+      ));
+    } catch {}
+  };
+
+  const createPoll = async () => {
+    if (!pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2) return;
+    try {
+      const { data } = await api.post('/collab/polls', {
+        question: pollQuestion.trim(),
+        options: pollOptions.filter(o => o.trim()),
+      });
+      // Re-fetch polls to get formatted data
+      const res = await api.get('/collab/polls?limit=3');
+      setPolls(res.data.polls || []);
+      setPollQuestion('');
+      setPollOptions(['', '']);
+      setShowCreatePoll(false);
+    } catch {}
   };
 
   const timeAgo = (dateStr) => {
@@ -801,8 +832,109 @@ const CommunityPage = () => {
           )}
         </div>
 
-        {/* Right: Hot Takes sidebar */}
+        {/* Right: sidebar */}
         <div className="space-y-4">
+          {/* Community Polls */}
+          {polls.length > 0 && (
+            <div className={`${CARD} p-4`}>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-[10px] font-bold uppercase tracking-widest text-ink-muted dark:text-ink-faint flex items-center gap-1.5">
+                  {'\uD83D\uDCCA'} Community Polls
+                </h3>
+                <button onClick={() => setShowCreatePoll(!showCreatePoll)}
+                  className="text-[10px] text-accent hover:underline">
+                  + Create
+                </button>
+              </div>
+
+              {/* Create poll form */}
+              {showCreatePoll && (
+                <div className="mb-3 pb-3 border-b border-[#e5e5e5] dark:border-[#222]">
+                  <input
+                    value={pollQuestion}
+                    onChange={(e) => setPollQuestion(e.target.value)}
+                    placeholder="Ask a question..."
+                    className="w-full px-2.5 py-1.5 text-xs border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#0a0a0a] text-ink dark:text-paper placeholder:text-ink-faint focus:outline-none focus:border-ink dark:focus:border-paper mb-2"
+                  />
+                  {pollOptions.map((opt, i) => (
+                    <input
+                      key={i}
+                      value={opt}
+                      onChange={(e) => {
+                        const newOpts = [...pollOptions];
+                        newOpts[i] = e.target.value;
+                        setPollOptions(newOpts);
+                      }}
+                      placeholder={`Option ${i + 1}`}
+                      className="w-full px-2.5 py-1 text-[11px] border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#0a0a0a] text-ink dark:text-paper placeholder:text-ink-faint focus:outline-none focus:border-ink dark:focus:border-paper mb-1"
+                    />
+                  ))}
+                  {pollOptions.length < 6 && (
+                    <button onClick={() => setPollOptions([...pollOptions, ''])}
+                      className="text-[10px] text-ink-faint hover:text-ink dark:hover:text-paper mb-2">
+                      + Add option
+                    </button>
+                  )}
+                  <div className="flex gap-2">
+                    <button onClick={createPoll}
+                      className="flex-1 px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider bg-ink dark:bg-paper text-paper dark:text-ink hover:opacity-80">
+                      Create Poll
+                    </button>
+                    <button onClick={() => setShowCreatePoll(false)}
+                      className="px-2 py-1.5 text-[10px] text-ink-faint border border-[#e5e5e5] dark:border-[#222] hover:bg-gray-50 dark:hover:bg-white/5">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Poll list */}
+              <div className="space-y-3">
+                {polls.map(poll => (
+                  <div key={poll._id}>
+                    <p className="text-xs font-semibold text-ink dark:text-paper mb-2">{poll.question}</p>
+                    <div className="space-y-1.5">
+                      {poll.options.map((opt, i) => {
+                        const hasVoted = poll.options.some(o => o.userVoted);
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => !hasVoted && votePoll(poll._id, i)}
+                            disabled={hasVoted}
+                            className={`w-full text-left relative overflow-hidden transition-colors ${
+                              hasVoted ? 'cursor-default' : 'hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer'
+                            }`}
+                          >
+                            {/* Background bar */}
+                            {hasVoted && (
+                              <div
+                                className="absolute inset-0 transition-all duration-500"
+                                style={{
+                                  width: `${opt.percentage}%`,
+                                  background: opt.userVoted ? 'rgba(74,222,128,0.15)' : 'rgba(148,152,158,0.1)',
+                                }}
+                              />
+                            )}
+                            <div className="relative flex items-center justify-between px-2.5 py-1.5 border border-[#e5e5e5] dark:border-[#222]">
+                              <span className="text-[11px] text-ink dark:text-paper">
+                                {opt.userVoted && <span className="mr-1">✓</span>}
+                                {opt.text}
+                              </span>
+                              {hasVoted && (
+                                <span className="text-[10px] text-ink-faint font-medium">{opt.percentage}%</span>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[9px] text-ink-faint mt-1">{poll.totalVotes} vote{poll.totalVotes !== 1 ? 's' : ''}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Sentiment Pulse */}
           {sentimentPulse && sentimentPulse.sentiments?.length > 0 && (
             <div className={`${CARD} p-4`}>

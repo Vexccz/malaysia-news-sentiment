@@ -996,3 +996,110 @@ exports.replyToPost = async (req, res) => {
     res.status(500).json({ error: 'Failed to reply to post.' });
   }
 };
+
+// ── Community Polls ──────────────────────────────────────────────
+
+const Poll = require('../models/Poll');
+
+// @desc    Create a poll
+// @route   POST /api/v1/collab/polls
+// @access  Private
+exports.createPoll = async (req, res) => {
+  try {
+    const { question, options, articleId } = req.body;
+    if (!question?.trim()) return res.status(400).json({ error: 'Question is required.' });
+    if (!options || options.length < 2 || options.length > 6) {
+      return res.status(400).json({ error: 'Poll needs 2-6 options.' });
+    }
+
+    const poll = await Poll.create({
+      question: question.trim(),
+      options: options.map(text => ({ text: text.trim(), voters: [] })),
+      createdBy: req.userId,
+      articleId: articleId || null,
+    });
+
+    await poll.populate('createdBy', 'name avatar');
+    res.status(201).json({ poll });
+  } catch (err) {
+    console.error('[Collab] createPoll error:', err.message);
+    res.status(500).json({ error: 'Failed to create poll.' });
+  }
+};
+
+// @desc    Get active polls
+// @route   GET /api/v1/collab/polls
+// @access  Public
+exports.getPolls = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 5;
+    const polls = await Poll.find({ expiresAt: { $gt: new Date() } })
+      .populate('createdBy', 'name avatar')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    const uid = req.userId;
+    const formatted = polls.map(p => {
+      const totalVotes = p.options.reduce((sum, o) => sum + o.voters.length, 0);
+      const userVote = p.options.findIndex(o => o.voters.some(v => v.toString() === uid));
+      return {
+        _id: p._id,
+        question: p.question,
+        options: p.options.map((o, i) => ({
+          text: o.text,
+          votes: o.voters.length,
+          percentage: totalVotes > 0 ? Math.round((o.voters.length / totalVotes) * 100) : 0,
+          userVoted: i === userVote,
+        })),
+        totalVotes,
+        createdBy: p.createdBy,
+        articleId: p.articleId,
+        expiresAt: p.expiresAt,
+        createdAt: p.createdAt,
+      };
+    });
+
+    res.json({ polls: formatted });
+  } catch (err) {
+    console.error('[Collab] getPolls error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch polls.' });
+  }
+};
+
+// @desc    Vote on a poll
+// @route   POST /api/v1/collab/polls/:id/vote
+// @access  Private
+exports.votePoll = async (req, res) => {
+  try {
+    const { optionIndex } = req.body;
+    const poll = await Poll.findById(req.params.id);
+    if (!poll) return res.status(404).json({ error: 'Poll not found.' });
+    if (poll.expiresAt < new Date()) return res.status(400).json({ error: 'Poll has expired.' });
+    if (optionIndex < 0 || optionIndex >= poll.options.length) {
+      return res.status(400).json({ error: 'Invalid option.' });
+    }
+
+    const uid = req.userId;
+    // Remove existing vote
+    poll.options.forEach(o => {
+      o.voters = o.voters.filter(v => v.toString() !== uid);
+    });
+    // Add new vote
+    poll.options[optionIndex].voters.push(uid);
+    await poll.save();
+
+    const totalVotes = poll.options.reduce((sum, o) => sum + o.voters.length, 0);
+    const formatted = poll.options.map((o, i) => ({
+      text: o.text,
+      votes: o.voters.length,
+      percentage: totalVotes > 0 ? Math.round((o.voters.length / totalVotes) * 100) : 0,
+      userVoted: i === optionIndex,
+    }));
+
+    res.json({ options: formatted, totalVotes });
+  } catch (err) {
+    console.error('[Collab] votePoll error:', err.message);
+    res.status(500).json({ error: 'Failed to vote.' });
+  }
+};

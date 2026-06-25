@@ -21,6 +21,9 @@ const {
   likePost,
   reactToPost,
   replyToPost,
+  createPoll,
+  getPolls,
+  votePoll,
 } = require('../controllers/collaborationController');
 
 // ── Comments ────────────────────────────────────────────────
@@ -50,6 +53,11 @@ router.post('/posts', protect, createPost);
 router.post('/posts/:id/like', protect, likePost);
 router.post('/posts/:id/react', protect, reactToPost);
 router.post('/posts/:id/reply', protect, replyToPost);
+
+// ── Community Polls ──────────────────────────────────────────
+router.get('/polls', getPolls);
+router.post('/polls', protect, createPoll);
+router.post('/polls/:id/vote', protect, votePoll);
 
 router.get('/shared', getSharedArticles);
 
