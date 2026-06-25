@@ -5,6 +5,7 @@ const {
   register, login, googleLogin, googleFirebaseLogin, verifyEmail,
   forgotPassword, resetPassword, getMe,
   updatePreferences, updateProfile, resendVerification,
+  setup2FA, verify2FA, disable2FA,
 } = require('../controllers/authController');
 const { signGuestToken } = require('../middleware/auth');
 
@@ -58,6 +59,11 @@ if (process.env.NODE_ENV !== 'production') {
 router.get('/me',                   protect, getMe);
 router.patch('/preferences',        protect, updatePreferences);
 router.patch('/profile',            protect, updateProfile);
+
+// 2FA
+router.post('/2fa/setup',           protect, setup2FA);
+router.post('/2fa/verify',          protect, verify2FA);
+router.post('/2fa/disable',         protect, disable2FA);
 
 module.exports = router;
 

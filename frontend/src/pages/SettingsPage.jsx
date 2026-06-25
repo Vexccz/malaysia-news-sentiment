@@ -60,47 +60,65 @@ const loadGuestNotificationPrefs = () => {
   catch { return {}; }
 };
 
-const generateMockSecret = () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-  let secret = '';
-  for (let i = 0; i < 16; i++) {
-    secret += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return secret;
-};
-
 const formatSecret = (secret) =>
   secret.match(/.{1,4}/g)?.join(' ') || secret;
 
 const TwoFactorAuthRow = () => {
   const [twoFAState, setTwoFAState] = useState('idle'); // idle | setup | enabled
   const [secret, setSecret] = useState('');
+  const [qrCode, setQrCode] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleStartSetup = () => {
-    const newSecret = generateMockSecret();
-    setSecret(newSecret);
-    setTwoFAState('setup');
-    setVerificationCode('');
+  const handleStartSetup = async () => {
+    setLoading(true);
     setError('');
+    try {
+      const { data } = await api.post('/auth/2fa/setup');
+      setSecret(data.secret);
+      setQrCode(data.qr);
+      setTwoFAState('setup');
+      setVerificationCode('');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to start 2FA setup.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     const trimmed = verificationCode.trim();
     if (trimmed.length !== 6 || !/^\d{6}$/.test(trimmed)) {
       setError('Please enter a valid 6-digit code.');
       return;
     }
+    setLoading(true);
     setError('');
-    setTwoFAState('enabled');
+    try {
+      await api.post('/auth/2fa/verify', { code: trimmed });
+      setTwoFAState('enabled');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Invalid code. Try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDisable = () => {
-    setTwoFAState('idle');
-    setSecret('');
-    setVerificationCode('');
+  const handleDisable = async () => {
+    setLoading(true);
     setError('');
+    try {
+      await api.post('/auth/2fa/disable');
+      setTwoFAState('idle');
+      setSecret('');
+      setQrCode('');
+      setVerificationCode('');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to disable 2FA.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (twoFAState === 'enabled') {
@@ -157,25 +175,14 @@ const TwoFactorAuthRow = () => {
               Enter this key in your authenticator app (Google Authenticator, Authy, etc.) or scan the code below.
             </p>
           </div>
-          {/* QR Code placeholder */}
+          {/* QR Code — real from backend */}
           <div className="mt-3 border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#0a0a0a] p-4 flex flex-col items-center">
-            <div className="w-32 h-32 border-2 border-ink dark:border-paper flex items-center justify-center">
-              <div className="grid grid-cols-8 grid-rows-8 w-24 h-24 gap-px">
-                {Array.from({ length: 64 }).map((_, i) => {
-                  const isFilled = ((i % 3) + Math.floor(i / 8)) % 2 === 0 ||
-                    (i < 8 || i >= 56 || i % 8 === 0 || i % 8 === 7) ||
-                    (i >= 27 && i <= 29) || (i >= 35 && i <= 37) ||
-                    (i >= 18 && i <= 20) || (i >= 44 && i <= 46);
-                  return (
-                    <div
-                      key={i}
-                      className={`${isFilled ? 'bg-ink dark:bg-paper' : 'bg-white dark:bg-[#0a0a0a]'}`}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-            <p className="text-[9px] text-ink-faint mt-2 uppercase tracking-wider font-sans">Demo QR Code</p>
+            {qrCode ? (
+              <img src={qrCode} alt="Scan this QR code with your authenticator app" className="w-40 h-40" />
+            ) : (
+              <div className="w-40 h-40 flex items-center justify-center text-[10px] text-ink-faint">Loading QR...</div>
+            )}
+            <p className="text-[9px] text-ink-faint mt-2 uppercase tracking-wider font-sans">Scan with Google Authenticator</p>
           </div>
         </div>
 

@@ -401,4 +401,80 @@ const resendVerification = async (req, res) => {
   }
 };
 
-module.exports = { register, login, googleLogin, googleFirebaseLogin, verifyEmail, forgotPassword, resetPassword, getMe, updatePreferences, updateProfile, resendVerification };
+// ── TWO-FACTOR AUTH ──────────────────────────────────────────
+const speakeasy = require('speakeasy');
+const QRCode = require('qrcode');
+
+const setup2FA = async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    const secret = speakeasy.generateSecret({
+      name: `MY News Sentiment (${user.email})`,
+      issuer: 'MY News Sentiment',
+      length: 20,
+    });
+
+    // Store temp secret (not enabled yet)
+    user.twoFactorSecret = secret.base32;
+    await user.save({ validateBeforeSave: false });
+
+    // Generate QR code as data URL
+    const qrDataUrl = await QRCode.toDataURL(secret.otpauth_url);
+
+    res.json({
+      secret: secret.base32,
+      qr: qrDataUrl,
+      otpauthUrl: secret.otpauth_url,
+    });
+  } catch (err) {
+    console.error('2FA setup error:', err);
+    res.status(500).json({ error: 'Failed to setup 2FA.' });
+  }
+};
+
+const verify2FA = async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code || code.length !== 6) return res.status(400).json({ error: 'Invalid code format.' });
+
+    const user = await User.findById(req.userId).select('+twoFactorSecret');
+    if (!user || !user.twoFactorSecret) return res.status(400).json({ error: '2FA not set up. Call setup first.' });
+
+    const verified = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: 'base32',
+      token: code,
+      window: 1, // allow 30s clock skew
+    });
+
+    if (!verified) return res.status(400).json({ error: 'Invalid verification code.' });
+
+    user.twoFactorEnabled = true;
+    await user.save({ validateBeforeSave: false });
+
+    res.json({ message: '2FA enabled successfully!', twoFactorEnabled: true });
+  } catch (err) {
+    console.error('2FA verify error:', err);
+    res.status(500).json({ error: 'Failed to verify 2FA.' });
+  }
+};
+
+const disable2FA = async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('+twoFactorSecret');
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    user.twoFactorEnabled = false;
+    user.twoFactorSecret = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    res.json({ message: '2FA disabled.', twoFactorEnabled: false });
+  } catch (err) {
+    console.error('2FA disable error:', err);
+    res.status(500).json({ error: 'Failed to disable 2FA.' });
+  }
+};
+
+module.exports = { register, login, googleLogin, googleFirebaseLogin, verifyEmail, forgotPassword, resetPassword, getMe, updatePreferences, updateProfile, resendVerification, setup2FA, verify2FA, disable2FA };

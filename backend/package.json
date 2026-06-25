@@ -11,7 +11,9 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "setupFilesAfterEnv": ["./jest.setup.js"],
+    "setupFilesAfterEnv": [
+      "./jest.setup.js"
+    ],
     "testTimeout": 30000,
     "coverageDirectory": "./coverage",
     "reporters": [
@@ -51,7 +53,9 @@
     "openai": "^6.34.0",
     "p-limit": "^2.3.0",
     "pdfkit": "^0.18.0",
+    "qrcode": "^1.5.4",
     "sentiment": "^5.0.2",
-    "socket.io": "^4.8.3"
+    "socket.io": "^4.8.3",
+    "speakeasy": "^2.0.0"
   }
 }
