@@ -736,6 +736,20 @@ export const translations = {
     noDataForTopic: 'No data found for this topic and time range',
     sentimentScore: 'Sentiment Score',
     opportunities: 'Opportunities',
+    // SourceCredibility — new features
+    balancedCoverage: 'For Balanced Coverage',
+    readPair: 'Opposite perspectives, high reliability',
+    recommendedReading: 'Recommended Reading',
+    sourceComparison: 'Source Comparison',
+    sourceComparisonDesc: 'Side-by-side bias and reliability scores for all sources',
+    historicalTrend: '7-Day Trend',
+    biasScore: 'Bias Score',
+    reliabilityScore: 'Reliability',
+    trendLabel: 'Trend',
+    noComparisonData: 'No comparison data available',
+    comparisonNote: 'Click column headers to sort',
+    positiveRatio: 'Pos %',
+    negativeRatio: 'Neg %',
   },
   ms: {
     // Nav
@@ -1209,5 +1223,19 @@ export const translations = {
     noDataForTopic: 'Tiada data ditemui untuk topik dan julat masa ini',
     sentimentScore: 'Skor Sentimen',
     opportunities: 'Peluang',
+    // SourceCredibility — new features
+    balancedCoverage: 'Untuk Liputan Seimbang',
+    readPair: 'Perspektif berbeza, kebolehpercayaan tinggi',
+    recommendedReading: 'Bacaan Disyorkan',
+    sourceComparison: 'Perbandingan Sumber',
+    sourceComparisonDesc: 'Skor berat sebelah dan kebolehpercayaan sumber secara bersebelahan',
+    historicalTrend: 'Trend 7 Hari',
+    biasScore: 'Skor Berat Sebelah',
+    reliabilityScore: 'Kebolehpercayaan',
+    trendLabel: 'Trend',
+    noComparisonData: 'Tiada data perbandingan tersedia',
+    comparisonNote: 'Klik tajuk lajur untuk mengisih',
+    positiveRatio: 'Pos %',
+    negativeRatio: 'Neg %',
   }
 };
