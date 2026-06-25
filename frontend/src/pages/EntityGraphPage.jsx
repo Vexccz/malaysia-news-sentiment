@@ -84,7 +84,9 @@ export default function EntityGraphPage() {
     checkMobile();
     if (window.innerWidth <= 768) setViewMode('list');
     window.addEventListener('resize', checkMobile);
-  
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Focus neighborhood effect - update items without full re-render
   useEffect(() => {
     const graph = graphInstance.current;
@@ -123,8 +125,6 @@ export default function EntityGraphPage() {
       });
     } catch {}
   }, [focusedNode]);
-  return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   // Cleanup timeline animation on unmount
   useEffect(() => {
