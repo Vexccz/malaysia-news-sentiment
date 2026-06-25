@@ -20,7 +20,7 @@ import AnalyzingOverlay from '../components/AnalyzingOverlay';
 import usePullToRefresh from '../hooks/usePullToRefresh';
 import useSwipeTabs from '../hooks/useSwipeTabs';
 import { hapticImpact } from '../utils/haptics';
-import { Search, Clock, ArrowLeft, Sparkles, FileDown, Printer, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Brain, Download, Settings2, Globe, GripVertical, Activity, Users, Calendar, Camera } from 'lucide-react';
+import { Search, Clock, ArrowLeft, Sparkles, FileDown, Printer, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Brain, Download, Settings2, Globe, GripVertical, Activity, Users } from 'lucide-react';
 import DashboardCustomizer from '../components/DashboardCustomizer';
 import EmptyState from '../components/EmptyState';
 import DashboardSummary from '../components/DashboardSummary';
@@ -227,19 +227,6 @@ const WIDGET_ID_MAP = {
 };
 
 /**
- * Animated stat number — uses CSS counter-increment for smooth animation.
- * Replaced useCountUp hook to fix TDZ error in production minification.
- */
-const AnimatedNumber = ({ value }) => {
-  const ref = React.useRef(null);
-  React.useEffect(() => {
-    if (!ref.current) return;
-    ref.current.textContent = (value || 0).toLocaleString();
-  }, [value]);
-  return <span ref={ref}>{(value || 0).toLocaleString()}</span>;
-};
-
-/**
  * Trend badge – shows % change vs previous period.
  * `pct` is the raw percentage change (e.g. 12, -5, 0).
  * `inverted` inverts the arrow colour logic (used for Negative sentiment
@@ -249,11 +236,13 @@ const TrendBadge = ({ pct, inverted = false }) => {
   if (pct === 0 || pct === undefined || pct === null) {
     return (
       <span className="inline-flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 mt-1">
-        → 0%
+        → 0% vs last week
       </span>
     );
   }
   const isUp = pct > 0;
+  // For "normal" metrics up = green, down = red.
+  // For inverted metrics (negative sentiment) flip that.
   const good = inverted ? !isUp : isUp;
   const colorClass = good
     ? 'text-emerald-600 dark:text-emerald-400'
@@ -262,7 +251,7 @@ const TrendBadge = ({ pct, inverted = false }) => {
 
   return (
     <span className={`inline-flex items-center gap-1 text-xs font-semibold ${colorClass} mt-1`}>
-      {arrow}{Math.abs(pct)}%
+      {arrow}{Math.abs(pct)}% vs last week
     </span>
   );
 };
@@ -367,8 +356,8 @@ const Dashboard = () => {
     isLoading: isDashboardLoading,
     error: dashboardError 
   } = useQuery({
-    queryKey: ['dashboardInit', timeframe, page, dateFrom, dateTo],
-    queryFn: () => getDashboardInit({ limit: LIMIT, page, timeframe, dateFrom, dateTo }),
+    queryKey: ['dashboardInit', timeframe, page],
+    queryFn: () => getDashboardInit({ limit: LIMIT, page, timeframe }),
     enabled: isHistoryView,
     staleTime: 60000,
   });
@@ -399,13 +388,6 @@ const Dashboard = () => {
   const [noResultsQuery, setNoResultsQuery] = useState(null);
   const [showExportSheet, setShowExportSheet] = useState(false);
 
-  // Custom date range state
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-
-  // Ref for dashboard export
-  const dashboardRef = useRef(null);
-
   // Back gesture handling for export sheet
   useEffect(() => {
     if (!showExportSheet) return;
@@ -415,10 +397,10 @@ const Dashboard = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [showExportSheet]);
 
-  // Reset page when timeframe or date range changes
+  // Reset page when timeframe changes
   useEffect(() => {
     setPage(1);
-  }, [timeframe, dateFrom, dateTo]);
+  }, [timeframe]);
 
   // Derived Values
   const articles = isHistoryView ? (dashboardData?.history?.articles || []) : searchArticles;
@@ -670,10 +652,10 @@ const Dashboard = () => {
     }),
   };
 
-  // Click-to-filter on pie chart — navigate to Advanced Search with sentiment
+  // Click-to-filter on pie chart (Activity 2.2 - Toggle behaviour)
   const handlePieSegmentClick = (sentimentName) => {
-    // Navigate to Advanced Search with the sentiment filter
-    handleDrillDown(sentimentName, isHistoryView ? '' : currentQuery);
+    // Toggle: if already filtered by this sentiment, reset to 'all'
+    setFilter(filter === sentimentName ? 'All' : sentimentName);
   };
 
   // Click-to-filter on KPI cards (Activity 1.1 - Perfective Maintenance)
@@ -691,94 +673,6 @@ const Dashboard = () => {
       setFilter(filter === sentimentValue ? 'All' : sentimentValue);
     }
   };
-
-  // Drill-down: navigate to Advanced Search with sentiment filter
-  const handleDrillDown = useCallback((sentiment, topic) => {
-    const params = new URLSearchParams();
-    if (sentiment) params.set('sentiment', sentiment);
-    if (topic) params.set('q', topic);
-    if (dateFrom) params.set('dateFrom', dateFrom);
-    if (dateTo) params.set('dateTo', dateTo);
-    navigate(`/search?${params.toString()}`);
-  }, [navigate, dateFrom, dateTo]);
-
-  // Export dashboard as image using native browser APIs
-  const handleExportDashboardImage = useCallback(async () => {
-    const el = dashboardRef.current;
-    if (!el) return;
-    const imgToast = toast.loading(t('exportingImage') || 'Capturing dashboard...');
-
-    try {
-      // Clone node and inline all computed styles
-      const clone = el.cloneNode(true);
-      const allOriginal = el.querySelectorAll('*');
-      const allCloned = clone.querySelectorAll('*');
-      // Inline critical computed styles
-      for (let i = 0; i < allOriginal.length; i++) {
-        const computed = window.getComputedStyle(allOriginal[i]);
-        let inline = '';
-        for (let j = 0; j < computed.length; j++) {
-          const prop = computed[j];
-          inline += `${prop}:${computed.getPropertyValue(prop)};`;
-        }
-        allCloned[i].setAttribute('style', inline);
-      }
-      const rootComputed = window.getComputedStyle(el);
-      let rootInline = '';
-      for (let j = 0; j < rootComputed.length; j++) {
-        const prop = rootComputed[j];
-        rootInline += `${prop}:${rootComputed.getPropertyValue(prop)};`;
-      }
-      clone.setAttribute('style', rootInline);
-
-      // Build SVG with foreignObject
-      const w = el.scrollWidth;
-      const h = el.scrollHeight;
-      const data = new XMLSerializer().serializeToString(clone);
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
-        <foreignObject width="100%" height="100%">
-          <div xmlns="http://www.w3.org/1999/xhtml">${data}</div>
-        </foreignObject>
-      </svg>`;
-
-      const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-        img.src = url;
-      });
-
-      const canvas = document.createElement('canvas');
-      const scale = 2; // 2x for retina
-      canvas.width = w * scale;
-      canvas.height = h * scale;
-      const ctx = canvas.getContext('2d');
-      ctx.scale(scale, scale);
-      ctx.drawImage(img, 0, 0, w, h);
-      URL.revokeObjectURL(url);
-
-      canvas.toBlob((b) => {
-        if (!b) {
-          toast.error('Failed to capture dashboard.', { id: imgToast });
-          return;
-        }
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(b);
-        a.download = `dashboard-${new Date().toISOString().slice(0, 10)}.png`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        toast.success(t('dashboardExported') || 'Dashboard exported as image!', { id: imgToast });
-      }, 'image/png');
-    } catch (err) {
-      console.error('Export image failed:', err);
-      toast.error('Export failed. Try using Print instead.', { id: imgToast });
-    }
-  }, [t]);
 
   // Drag-and-drop handlers for widget reordering
   const handleDragStart = useCallback((e, widgetKey) => {
@@ -898,7 +792,6 @@ const Dashboard = () => {
 
   return (
     <div
-      ref={dashboardRef}
       className="relative"
       onTouchStart={(e) => { pullTouchStart(e); swipeTouchStart(e); }}
       onTouchMove={pullTouchMove}
@@ -1024,52 +917,22 @@ const Dashboard = () => {
                 )}
                 <div className="flex items-center gap-2 ml-auto flex-wrap">
                   {isHistoryView && (
-                      <div className="flex items-center gap-2">
-                        {TIME_OPTIONS.map(opt => (
-                          <button
-                            key={opt.key}
-                            className={`px-2 text-xs font-medium uppercase tracking-wider transition-colors font-sans ${
-                              timeframe === opt.key && !dateFrom && !dateTo
-                                ? 'text-ink dark:text-paper font-bold'
-                                : 'text-ink-faint hover:text-ink-muted'
-                            }`}
-                            onClick={() => { setTimeframe(opt.key); setPage(1); setDateFrom(''); setDateTo(''); }}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                        <span className="w-px h-4 bg-gray-200 dark:bg-[#2a2a2a] mx-1" />
-                        <div className="flex items-center gap-1.5">
-                          <Calendar size={12} className="text-ink-faint" />
-                          <input
-                            type="date"
-                            value={dateFrom}
-                            onChange={(e) => { setDateFrom(e.target.value); setTimeframe(''); setPage(1); }}
-                            className="text-[11px] font-medium uppercase tracking-wider text-ink dark:text-paper bg-transparent border border-gray-200 dark:border-[#2a2a2a] px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-600"
-                            title={t('from') || 'From'}
-                            style={{ colorScheme: 'auto' }}
-                          />
-                          <span className="text-[10px] text-ink-faint">–</span>
-                          <input
-                            type="date"
-                            value={dateTo}
-                            onChange={(e) => { setDateTo(e.target.value); setTimeframe(''); setPage(1); }}
-                            className="text-[11px] font-medium uppercase tracking-wider text-ink dark:text-paper bg-transparent border border-gray-200 dark:border-[#2a2a2a] px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-600"
-                            title={t('to') || 'To'}
-                            style={{ colorScheme: 'auto' }}
-                          />
-                          {(dateFrom || dateTo) && (
-                            <button
-                              onClick={() => { setDateFrom(''); setDateTo(''); }}
-                              className="text-[10px] text-ink-faint hover:text-ink dark:hover:text-paper transition-colors ml-0.5"
-                              title="Clear dates"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-0">
+                      {TIME_OPTIONS.map(opt => (
+                        <button
+                          key={opt.key}
+                          className={`px-2 text-xs font-medium uppercase tracking-wider transition-colors font-sans ${
+                            timeframe === opt.key 
+                              ? 'text-ink dark:text-paper font-bold' 
+                              : 'text-ink-faint hover:text-ink-muted'
+                          }`}
+                          onClick={() => { setTimeframe(opt.key); setPage(1); }}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   {/* Source filter dropdown */}
                   {uniqueSources.length > 1 && (
                     <select
@@ -1101,9 +964,6 @@ const Dashboard = () => {
                     </button>
                     <button onClick={handleExport} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="Export CSV">
                       <Download size={14} />
-                    </button>
-                    <button onClick={handleExportDashboardImage} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title={t('exportAsImage') || 'Export as Image'}>
-                      <Camera size={14} />
                     </button>
                   </div>
                   {/* Mobile: only customize + AI forecast inline, rest in FAB */}
@@ -1174,7 +1034,7 @@ const Dashboard = () => {
                                 Total Analyzed
                               </div>
                               <div className="font-['Playfair_Display'] text-5xl font-black text-ink dark:text-paper leading-none">
-                                <AnimatedNumber value={counts.total} />
+                                {counts.total.toLocaleString()}
                               </div>
                               <div className="mt-1">
                                 <TrendBadge pct={periodComparison.total} />
@@ -1191,13 +1051,10 @@ const Dashboard = () => {
                                 Positive
                               </div>
                               <div className="font-['Playfair_Display'] text-5xl font-black text-emerald-600 dark:text-emerald-500 leading-none">
-                                <AnimatedNumber value={counts.positive} />
+                                {counts.positive.toLocaleString()}
                               </div>
                               <div className="text-[10px] text-ink-muted dark:text-ink-faint mt-1.5 font-sans">
                                 {counts.total ? Math.round(counts.positive / counts.total * 100) : 0}%
-                              </div>
-                              <div className="mt-1">
-                                <TrendBadge pct={periodComparison.positive} />
                               </div>
                             </motion.div>
 
@@ -1211,13 +1068,10 @@ const Dashboard = () => {
                                 Negative
                               </div>
                               <div className="font-['Playfair_Display'] text-5xl font-black text-red-600 dark:text-red-500 leading-none">
-                                <AnimatedNumber value={counts.negative} />
+                                {counts.negative.toLocaleString()}
                               </div>
                               <div className="text-[10px] text-ink-muted dark:text-ink-faint mt-1.5 font-sans">
                                 {counts.total ? Math.round(counts.negative / counts.total * 100) : 0}%
-                              </div>
-                              <div className="mt-1">
-                                <TrendBadge pct={periodComparison.negative} inverted />
                               </div>
                             </motion.div>
 
@@ -1231,13 +1085,10 @@ const Dashboard = () => {
                                 Neutral
                               </div>
                               <div className="font-['Playfair_Display'] text-5xl font-black text-gray-500 dark:text-gray-400 leading-none">
-                                <AnimatedNumber value={counts.neutral} />
+                                {counts.neutral.toLocaleString()}
                               </div>
                               <div className="text-[10px] text-ink-muted dark:text-ink-faint mt-1.5 font-sans">
                                 {counts.total ? Math.round(counts.neutral / counts.total * 100) : 0}%
-                              </div>
-                              <div className="mt-1">
-                                <TrendBadge pct={periodComparison.neutral} />
                               </div>
                             </motion.div>
                           </div>
@@ -1499,7 +1350,7 @@ const Dashboard = () => {
                                 Total Analyzed
                               </div>
                               <div className="font-['Playfair_Display'] text-5xl font-black text-ink dark:text-paper leading-none">
-                                <AnimatedNumber value={counts.total} />
+                                {counts.total.toLocaleString()}
                               </div>
                               <div className="mt-1">
                                 <TrendBadge pct={periodComparison.total} />
@@ -1516,13 +1367,10 @@ const Dashboard = () => {
                                 Positive
                               </div>
                               <div className="font-['Playfair_Display'] text-5xl font-black text-emerald-600 dark:text-emerald-500 leading-none">
-                                <AnimatedNumber value={counts.positive} />
+                                {counts.positive.toLocaleString()}
                               </div>
                               <div className="text-[10px] text-ink-muted dark:text-ink-faint mt-1.5 font-sans">
                                 {counts.total ? Math.round(counts.positive / counts.total * 100) : 0}%
-                              </div>
-                              <div className="mt-1">
-                                <TrendBadge pct={periodComparison.positive} />
                               </div>
                             </motion.div>
 
@@ -1536,13 +1384,10 @@ const Dashboard = () => {
                                 Negative
                               </div>
                               <div className="font-['Playfair_Display'] text-5xl font-black text-red-600 dark:text-red-500 leading-none">
-                                <AnimatedNumber value={counts.negative} />
+                                {counts.negative.toLocaleString()}
                               </div>
                               <div className="text-[10px] text-ink-muted dark:text-ink-faint mt-1.5 font-sans">
                                 {counts.total ? Math.round(counts.negative / counts.total * 100) : 0}%
-                              </div>
-                              <div className="mt-1">
-                                <TrendBadge pct={periodComparison.negative} inverted />
                               </div>
                             </motion.div>
 
@@ -1556,13 +1401,10 @@ const Dashboard = () => {
                                 Neutral
                               </div>
                               <div className="font-['Playfair_Display'] text-5xl font-black text-gray-500 dark:text-gray-400 leading-none">
-                                <AnimatedNumber value={counts.neutral} />
+                                {counts.neutral.toLocaleString()}
                               </div>
                               <div className="text-[10px] text-ink-muted dark:text-ink-faint mt-1.5 font-sans">
                                 {counts.total ? Math.round(counts.neutral / counts.total * 100) : 0}%
-                              </div>
-                              <div className="mt-1">
-                                <TrendBadge pct={periodComparison.neutral} />
                               </div>
                             </motion.div>
                           </div>
@@ -1907,12 +1749,6 @@ const Dashboard = () => {
                     <FileDown size={18} />
                   </div>
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Download PDF Report</span>
-                </button>
-                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-sm hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-left" onClick={() => { handleExportDashboardImage(); setShowExportSheet(false); }}>
-                  <div className="w-9 h-9 rounded-xl bg-violet-50 dark:bg-violet-500/10 flex items-center justify-center text-violet-500">
-                    <Camera size={18} />
-                  </div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('exportAsImage') || 'Export as Image'}</span>
                 </button>
               </div>
             </motion.div>
