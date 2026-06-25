@@ -203,7 +203,7 @@ const ProfilePage = () => {
         const discussionsArr = commentsRes.status === 'fulfilled' ? (Array.isArray(commentsRes.value.data) ? commentsRes.value.data : commentsRes.value.data.discussions || []) : [];
 
         setStats({
-          articlesViewed: historyArr.length || user?.analysisCount || 0,
+          articlesViewed: user?.analysisCount || historyArr.length || 0,
           bookmarks: bookmarksArr.length,
           shared: sharedArr.length,
           comments: discussionsArr.length,
