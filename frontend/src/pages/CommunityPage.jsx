@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import { MessageSquare, X, Eye, Bookmark, MessageCircle, Calendar, Shield } from 'lucide-react';
 
 const CARD = 'bg-white dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222]';
@@ -369,6 +370,7 @@ const CommentItem = ({ c, onLike, timeAgo, sentimentColor, onUserClick, currentU
 const CommunityPage = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
+  const socket = useSocket();
   const [discussions, setDiscussions] = useState([]);
   const [hotTakes, setHotTakes] = useState([]);
   const [dotd, setDotd] = useState(null);
@@ -419,6 +421,42 @@ const CommunityPage = () => {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // Real-time Socket.IO listeners
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewComment = (data) => {
+      const { articleId, comment } = data;
+      // Update discussions list comment count
+      setDiscussions(prev => prev.map(d =>
+        d.articleId === articleId
+          ? { ...d, commentCount: d.commentCount + 1, lastComment: comment.content, lastCommentAt: comment.createdAt, userName: comment.user?.name || 'Anonymous' }
+          : d
+      ));
+      // If currently viewing this article's comments, add the new one
+      if (expandedId === articleId) {
+        setComments(prev => {
+          if (prev.some(c => c._id === comment._id)) return prev;
+          return [comment, ...prev];
+        });
+      }
+    };
+
+    const handleLikeUpdate = (data) => {
+      setComments(prev => prev.map(c =>
+        c._id === data.commentId ? { ...c, likes: Array(data.likes).fill(null) } : c
+      ));
+    };
+
+    socket.on('comment:new', handleNewComment);
+    socket.on('comment:like', handleLikeUpdate);
+
+    return () => {
+      socket.off('comment:new', handleNewComment);
+      socket.off('comment:like', handleLikeUpdate);
+    };
+  }, [socket, expandedId]);
 
   const loadComments = async (articleId) => {
     if (expandedId === articleId) { setExpandedId(null); return; }
