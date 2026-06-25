@@ -279,7 +279,7 @@ const Trending = () => {
                 <div className="flex-1 min-w-0 py-2">
                   <div className="flex items-start gap-4">
                     <div className="flex-1 min-w-0">
-                      <ArticleCard article={art} onPreview={handlePreview} />
+                      <ArticleCard article={art} onPreview={setSelectedArticle} />
                     </div>
                     {/* Sparkline + velocity */}
                     <div className="flex-shrink-0 w-28 flex flex-col items-end gap-1 pt-2">
