@@ -84,7 +84,46 @@ export default function EntityGraphPage() {
     checkMobile();
     if (window.innerWidth <= 768) setViewMode('list');
     window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+  
+  // Focus neighborhood effect - update items without full re-render
+  useEffect(() => {
+    const graph = graphInstance.current;
+    if (!graph || !graph.getNodes) return;
+    try {
+      const nodes = graph.getNodes();
+      const edges = graph.getEdges();
+      if (!focusedNode) {
+        nodes.forEach(n => {
+          const model = n.getModel();
+          graph.updateItem(n, { style: { ...model.style, opacity: 1 } });
+        });
+        edges.forEach(e => {
+          const model = e.getModel();
+          graph.updateItem(e, { style: { ...model.style, strokeOpacity: 0.6 } });
+        });
+        return;
+      }
+      const focusedItem = nodes.find(n => n.getModel().label === focusedNode);
+      if (!focusedItem) return;
+      const focusedId = focusedItem.getID();
+      const neighborIds = new Set([focusedId]);
+      edges.forEach(e => {
+        const m = e.getModel();
+        if (m.source === focusedId) neighborIds.add(m.target);
+        if (m.target === focusedId) neighborIds.add(m.source);
+      });
+      nodes.forEach(n => {
+        const m = n.getModel();
+        graph.updateItem(n, { style: { ...m.style, opacity: neighborIds.has(n.getID()) ? 1 : 0.08 } });
+      });
+      edges.forEach(e => {
+        const m = e.getModel();
+        const ok = neighborIds.has(m.source) && neighborIds.has(m.target);
+        graph.updateItem(e, { style: { ...m.style, strokeOpacity: ok ? 0.8 : 0.03 } });
+      });
+    } catch {}
+  }, [focusedNode]);
+  return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   // Cleanup timeline animation on unmount
@@ -318,17 +357,6 @@ export default function EntityGraphPage() {
     const sizeRange = mobileGraphMode ? 30 : 70;
 
     // Feature: Focus neighborhood - compute connected nodes
-    const focusedNeighborIds = new Set();
-    let focusedNodeId = null;
-    if (focusedNode) {
-      const focusedGraph = graphNodes.find(n => n.label === focusedNode);
-      if (focusedGraph) {
-        focusedNodeId = focusedGraph.id;
-        focusedNeighborIds.add(focusedNodeId);
-        graphEdges.forEach(e => {
-          if (e.source === focusedNodeId) focusedNeighborIds.add(e.target);
-          if (e.target === focusedNodeId) focusedNeighborIds.add(e.source);
-        });
       }
     }
 
@@ -350,7 +378,6 @@ export default function EntityGraphPage() {
             fill: color,
             stroke: isExpanded ? '#6366F1' : color,
             lineWidth: n.mentions > maxMentions * 0.6 ? 3.5 : 2,
-            opacity: (isHighlighted && onPath && (!focusedNode || focusedNeighborIds.has(n.id))) ? 1 : 0.08,
             lineDash: isExpanded ? [4, 2] : undefined,
             shadowBlur: n.mentions > maxMentions * 0.6 ? 20 : 0,
             shadowColor: `${color}60`,
@@ -374,7 +401,6 @@ export default function EntityGraphPage() {
         const pathIdxTgt = highlightedPath ? highlightedPath.indexOf(e.target) : -1;
         const isPathEdge = isOnPath && Math.abs(pathIdxSrc - pathIdxTgt) === 1;
         // Feature: Focus neighborhood - dim edges not connected to focused node
-        const focusConnected = !focusedNodeId || (focusedNeighborIds.has(e.source) && focusedNeighborIds.has(e.target));
         return {
           id: `edge-${i}`,
           source: e.source,
@@ -384,7 +410,7 @@ export default function EntityGraphPage() {
           style: {
             stroke: isPathEdge ? '#6366F1' : edgeColor,
             lineWidth: isPathEdge ? 5 : Math.min(5, 1.5 + e.weight * 0.6),
-            strokeOpacity: (highlightedPath && !isPathEdge) ? 0.05 : (focusConnected ? 0.6 : 0.03),
+            strokeOpacity: (highlightedPath && !isPathEdge) ? 0.05 : 0.6,
             endArrow: isPathEdge ? { path: 'M 0,0 L 8,4 L 8,-4 Z', fill: '#6366F1' } : false,
           },
         };
@@ -532,7 +558,7 @@ export default function EntityGraphPage() {
         graphInstance.current = null;
       }
     };
-  }, [data, loading, isDark, viewMode, isMobile, getFilteredData, calculateEdgeSentiments, linkDistance, nodeStrength, highlightedPath, timelineValue, graphDataExtra, pathMode, focusedNode]);
+  }, [data, loading, isDark, viewMode, isMobile, getFilteredData, calculateEdgeSentiments, linkDistance, nodeStrength, highlightedPath, timelineValue, graphDataExtra, pathMode]);
 
   // Handle resize
   useEffect(() => {
