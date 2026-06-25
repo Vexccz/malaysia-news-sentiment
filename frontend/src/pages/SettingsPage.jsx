@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { settingsTranslations } from '../services/settingsTranslations';
+import api from '../services/api';
 
 const Section = ({ title, children }) => (
   <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] mb-6">
@@ -59,6 +60,176 @@ const loadGuestNotificationPrefs = () => {
   catch { return {}; }
 };
 
+const generateMockSecret = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let secret = '';
+  for (let i = 0; i < 16; i++) {
+    secret += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return secret;
+};
+
+const formatSecret = (secret) =>
+  secret.match(/.{1,4}/g)?.join(' ') || secret;
+
+const TwoFactorAuthRow = () => {
+  const [twoFAState, setTwoFAState] = useState('idle'); // idle | setup | enabled
+  const [secret, setSecret] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [error, setError] = useState('');
+
+  const handleStartSetup = () => {
+    const newSecret = generateMockSecret();
+    setSecret(newSecret);
+    setTwoFAState('setup');
+    setVerificationCode('');
+    setError('');
+  };
+
+  const handleVerify = () => {
+    const trimmed = verificationCode.trim();
+    if (trimmed.length !== 6 || !/^\d{6}$/.test(trimmed)) {
+      setError('Please enter a valid 6-digit code.');
+      return;
+    }
+    setError('');
+    setTwoFAState('enabled');
+  };
+
+  const handleDisable = () => {
+    setTwoFAState('idle');
+    setSecret('');
+    setVerificationCode('');
+    setError('');
+  };
+
+  if (twoFAState === 'enabled') {
+    return (
+      <div className="px-5 py-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-ink dark:text-paper font-sans">Two-Factor Auth</span>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 font-sans">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              Enabled
+            </span>
+          </div>
+          <button
+            onClick={handleDisable}
+            className="px-3 py-1.5 text-xs font-medium uppercase tracking-wider text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors font-sans"
+          >
+            Disable 2FA
+          </button>
+        </div>
+        <p className="text-[11px] text-ink-faint font-sans">
+          Two-factor authentication is active. Your account requires a verification code on each sign-in.
+        </p>
+      </div>
+    );
+  }
+
+  if (twoFAState === 'setup') {
+    return (
+      <div className="px-5 py-4">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-medium text-ink dark:text-paper font-sans">Setup Two-Factor Auth</span>
+          <button
+            onClick={() => { setTwoFAState('idle'); setVerificationCode(''); setError(''); }}
+            className="text-[10px] text-ink-faint hover:text-ink-muted uppercase tracking-wider font-sans"
+          >
+            Cancel
+          </button>
+        </div>
+
+        {/* Step 1: Secret Key */}
+        <div className="mb-4">
+          <label className="block text-[10px] font-semibold text-ink-muted dark:text-ink-faint uppercase tracking-[0.15em] mb-2 font-sans">
+            Step 1 — Add to Authenticator App
+          </label>
+          <div className="border border-[#e5e5e5] dark:border-[#222] bg-paper dark:bg-paper-dark p-4">
+            <p className="text-[10px] text-ink-faint uppercase tracking-wider mb-2 font-sans">Manual Entry Key</p>
+            <div className="font-mono text-sm tracking-[0.3em] text-ink dark:text-paper select-all break-all">
+              {formatSecret(secret)}
+            </div>
+            <p className="text-[10px] text-ink-faint mt-3 font-sans">
+              Enter this key in your authenticator app (Google Authenticator, Authy, etc.) or scan the code below.
+            </p>
+          </div>
+          {/* QR Code placeholder */}
+          <div className="mt-3 border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#0a0a0a] p-4 flex flex-col items-center">
+            <div className="w-32 h-32 border-2 border-ink dark:border-paper flex items-center justify-center">
+              <div className="grid grid-cols-8 grid-rows-8 w-24 h-24 gap-px">
+                {Array.from({ length: 64 }).map((_, i) => {
+                  const isFilled = ((i % 3) + Math.floor(i / 8)) % 2 === 0 ||
+                    (i < 8 || i >= 56 || i % 8 === 0 || i % 8 === 7) ||
+                    (i >= 27 && i <= 29) || (i >= 35 && i <= 37) ||
+                    (i >= 18 && i <= 20) || (i >= 44 && i <= 46);
+                  return (
+                    <div
+                      key={i}
+                      className={`${isFilled ? 'bg-ink dark:bg-paper' : 'bg-white dark:bg-[#0a0a0a]'}`}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+            <p className="text-[9px] text-ink-faint mt-2 uppercase tracking-wider font-sans">Demo QR Code</p>
+          </div>
+        </div>
+
+        {/* Step 2: Verification */}
+        <div className="mb-2">
+          <label className="block text-[10px] font-semibold text-ink-muted dark:text-ink-faint uppercase tracking-[0.15em] mb-2 font-sans">
+            Step 2 — Verify Code
+          </label>
+          <p className="text-[11px] text-ink-faint mb-2 font-sans">
+            Enter the 6-digit code from your authenticator app to confirm setup.
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              maxLength={6}
+              inputMode="numeric"
+              className="w-32 px-3 py-1.5 text-sm tracking-[0.2em] text-center border border-paper-line dark:border-paper-dark-line bg-paper dark:bg-paper-dark text-ink dark:text-paper placeholder:text-ink-faint focus:outline-none focus:border-accent transition-colors font-mono"
+              placeholder="000000"
+              value={verificationCode}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, '');
+                setVerificationCode(val);
+                setError('');
+              }}
+            />
+            <button
+              onClick={handleVerify}
+              disabled={verificationCode.length !== 6}
+              className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wider bg-ink text-paper hover:bg-accent transition-colors font-sans disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Verify & Enable
+            </button>
+          </div>
+          {error && (
+            <p className="text-[11px] text-red-600 dark:text-red-400 mt-2 font-sans">{error}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // idle state
+  return (
+    <SettingRow label="Two-Factor Auth" desc="Add an extra layer of security">
+      <button
+        onClick={handleStartSetup}
+        className="px-3 py-1.5 text-xs font-medium uppercase tracking-wider text-ink dark:text-paper border border-paper-line dark:border-paper-dark-line hover:bg-paper dark:hover:bg-paper-dark transition-colors font-sans"
+      >
+        Setup 2FA
+      </button>
+    </SettingRow>
+  );
+};
+
 const SettingsPage = () => {
   const { user, updatePreferences, updateProfile, logout } = useAuth();
   const { lang, setLang } = useLanguage();
@@ -84,6 +255,29 @@ const SettingsPage = () => {
   const [saved, setSaved] = useState(null);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
+
+  // Billing state
+  const [showBillingComparison, setShowBillingComparison] = useState(false);
+  const [billingToast, setBillingToast] = useState(false);
+
+  // Avatar state
+  const avatarInputRef = useRef(null);
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [avatarError, setAvatarError] = useState(null);
+  const [avatarSaving, setAvatarSaving] = useState(false);
+
+  useEffect(() => {
+    if (!isGuest && user?.avatar) {
+      setAvatarPreview(user.avatar);
+    }
+  }, [isGuest, user?.avatar]);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [currentPw, setCurrentPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwError, setPwError] = useState('');
+  const [pwSuccess, setPwSuccess] = useState(false);
 
   useEffect(() => {
     if (!isGuest && user?.name) setName(user.name);
@@ -145,9 +339,88 @@ const SettingsPage = () => {
     }
   };
 
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPwError('');
+    if (newPw.length < 6) {
+      setPwError('New password must be at least 6 characters.');
+      return;
+    }
+    if (newPw !== confirmPw) {
+      setPwError('Passwords do not match.');
+      return;
+    }
+    setPwLoading(true);
+    try {
+      await api.post('/auth/change-password', { currentPassword: currentPw, newPassword: newPw });
+      setShowPasswordForm(false);
+      setCurrentPw('');
+      setNewPw('');
+      setConfirmPw('');
+      setPwSuccess(true);
+      setTimeout(() => setPwSuccess(false), 3000);
+    } catch (err) {
+      setPwError(err.response?.data?.message || 'Failed to change password.');
+    } finally {
+      setPwLoading(false);
+    }
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleAvatarClick = () => {
+    if (isGuest) return;
+    avatarInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarError(null);
+
+    if (file.size > 2 * 1024 * 1024) {
+      setAvatarError('File too large. Maximum size is 2MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64 = reader.result;
+      setAvatarPreview(base64);
+      setAvatarSaving(true);
+      try {
+        if (!isGuest) {
+          await updateProfile({ avatar: base64 });
+        }
+      } catch (err) {
+        console.error('Failed to upload avatar:', err);
+        setAvatarError('Upload failed. Please try again.');
+      } finally {
+        setAvatarSaving(false);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleRemoveAvatar = async () => {
+    setAvatarPreview(null);
+    setAvatarError(null);
+    if (!isGuest) {
+      try {
+        await updateProfile({ avatar: null });
+      } catch (err) {
+        console.error('Failed to remove avatar:', err);
+      }
+    }
+  };
+
+  const handleSubscribePro = () => {
+    setBillingToast(true);
+    setTimeout(() => setBillingToast(false), 3000);
   };
 
   return (
@@ -261,35 +534,190 @@ const SettingsPage = () => {
         ) : (
           <>
             <SettingRow label="Password" desc="Change your account password">
-              <button className="px-3 py-1.5 text-xs font-medium text-ink-faint border border-paper-line dark:border-paper-dark-line cursor-not-allowed font-sans opacity-50">
-                Change Password
+              <button
+                className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-ink dark:text-paper border border-paper-line dark:border-paper-dark-line hover:bg-paper dark:hover:bg-paper-dark transition-colors font-sans"
+                onClick={() => { setShowPasswordForm(!showPasswordForm); setPwError(''); }}
+              >
+                {showPasswordForm ? 'Cancel' : 'Change Password'}
               </button>
             </SettingRow>
-            <SettingRow label="Two-Factor Auth" desc="Add an extra layer of security">
-              <button className="px-3 py-1.5 text-xs font-medium text-ink-faint border border-paper-line dark:border-paper-dark-line cursor-not-allowed font-sans opacity-50">
-                Setup 2FA
-              </button>
-            </SettingRow>
+            {showPasswordForm && (
+              <form onSubmit={handleChangePassword} className="px-5 py-4 border-t border-[#e5e5e5] dark:border-[#222]">
+                <div className="flex flex-col gap-3 max-w-xs">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[10px] font-semibold text-ink-faint uppercase tracking-wider font-sans">Current Password</span>
+                    <input
+                      type="password"
+                      className="px-3 py-1.5 text-sm border border-paper-line dark:border-paper-dark-line bg-paper dark:bg-paper-dark text-ink dark:text-paper focus:outline-none focus:border-accent transition-colors font-sans"
+                      value={currentPw}
+                      onChange={e => setCurrentPw(e.target.value)}
+                      required
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[10px] font-semibold text-ink-faint uppercase tracking-wider font-sans">New Password</span>
+                    <input
+                      type="password"
+                      className="px-3 py-1.5 text-sm border border-paper-line dark:border-paper-dark-line bg-paper dark:bg-paper-dark text-ink dark:text-paper focus:outline-none focus:border-accent transition-colors font-sans"
+                      value={newPw}
+                      onChange={e => setNewPw(e.target.value)}
+                      required
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[10px] font-semibold text-ink-faint uppercase tracking-wider font-sans">Confirm Password</span>
+                    <input
+                      type="password"
+                      className="px-3 py-1.5 text-sm border border-paper-line dark:border-paper-dark-line bg-paper dark:bg-paper-dark text-ink dark:text-paper focus:outline-none focus:border-accent transition-colors font-sans"
+                      value={confirmPw}
+                      onChange={e => setConfirmPw(e.target.value)}
+                      required
+                    />
+                  </label>
+                  {pwError && <p className="text-[11px] text-red-600 dark:text-red-400 font-sans">{pwError}</p>}
+                  {pwSuccess && <p className="text-[11px] text-green-700 dark:text-green-400 font-sans">Password changed successfully.</p>}
+                  <button
+                    type="submit"
+                    disabled={pwLoading}
+                    className="self-start px-4 py-1.5 text-xs font-semibold uppercase tracking-wider bg-ink text-paper hover:bg-accent transition-colors font-sans disabled:opacity-40"
+                  >
+                    {pwLoading ? 'Saving…' : 'Save Password'}
+                  </button>
+                </div>
+              </form>
+            )}
+            <TwoFactorAuthRow />
           </>
         )}
       </Section>
 
       {/* Billing */}
       <Section title="Billing">
-        <SettingRow label="Current Plan" desc={isGuest ? "You're using the free tier" : "Manage your subscription"}>
-          <span className="text-xs font-semibold text-ink dark:text-paper font-sans">
-            {(!isGuest && safeUser.plan === 'pro') ? 'Pro Plan' : 'Free Plan'}
-          </span>
-        </SettingRow>
+        <div className="px-5 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <span className="text-sm font-medium text-ink dark:text-paper font-sans">Current Plan</span>
+              <p className="text-[11px] text-ink-faint mt-0.5 font-sans">
+                {isGuest ? "Sign in to manage billing" : "Manage your subscription"}
+              </p>
+            </div>
+            <span className="px-3 py-1 text-xs font-bold uppercase tracking-wider border border-ink dark:border-paper text-ink dark:text-paper font-sans">
+              {(!isGuest && safeUser.plan === 'pro') ? 'Pro Plan' : 'Free Plan'}
+            </span>
+          </div>
+          {!isGuest && safeUser.plan !== 'pro' && (
+            <button
+              onClick={() => setShowBillingComparison(!showBillingComparison)}
+              className="w-full mt-2 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider bg-ink text-paper hover:bg-accent dark:bg-paper dark:text-ink dark:hover:bg-paper-line transition-colors font-sans"
+            >
+              {showBillingComparison ? 'Hide Plans' : 'Upgrade to Pro'}
+            </button>
+          )}
+        </div>
+
+        {showBillingComparison && (
+          <div className="px-5 py-4 border-t border-[#e5e5e5] dark:border-[#222]">
+            <div className="grid grid-cols-2 gap-0 border border-[#e5e5e5] dark:border-[#222]">
+              {/* Free Plan Card */}
+              <div className="p-4 border-r border-[#e5e5e5] dark:border-[#222]">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-ink-muted dark:text-ink-faint font-sans mb-1">Free</h3>
+                <p className="text-lg font-black text-ink dark:text-paper font-sans mb-3">RM 0</p>
+                <ul className="space-y-1.5">
+                  {['50 articles/day', 'Basic sentiment analysis', 'No export', 'No API access'].map(f => (
+                    <li key={f} className="flex items-start gap-1.5 text-[11px] text-ink-faint font-sans">
+                      <span className="mt-0.5 text-[10px]">—</span>{f}
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-4 px-2 py-1.5 text-center text-[10px] font-semibold uppercase tracking-wider text-ink-faint border border-[#e5e5e5] dark:border-[#222] font-sans">
+                  Current Plan
+                </div>
+              </div>
+
+              {/* Pro Plan Card */}
+              <div className="p-4 bg-paper dark:bg-paper-dark">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-ink dark:text-paper font-sans mb-1">Pro</h3>
+                <p className="text-lg font-black text-ink dark:text-paper font-sans mb-1">RM 29<span className="text-[11px] font-medium text-ink-faint">/month</span></p>
+                <ul className="space-y-1.5">
+                  {['Unlimited articles', 'Advanced analytics', 'PDF & CSV export', 'API access', 'Priority support'].map(f => (
+                    <li key={f} className="flex items-start gap-1.5 text-[11px] text-ink dark:text-paper font-sans">
+                      <span className="mt-0.5 text-[10px]">✓</span>{f}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={handleSubscribePro}
+                  className="mt-4 w-full px-2 py-1.5 text-center text-[10px] font-semibold uppercase tracking-wider bg-ink text-paper hover:bg-accent dark:bg-paper dark:text-ink dark:hover:bg-paper-line transition-colors font-sans"
+                >
+                  Subscribe to Pro
+                </button>
+              </div>
+            </div>
+
+            {billingToast && (
+              <div className="mt-3 px-4 py-2 text-[11px] font-medium text-ink dark:text-paper bg-paper dark:bg-paper-dark border border-[#e5e5e5] dark:border-[#222] font-sans">
+                Coming soon — payment integration pending
+              </div>
+            )}
+          </div>
+        )}
       </Section>
 
       {/* Account Profile */}
       <Section title="Account Profile">
-        <SettingRow label="Display Photo" desc={isGuest ? "Sign in to set a profile photo" : "From your login source"}>
-          <div className="w-9 h-9 border border-paper-line dark:border-paper-dark-line flex items-center justify-center text-sm font-bold text-ink dark:text-paper font-display">
-            {(name || safeUser.name || '?').charAt(0).toUpperCase()}
+        <div className="flex items-center justify-between px-5 py-3">
+          <div className="flex-1 min-w-0 mr-4">
+            <span className="text-sm font-medium text-ink dark:text-paper font-sans">Display Photo</span>
+            <p className="text-[11px] text-ink-faint mt-0.5 font-sans">
+              {isGuest ? 'Sign in to set a profile photo' : 'Click to change (JPG, PNG, WebP, max 2MB)'}
+            </p>
           </div>
-        </SettingRow>
+          <div className="flex items-center gap-2">
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleAvatarChange}
+            />
+            <button
+              onClick={handleAvatarClick}
+              disabled={isGuest || avatarSaving}
+              className="relative w-10 h-10 rounded-full border-2 border-paper-line dark:border-paper-dark-line overflow-hidden flex items-center justify-center group disabled:cursor-not-allowed"
+            >
+              {avatarPreview ? (
+                <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <span className="w-full h-full flex items-center justify-center text-sm font-bold text-ink dark:text-paper font-display bg-[#fafafa] dark:bg-[#111]">
+                  {(name || safeUser.name || '?').charAt(0).toUpperCase()}
+                </span>
+              )}
+              {!isGuest && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-[8px] font-bold text-white uppercase tracking-wider">Edit</span>
+                </div>
+              )}
+              {avatarSaving && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                  <span className="text-[8px] font-bold text-white animate-pulse">...</span>
+                </div>
+              )}
+            </button>
+            {avatarPreview && !isGuest && (
+              <button
+                onClick={handleRemoveAvatar}
+                className="text-[10px] font-medium text-red-600 dark:text-red-400 hover:underline font-sans"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+        </div>
+        {avatarError && (
+          <div className="px-5 pb-2 -mt-1">
+            <span className="text-[11px] text-red-600 dark:text-red-400 font-sans">{avatarError}</span>
+          </div>
+        )}
 
         <SettingRow label="Display Name" desc="Your name shown in the dashboard">
           <div className="flex items-center gap-2">
