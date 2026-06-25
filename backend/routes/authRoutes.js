@@ -68,11 +68,11 @@ router.get('/profile/:userId', async (req, res) => {
 
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
-    // Get comment count
-    const commentCount = await Comment.countDocuments({ userId, isAnonymous: false });
+    // Get comment count (isAnonymous can be null or false — both mean not anonymous)
+    const commentCount = await Comment.countDocuments({ userId, isAnonymous: { $ne: true } });
 
     // Get recent comments (last 5, non-anonymous)
-    const recentComments = await Comment.find({ userId, isAnonymous: false })
+    const recentComments = await Comment.find({ userId, isAnonymous: { $ne: true } })
       .select('content articleId commentSentiment createdAt')
       .populate('articleId', 'title source')
       .sort({ createdAt: -1 })
