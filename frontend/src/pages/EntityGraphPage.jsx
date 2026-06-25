@@ -344,7 +344,6 @@ export default function EntityGraphPage() {
         return {
           id: n.id,
           label: n.label,
-          clusterId: n.category || 'default',
           data: { label: n.label, mentions: n.mentions, sentiment: n.sentiment, category: n.category },
           size: isExpanded ? nodeSize * 0.85 : nodeSize,
           style: {
@@ -410,10 +409,6 @@ export default function EntityGraphPage() {
         collideStrength: 1,
         alphaDecay: 0.015,
         alphaMin: 0.001,
-        clustering: true,
-        clusterNodeStrength: 3,
-        clusterEdgeStrength: 0.5,
-        clusterFociStrength: 0.8,
       },
       modes: {
         default: [
