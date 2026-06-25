@@ -284,11 +284,11 @@ const Trending = () => {
                     {/* Sparkline + velocity */}
                     <div className="flex-shrink-0 w-28 flex flex-col items-end gap-1 pt-2">
                       <div className="flex items-center gap-1">
-                        <VelocityIcon dir={velocity.dir} />
-                        <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                        {velocity.dir !== 'stable' && <VelocityIcon dir={velocity.dir} />}
+                        <span className={`text-[10px] font-bold ${
                           velocity.dir === 'up' ? 'text-emerald-500' : velocity.dir === 'down' ? 'text-red-500' : 'text-slate-400'
                         }`}>
-                          {velocity.dir === 'stable' ? 'Stable' : `${velocity.pct > 0 ? '+' : ''}${velocity.pct}%`}
+                          {velocity.dir === 'stable' ? '—' : `${velocity.pct > 0 ? '+' : ''}${velocity.pct}%`}
                         </span>
                       </div>
                       {trendData[topic] && trendData[topic].length > 1 && (
@@ -309,8 +309,8 @@ const Trending = () => {
                       )}
                       {!compareMode && (
                         <button onClick={() => handleDrillDown(topic)}
-                          className="text-[9px] uppercase tracking-wider text-ink-muted hover:text-ink dark:hover:text-paper transition-colors font-sans">
-                          {t('viewAll') || 'View All'} →
+                          className="text-[9px] text-ink-muted hover:text-ink dark:hover:text-paper transition-colors font-sans">
+                          View All →
                         </button>
                       )}
                     </div>
