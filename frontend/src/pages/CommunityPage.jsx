@@ -383,6 +383,11 @@ const CommunityPage = () => {
   const [trendingKeywords, setTrendingKeywords] = useState([]);
   const [sentimentPulse, setSentimentPulse] = useState(null);
   const [leaderboard, setLeaderboard] = useState([]);
+  const [communityPosts, setCommunityPosts] = useState([]);
+  const [postContent, setPostContent] = useState('');
+  const [postAnonymous, setPostAnonymous] = useState(false);
+  const [posting, setPosting] = useState(false);
+  const [activeTab, setActiveTab] = useState('discussions'); // 'discussions' | 'posts'
 
   useEffect(() => {
     let cancelled = false;
@@ -395,6 +400,7 @@ const CommunityPage = () => {
           api.get('/collab/trending-keywords?days=7&limit=15'),
           api.get('/collab/sentiment-pulse?days=7'),
           api.get('/collab/leaderboard?days=7&limit=5'),
+          api.get('/collab/posts?limit=10'),
         ]);
         if (!cancelled) {
           setDiscussions(discRes.data.discussions || []);
@@ -403,6 +409,7 @@ const CommunityPage = () => {
           setTrendingKeywords(kwRes.data.keywords || []);
           setSentimentPulse(spRes.data || null);
           setLeaderboard(lbRes.data.leaderboard || []);
+          setCommunityPosts(postsRes.data.posts || []);
         }
       } catch (err) {
         console.error('Community fetch failed:', err);
@@ -446,6 +453,18 @@ const CommunityPage = () => {
   const reactToComment = async (commentId, emoji) => {
     const { data } = await api.post(`/collab/comments/${commentId}/react`, { emoji });
     return { data };
+  };
+
+  const submitPost = async () => {
+    if (!postContent.trim() || posting) return;
+    setPosting(true);
+    try {
+      const { data } = await api.post('/collab/posts', { content: postContent.trim(), isAnonymous: postAnonymous });
+      setCommunityPosts(prev => [data.post, ...prev]);
+      setPostContent('');
+      setPostAnonymous(false);
+    } catch {}
+    finally { setPosting(false); }
   };
 
   const timeAgo = (dateStr) => {
@@ -495,6 +514,56 @@ const CommunityPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Main content */}
         <div className="lg:col-span-2 space-y-4">
+          {/* Share Your Take compose box */}
+          <div className={`${CARD} p-4`}>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted dark:text-ink-faint">Share Your Take</span>
+              <button onClick={() => setPostAnonymous(!postAnonymous)}
+                className={`flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-medium border transition-colors ${postAnonymous ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/20 text-amber-600' : 'border-[#e5e5e5] dark:border-[#333] text-ink-faint'}`}>
+                {postAnonymous ? 'Anonymous' : 'Visible'}
+              </button>
+            </div>
+            <textarea
+              value={postContent}
+              onChange={(e) => setPostContent(e.target.value)}
+              placeholder="What's on your mind about Malaysian news?"
+              rows={3}
+              className="w-full px-3 py-2 text-sm border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#0a0a0a] text-ink dark:text-paper placeholder:text-ink-faint focus:outline-none focus:border-ink dark:focus:border-paper transition-colors resize-none"
+            />
+            <div className="flex justify-end mt-2">
+              <button onClick={submitPost} disabled={!postContent.trim() || posting}
+                className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wider bg-ink dark:bg-paper text-paper dark:text-ink hover:opacity-80 disabled:opacity-30 transition-all">
+                {posting ? 'Posting...' : 'Post'}
+              </button>
+            </div>
+          </div>
+
+          {/* Tab switcher */}
+          <div className="flex gap-0 border-b border-[#e5e5e5] dark:border-[#222]">
+            <button
+              onClick={() => setActiveTab('discussions')}
+              className={`px-4 py-2 text-[11px] font-semibold uppercase tracking-wider transition-colors border-b-2 ${
+                activeTab === 'discussions'
+                  ? 'border-ink dark:border-paper text-ink dark:text-paper'
+                  : 'border-transparent text-ink-faint hover:text-ink dark:hover:text-paper'
+              }`}
+            >
+              Article Discussions
+            </button>
+            <button
+              onClick={() => setActiveTab('posts')}
+              className={`px-4 py-2 text-[11px] font-semibold uppercase tracking-wider transition-colors border-b-2 ${
+                activeTab === 'posts'
+                  ? 'border-ink dark:border-paper text-ink dark:text-paper'
+                  : 'border-transparent text-ink-faint hover:text-ink dark:hover:text-paper'
+              }`}
+            >
+              Community Posts
+            </button>
+          </div>
+          {/* Tab content */}
+          {activeTab === 'discussions' && (
+          <>
           {/* Discussion of the Day */}
           {dotd && dotd.articleId && (
             <div className={`${CARD} overflow-hidden border-l-2`} style={{ borderLeftColor: '#f59e0b' }}>
@@ -622,7 +691,76 @@ const CommunityPage = () => {
                 ))}
               </div>
             )}
-          </div>
+          </>
+          )}
+
+          {/* Community Posts tab */}
+          {activeTab === 'posts' && (
+            <div className="space-y-3">
+              {communityPosts.length === 0 ? (
+                <div className={`${CARD} p-8 text-center`}>
+                  <MessageSquare size={24} className="mx-auto mb-2 text-ink-faint" />
+                  <p className="text-sm text-ink-faint">No posts yet.</p>
+                  <p className="text-xs text-ink-faint mt-1">Be the first to share your take!</p>
+                </div>
+              ) : (
+                communityPosts.map(p => {
+                  const postInitials = (p.user?.name || 'A').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+                  return (
+                    <div key={p._id} className={`${CARD} p-4`}>
+                      <div className="flex items-center gap-2.5 mb-2">
+                        {p.isAnonymous ? (
+                          <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] text-ink-faint">?</div>
+                        ) : p.user?.avatar ? (
+                          <img src={p.user.avatar} alt={p.user.name}
+                            className="w-7 h-7 rounded-full object-cover cursor-pointer hover:opacity-80"
+                            onClick={() => setViewingUserId(p.userId)} />
+                        ) : (
+                          <div className="w-7 h-7 rounded-full bg-accent/10 text-accent flex items-center justify-center text-[10px] font-bold cursor-pointer hover:opacity-80"
+                            onClick={() => setViewingUserId(p.userId)}>
+                            {postInitials}
+                          </div>
+                        )}
+                        <span className={`text-xs font-semibold ${p.isAnonymous ? 'text-ink-faint' : 'text-ink dark:text-paper cursor-pointer hover:underline'}`}
+                          onClick={() => !p.isAnonymous && setViewingUserId(p.userId)}>
+                          {p.isAnonymous ? 'Anonymous' : (p.user?.name || 'Anonymous')}
+                        </span>
+                        {p.sentiment && (
+                          <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider"
+                            style={{ background: sentimentColor(p.sentiment) + '15', color: sentimentColor(p.sentiment) }}>
+                            {p.sentiment}
+                          </span>
+                        )}
+                        <span className="text-[10px] text-ink-faint ml-auto">{timeAgo(p.createdAt)}</span>
+                      </div>
+                      <p className="text-sm text-ink dark:text-paper leading-relaxed ml-[38px]">{p.content}</p>
+                      {p.tags?.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2 ml-[38px]">
+                          {p.tags.map(tag => (
+                            <span key={tag} className="px-1.5 py-0.5 text-[9px] border border-[#e5e5e5] dark:border-[#333] text-ink-faint">#{tag}</span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-3 mt-2 ml-[38px]">
+                        <span className="flex items-center gap-1 text-[10px] text-ink-faint">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                          </svg>
+                          {p.likes?.length || 0}
+                        </span>
+                        <span className="flex items-center gap-1 text-[10px] text-ink-faint">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>
+                          </svg>
+                          {p.replies?.length || 0}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right: Hot Takes sidebar */}
