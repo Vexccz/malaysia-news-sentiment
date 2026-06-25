@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getArticleAnalysis, trackView } from '../services/api';
+import api from '../services/api';
 
 const deriveSourceLabel = (source, url) => {
   if (source && source !== 'Unknown' && source !== 'Source' && source !== 'Media Source') return source;
@@ -29,6 +30,10 @@ const ArticleDetailPanel = ({ article, isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState('summary');
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [comments, setComments] = useState([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !article) {
@@ -39,12 +44,10 @@ const ArticleDetailPanel = ({ article, isOpen, onClose }) => {
     const load = async () => {
       setLoading(true);
       try {
-        // Track the view as soon as panel is opened
         const articleId = article._id || article.id;
         if (articleId) {
           trackView(articleId).catch(err => console.error('View tracking failed:', err));
         }
-
         const data = await getArticleAnalysis(article);
         setAnalysis(data);
       } catch (err) {
@@ -55,9 +58,47 @@ const ArticleDetailPanel = ({ article, isOpen, onClose }) => {
       }
     };
     load();
+
+    // Load comments
+    const articleId = article._id || article.id;
+    if (articleId) {
+      setCommentsLoading(true);
+      api.get(`/collab/comments/${articleId}`)
+        .then(({ data }) => setComments(data.comments || []))
+        .catch(() => {})
+        .finally(() => setCommentsLoading(false));
+    }
   }, [isOpen, article]);
 
   if (!article && isOpen) return null;
+
+  const submitComment = async () => {
+    if (!newComment.trim() || submitting) return;
+    const articleId = article?._id || article?.id;
+    if (!articleId) return;
+    setSubmitting(true);
+    try {
+      const { data } = await api.post('/collab/comments', { articleId, content: newComment.trim() });
+      setComments(prev => [data.comment, ...prev]);
+      setNewComment('');
+    } catch { /* silent */ }
+    finally { setSubmitting(false); }
+  };
+
+  const likeComment = async (commentId) => {
+    try { await api.post(`/collab/comments/${commentId}/like`); } catch {}
+  };
+
+  const timeAgo = (dateStr) => {
+    if (!dateStr) return '';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + 'm ago';
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return hrs + 'h ago';
+    return Math.floor(hrs / 24) + 'd ago';
+  };
 
   const { title, url, source, publishedAt, description, urlToImage } = article || {};
   const currentAnalysis = analysis || buildFallbackAnalysis(article);
@@ -97,7 +138,7 @@ const ArticleDetailPanel = ({ article, isOpen, onClose }) => {
             ) : (
               <>
                 <div className="detail-tabs-premium">
-                  {['summary', 'sentiment', 'entities'].map(tab => (
+                  {['summary', 'sentiment', 'entities', 'discussion'].map(tab => (
                     <button 
                       key={tab}
                       className={`detail-tab-btn ${activeTab === tab ? 'active' : ''}`}
@@ -143,6 +184,79 @@ const ArticleDetailPanel = ({ article, isOpen, onClose }) => {
                            {currentAnalysis?.entities?.topics?.map(t => <span key={t} className="premium-tag">{t}</span>)}
                            {(!currentAnalysis?.entities?.topics || currentAnalysis.entities.topics.length === 0) && <p style={{ color: 'var(--text-400)' }}>No entities found.</p>}
                         </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'discussion' && (
+                    <div className="animate-in">
+                      <span className="premium-label">Discussion ({comments.length})</span>
+                      
+                      {/* Comment input */}
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                        <input
+                          type="text"
+                          value={newComment}
+                          onChange={(e) => setNewComment(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && submitComment()}
+                          placeholder="Add a comment..."
+                          style={{
+                            flex: 1, padding: '10px 12px', fontSize: 13,
+                            border: '1px solid var(--border)', background: 'var(--bg)',
+                            color: 'var(--text-primary)', outline: 'none', borderRadius: 0,
+                          }}
+                        />
+                        <button
+                          onClick={submitComment}
+                          disabled={!newComment.trim() || submitting}
+                          style={{
+                            padding: '10px 16px', fontSize: 11, fontWeight: 700,
+                            letterSpacing: '0.08em', textTransform: 'uppercase',
+                            background: 'var(--text-primary, #111)', color: '#fff',
+                            border: 'none', cursor: newComment.trim() ? 'pointer' : 'default',
+                            opacity: newComment.trim() ? 1 : 0.3, borderRadius: 0,
+                          }}
+                        >
+                          Post
+                        </button>
+                      </div>
+
+                      {/* Comments list */}
+                      {commentsLoading ? (
+                        <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-400)', fontSize: 12 }}>Loading comments...</div>
+                      ) : comments.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-400)', fontSize: 12 }}>
+                          No comments yet. Start the discussion!
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                          {comments.map(c => (
+                            <div key={c._id} style={{ padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
+                                  {c.user?.name || 'Anonymous'}
+                                </span>
+                                <span style={{ fontSize: 10, color: 'var(--text-400)', marginLeft: 'auto' }}>
+                                  {timeAgo(c.createdAt)}
+                                </span>
+                              </div>
+                              <p style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--text-secondary)', margin: 0 }}>
+                                {c.content}
+                              </p>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                                <button
+                                  onClick={() => likeComment(c._id)}
+                                  style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: 'var(--text-400)', padding: 0 }}
+                                >
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+                                  </svg>
+                                  {c.likes?.length || 0}
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
