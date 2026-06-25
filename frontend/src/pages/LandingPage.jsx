@@ -6,7 +6,8 @@ import { useTheme } from '../context/ThemeContext';
 import {
   BarChart3, Network, TrendingUp, ShieldCheck, Brain, FileDown,
   Search, Zap, LineChart, Sun, Moon, ArrowRight, Play, Newspaper,
-  ChevronRight, Star, Globe, Clock, X, Plus, Check
+  ChevronRight, Star, Globe, Clock, X, Plus, Check,
+  GraduationCap, Building2, Target, BookOpen
 } from 'lucide-react';
 
 // ── Animation Variants ──
@@ -432,6 +433,222 @@ const Footer = () => (
   </footer>
 );
 
+// ── News Ticker (Bloomberg/CNN style) ──
+const NewsTicker = () => {
+  const tickerItems = [
+    { text: "PM Anwar announces RM50 billion infrastructure package for East Malaysia", sentiment: "positive" },
+    { text: "Ringgit hits 6-month low against Singapore dollar amid global uncertainty", sentiment: "negative" },
+    { text: "Malaysia's tech sector attracts record RM12B in FDI for Q1 2026", sentiment: "positive" },
+    { text: "BNM holds overnight rate steady at 3.0% amid inflation concerns", sentiment: "neutral" },
+    { text: "Harimau Malaya qualifies for Asian Cup knockout stage after 2-1 win", sentiment: "positive" },
+    { text: "Floods displace 15,000 residents in Kelantan and Terengganu", sentiment: "negative" },
+    { text: "Malaysia ranks 3rd in ASEAN digital economy readiness index", sentiment: "positive" },
+    { text: "Parliament debates new data protection amendments this week", sentiment: "neutral" },
+    { text: "Petronas signs RM8B deepwater exploration deal with Petrobras", sentiment: "positive" },
+    { text: "Youth unemployment rate rises to 12.3% in latest BNM quarterly report", sentiment: "negative" },
+  ];
+
+  const sentimentColor = {
+    positive: 'bg-green-500',
+    negative: 'bg-red-500',
+    neutral: 'bg-amber-500',
+  };
+
+  const items = [...tickerItems, ...tickerItems];
+
+  return (
+    <div className="relative overflow-hidden bg-ink dark:bg-[#1A1A1A] border-y border-ink/20 dark:border-paper/20">
+      <style>{`
+        @keyframes ticker-scroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .ticker-track {
+          animation: ticker-scroll 60s linear infinite;
+        }
+        .ticker-track:hover {
+          animation-play-state: paused;
+        }
+      `}</style>
+      <div className="flex items-center">
+        <div className="flex-shrink-0 px-4 py-2.5 bg-accent flex items-center gap-2 z-10 border-r border-accent/50">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+          </span>
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white font-sans">Live</span>
+        </div>
+        <div className="overflow-hidden flex-1">
+          <div className="ticker-track flex items-center whitespace-nowrap">
+            {items.map((item, i) => (
+              <div key={i} className="flex items-center gap-3 px-6 py-2.5">
+                <span className={`inline-block w-1.5 h-1.5 ${sentimentColor[item.sentiment]}`} />
+                <span className="text-xs text-paper/90 font-sans">{item.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Malaysia Map Preview ──
+const MalaysiaMapPreview = () => {
+  const states = [
+    { name: 'Kuala Lumpur', x: 145, y: 215, sentiment: 'positive', score: 0.78 },
+    { name: 'Penang', x: 110, y: 155, sentiment: 'positive', score: 0.72 },
+    { name: 'Johor', x: 160, y: 258, sentiment: 'neutral', score: 0.51 },
+    { name: 'Sabah', x: 315, y: 110, sentiment: 'negative', score: 0.35 },
+    { name: 'Sarawak', x: 260, y: 195, sentiment: 'neutral', score: 0.48 },
+    { name: 'Kelantan', x: 170, y: 140, sentiment: 'negative', score: 0.31 },
+    { name: 'Perak', x: 108, y: 182, sentiment: 'positive', score: 0.67 },
+  ];
+
+  const sentimentColors = {
+    positive: '#22c55e',
+    negative: '#ef4444',
+    neutral: '#f59e0b',
+  };
+
+  return (
+    <AnimatedSection className="py-16 px-6 border-t border-ink/10 dark:border-paper/10" variants={staggerContainer}>
+      <div className="max-w-4xl mx-auto">
+        <motion.div variants={staggerItem} className="text-center mb-10">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-2">Coverage</p>
+          <h2 className="font-['Playfair_Display'] text-3xl sm:text-4xl font-bold text-ink dark:text-paper mb-4">Malaysia Sentiment Map</h2>
+          <div className="max-w-xs mx-auto flex flex-col items-center gap-1 mb-4">
+            <div className="w-full h-[2px] bg-ink/20 dark:bg-paper/20" />
+            <div className="w-full h-px bg-ink/10 dark:bg-paper/10" />
+          </div>
+        </motion.div>
+
+        <motion.div variants={staggerItem} className="border border-ink/10 dark:border-paper/10 p-8">
+          <div className="flex flex-col lg:flex-row items-center gap-8">
+            <div className="flex-1 flex justify-center">
+              <svg viewBox="0 0 400 320" className="w-full max-w-md" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {/* Peninsular Malaysia outline */}
+                <path
+                  d="M100,130 L115,115 L130,110 L145,105 L155,115 L170,120 L175,135 L180,155 L175,175 L165,200 L155,230 L145,255 L135,270 L120,260 L110,240 L105,220 L100,200 L95,180 L95,160 L100,140 Z"
+                  className="stroke-ink/20 dark:stroke-paper/20"
+                  strokeWidth="1.5"
+                  fill="none"
+                />
+                {/* Sabah outline */}
+                <path
+                  d="M290,70 L310,65 L330,75 L340,95 L335,115 L325,135 L310,145 L295,140 L285,125 L280,105 L285,85 Z"
+                  className="stroke-ink/20 dark:stroke-paper/20"
+                  strokeWidth="1.5"
+                  fill="none"
+                />
+                {/* Sarawak outline */}
+                <path
+                  d="M230,155 L250,150 L270,155 L290,165 L300,180 L295,200 L280,210 L260,215 L240,210 L225,200 L220,180 L225,165 Z"
+                  className="stroke-ink/20 dark:stroke-paper/20"
+                  strokeWidth="1.5"
+                  fill="none"
+                />
+                {/* State dots with pulse animation */}
+                {states.map((state) => (
+                  <g key={state.name}>
+                    <circle
+                      cx={state.x}
+                      cy={state.y}
+                      r="6"
+                      fill={sentimentColors[state.sentiment]}
+                      opacity="0.9"
+                    />
+                    <circle
+                      cx={state.x}
+                      cy={state.y}
+                      r="6"
+                      fill="none"
+                      stroke={sentimentColors[state.sentiment]}
+                      strokeWidth="1"
+                      opacity="0.4"
+                    >
+                      <animate attributeName="r" from="6" to="14" dur="2s" repeatCount="indefinite" />
+                      <animate attributeName="opacity" from="0.4" to="0" dur="2s" repeatCount="indefinite" />
+                    </circle>
+                    <text
+                      x={state.x}
+                      y={state.y - 14}
+                      textAnchor="middle"
+                      className="fill-ink dark:fill-paper"
+                      fontSize="8"
+                      fontFamily="Inter, sans-serif"
+                      fontWeight="600"
+                    >
+                      {state.name}
+                    </text>
+                    <text
+                      x={state.x}
+                      y={state.y + 20}
+                      textAnchor="middle"
+                      className="fill-ink-muted dark:fill-ink-faint"
+                      fontSize="7"
+                      fontFamily="Inter, sans-serif"
+                    >
+                      {(state.score * 100).toFixed(0)}%
+                    </text>
+                  </g>
+                ))}
+              </svg>
+            </div>
+            <div className="flex-1 text-center lg:text-left">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-accent font-sans mb-3">Interactive Heatmap</p>
+              <h3 className="font-['Playfair_Display'] text-2xl font-bold text-ink dark:text-paper mb-3">Explore real-time sentiment across all 13 states</h3>
+              <p className="text-sm text-ink-muted dark:text-ink-faint font-sans leading-relaxed mb-6">Track how sentiment varies by region — from urban Kuala Lumpur to rural Sabah and Sarawak. Our AI analyzes state-specific news coverage in real-time.</p>
+              <div className="flex flex-wrap justify-center lg:justify-start gap-4">
+                {[
+                  { label: 'Positive', color: 'bg-green-500' },
+                  { label: 'Neutral', color: 'bg-amber-500' },
+                  { label: 'Negative', color: 'bg-red-500' },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 ${item.color}`} />
+                    <span className="text-[10px] uppercase tracking-[0.15em] text-ink-muted dark:text-ink-faint font-sans">{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatedSection>
+  );
+};
+
+// ── Technology Stack Bar ──
+const TechStackBar = () => {
+  const tech = ['React', 'Node.js', 'MongoDB', 'FastAPI', 'Malaya NLP', 'Socket.IO', 'Tailwind CSS', 'Python'];
+
+  return (
+    <AnimatedSection className="py-12 px-6 border-t border-ink/10 dark:border-paper/10" variants={staggerContainer}>
+      <div className="max-w-5xl mx-auto">
+        <motion.div variants={staggerItem} className="text-center mb-8">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-2">Technology</p>
+          <h2 className="font-['Playfair_Display'] text-2xl sm:text-3xl font-bold text-ink dark:text-paper mb-3">Built With</h2>
+          <p className="text-sm text-ink-muted dark:text-ink-faint font-sans">Powered by modern open-source technologies</p>
+        </motion.div>
+        <motion.div variants={staggerItem} className="border border-ink/10 dark:border-paper/10 p-6">
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {tech.map((t, i) => (
+              <motion.span
+                key={t}
+                className="px-4 py-2 text-xs font-medium uppercase tracking-[0.15em] text-ink dark:text-paper border border-ink/15 dark:border-paper/15 font-mono hover:border-accent hover:text-accent transition-colors cursor-default"
+                variants={staggerItem}
+              >
+                {t}
+              </motion.span>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+    </AnimatedSection>
+  );
+};
+
 // ── Landing Page ──
 const LandingPage = () => {
   const { user } = useAuth();
@@ -614,6 +831,9 @@ const LandingPage = () => {
         </div>
       </AnimatedSection>
 
+      {/* ─── NEWS TICKER ─── */}
+      <NewsTicker />
+
       {/* ─── FEATURES ─── */}
       <AnimatedSection className="py-16 px-6" id="features" variants={staggerContainer}>
         <div className="max-w-6xl mx-auto">
@@ -631,7 +851,7 @@ const LandingPage = () => {
             {features.map((f, i) => (
               <motion.div
                 key={i}
-                className="relative p-7 border-r border-b border-ink/10 dark:border-paper/10 group hover:bg-ink/[0.02] dark:hover:bg-paper/[0.02] transition-colors"
+                className="relative p-7 border-r border-b border-ink/10 dark:border-paper/10 group hover:bg-ink/[0.02] dark:hover:bg-paper/[0.02] transition-all duration-300 border-l-[3px] border-l-transparent hover:border-l-accent"
                 variants={staggerItem}
               >
                 <span className="block font-['Playfair_Display'] text-5xl font-bold text-ink/[0.06] dark:text-paper/[0.06] leading-none mb-2 select-none">
@@ -641,6 +861,12 @@ const LandingPage = () => {
                 <p className="text-[10px] uppercase tracking-[0.2em] text-accent font-sans mb-2">{f.title}</p>
                 <h3 className="text-base font-bold text-ink dark:text-paper font-sans mb-2">{f.title}</h3>
                 <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed font-sans">{f.desc}</p>
+                <div className="mt-3 overflow-hidden">
+                  <div className="h-px w-0 group-hover:w-full bg-accent/40 transition-all duration-700 ease-out" />
+                </div>
+                <span className="block mt-2 text-xs font-medium text-accent opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-sans">
+                  Explore →
+                </span>
               </motion.div>
             ))}
           </div>
@@ -686,6 +912,12 @@ const LandingPage = () => {
         </div>
       </AnimatedSection>
 
+      {/* ─── MALAYSIA MAP ─── */}
+      <MalaysiaMapPreview />
+
+      {/* ─── TECHNOLOGY STACK ─── */}
+      <TechStackBar />
+
       {/* ─── USE CASES ─── */}
       <AnimatedSection className="py-16 px-6 border-t border-ink/10 dark:border-paper/10" variants={staggerContainer}>
         <div className="max-w-6xl mx-auto">
@@ -700,19 +932,19 @@ const LandingPage = () => {
           </div>
           <div className="grid md:grid-cols-3 gap-0 border-t border-l border-ink/10 dark:border-paper/10">
             {[
-              { icon: '🎓', title: 'Researchers', desc: 'Track media sentiment trends for academic papers and thesis research on Malaysian politics, economy, and social issues.' },
-              { icon: '📰', title: 'Journalists', desc: 'Monitor how different outlets cover the same story. Identify bias patterns and verify source credibility.' },
-              { icon: '📊', title: 'Analysts', desc: 'Real-time sentiment tracking for market analysis, brand monitoring, and public opinion research.' },
-              { icon: '🏛️', title: 'Policy Makers', desc: 'Understand public sentiment on policies, track media coverage of government initiatives.' },
-              { icon: '🎯', title: 'PR & Communications', desc: 'Monitor brand mentions, track crisis sentiment, measure campaign effectiveness across Malaysian media.' },
-              { icon: '🧑‍🎓', title: 'Students', desc: 'Learn NLP concepts through real Malaysian news data. Perfect for FYP and coursework projects.' },
+              { icon: GraduationCap, title: 'Researchers', desc: 'Track media sentiment trends for academic papers and thesis research on Malaysian politics, economy, and social issues.' },
+              { icon: Newspaper, title: 'Journalists', desc: 'Monitor how different outlets cover the same story. Identify bias patterns and verify source credibility.' },
+              { icon: BarChart3, title: 'Analysts', desc: 'Real-time sentiment tracking for market analysis, brand monitoring, and public opinion research.' },
+              { icon: Building2, title: 'Policy Makers', desc: 'Understand public sentiment on policies, track media coverage of government initiatives.' },
+              { icon: Target, title: 'PR & Communications', desc: 'Monitor brand mentions, track crisis sentiment, measure campaign effectiveness across Malaysian media.' },
+              { icon: BookOpen, title: 'Students', desc: 'Learn NLP concepts through real Malaysian news data. Perfect for FYP and coursework projects.' },
             ].map((item, i) => (
               <motion.div
                 key={i}
                 className="p-7 border-r border-b border-ink/10 dark:border-paper/10 cursor-pointer hover:bg-ink/[0.02] dark:hover:bg-paper/[0.02] transition-colors"
                 variants={staggerItem}
               >
-                <span className="text-2xl block mb-4">{item.icon}</span>
+                <item.icon className="w-7 h-7 text-accent mb-4" strokeWidth={1.5} />
                 <h3 className="text-base font-bold text-ink dark:text-paper font-sans mb-2">{item.title}</h3>
                 <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed font-sans">{item.desc}</p>
               </motion.div>
@@ -747,21 +979,72 @@ const LandingPage = () => {
       </AnimatedSection>
 
       {/* ─── CTA ─── */}
-      <AnimatedSection className="py-12 px-6" variants={scaleIn}>
+      <AnimatedSection className="py-16 px-6" variants={scaleIn}>
         <div className="max-w-3xl mx-auto text-center">
           <motion.div
-            className="border-2 border-ink dark:border-paper p-12"
+            className="relative border-2 border-ink dark:border-paper p-12 overflow-hidden"
             whileInView={{ opacity: 1, scale: 1 }}
             initial={{ opacity: 0, scale: 0.95 }}
             viewport={{ once: true }}
           >
+            {/* Animated decorative lines */}
+            <motion.div
+              className="absolute top-0 left-0 right-0 h-px bg-accent"
+              initial={{ scaleX: 0 }}
+              whileInView={{ scaleX: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+              style={{ transformOrigin: 'left' }}
+            />
+            <motion.div
+              className="absolute bottom-0 left-0 right-0 h-px bg-accent"
+              initial={{ scaleX: 0 }}
+              whileInView={{ scaleX: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+              style={{ transformOrigin: 'right' }}
+            />
+            <motion.div
+              className="absolute top-0 left-0 bottom-0 w-px bg-accent"
+              initial={{ scaleY: 0 }}
+              whileInView={{ scaleY: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.4 }}
+              style={{ transformOrigin: 'top' }}
+            />
+            <motion.div
+              className="absolute top-0 right-0 bottom-0 w-px bg-accent"
+              initial={{ scaleY: 0 }}
+              whileInView={{ scaleY: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.6 }}
+              style={{ transformOrigin: 'bottom' }}
+            />
+
             <p className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-4">Get Started</p>
             <h2 className="font-['Playfair_Display'] text-3xl font-bold text-ink dark:text-paper mb-4">Start analyzing Malaysian news today</h2>
             <div className="max-w-xs mx-auto flex flex-col items-center gap-1 mb-6">
               <div className="w-full h-[2px] bg-ink/20 dark:bg-paper/20" />
               <div className="w-full h-px bg-ink/10 dark:bg-paper/10" />
             </div>
-            <p className="text-ink-muted dark:text-ink-faint mb-8 font-sans text-sm">Free to get started. No credit card required.</p>
+
+            {/* Mini feature highlights */}
+            <div className="flex flex-wrap items-center justify-center gap-6 mb-8">
+              {['15+ News Sources', 'Real-Time Analysis', 'Free Forever'].map((item, i) => (
+                <motion.div
+                  key={item}
+                  className="flex items-center gap-2"
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.3 + i * 0.1 }}
+                >
+                  <Check className="w-4 h-4 text-accent" />
+                  <span className="text-sm text-ink dark:text-paper font-sans font-medium">{item}</span>
+                </motion.div>
+              ))}
+            </div>
+
             <motion.button
               onClick={() => navigate('/register')}
               className="px-8 py-3.5 text-sm font-semibold tracking-wider uppercase text-paper bg-ink dark:bg-paper dark:text-ink hover:bg-accent dark:hover:bg-accent dark:hover:text-paper transition-colors"
@@ -770,6 +1053,13 @@ const LandingPage = () => {
             >
               Get Started Free <ArrowRight className="inline w-4 h-4 ml-1" />
             </motion.button>
+
+            <Link
+              to="/dashboard"
+              className="block mt-5 text-sm text-ink-muted dark:text-ink-faint hover:text-accent dark:hover:text-accent transition-colors font-sans"
+            >
+              Or explore the dashboard →
+            </Link>
           </motion.div>
         </div>
       </AnimatedSection>
