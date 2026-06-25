@@ -365,22 +365,34 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
           whileTap={isMobile ? { scale: 0.995 } : {}}
         >
           <div className="flex gap-4">
-            {/* Source initial or favicon */}
-            <div className="flex-shrink-0 pt-0.5">
-              {article.url && !faviconError ? (
+            {/* Thumbnail — left side */}
+            {article.urlToImage && !imageError ? (
+              <div className="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 overflow-hidden">
                 <img
-                  src={getFavicon(article.url)}
+                  src={article.urlToImage}
                   alt=""
-                  className="w-7 h-7 flex-shrink-0"
+                  className="w-full h-full object-cover"
                   loading="lazy"
-                  onError={() => setFaviconError(true)}
+                  onError={() => setImageError(true)}
                 />
-              ) : (
-                <SourceInitial source={article.source} />
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="flex-shrink-0 pt-0.5">
+                {article.url && !faviconError ? (
+                  <img
+                    src={getFavicon(article.url)}
+                    alt=""
+                    className="w-7 h-7 flex-shrink-0"
+                    loading="lazy"
+                    onError={() => setFaviconError(true)}
+                  />
+                ) : (
+                  <SourceInitial source={article.source} />
+                )}
+              </div>
+            )}
 
-            {/* Content */}
+            {/* Content — right side */}
             <div className="flex-1 min-w-0">
               {/* Top meta row: Source + Date + Sentiment */}
               <div className="flex items-center justify-between mb-1.5">
@@ -462,19 +474,6 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
                 </div>
               </div>
             </div>
-
-            {/* Thumbnail */}
-            {article.urlToImage && !imageError && (
-              <div className="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 overflow-hidden">
-                <img
-                  src={article.urlToImage}
-                  alt=""
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  onError={() => setImageError(true)}
-                />
-              </div>
-            )}
           </div>
         </motion.div>
       </div>
