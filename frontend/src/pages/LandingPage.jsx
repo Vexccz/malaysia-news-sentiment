@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { motion, useInView, useScroll, useTransform, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
@@ -493,27 +495,213 @@ const NewsTicker = () => {
   );
 };
 
-// ── Malaysia Map Preview ──
-const MalaysiaMapPreview = () => {
-  const states = [
-    { name: 'Kuala Lumpur', x: 145, y: 215, sentiment: 'positive', score: 0.78 },
-    { name: 'Penang', x: 110, y: 155, sentiment: 'positive', score: 0.72 },
-    { name: 'Johor', x: 160, y: 258, sentiment: 'neutral', score: 0.51 },
-    { name: 'Sabah', x: 315, y: 110, sentiment: 'negative', score: 0.35 },
-    { name: 'Sarawak', x: 260, y: 195, sentiment: 'neutral', score: 0.48 },
-    { name: 'Kelantan', x: 170, y: 140, sentiment: 'negative', score: 0.31 },
-    { name: 'Perak', x: 108, y: 182, sentiment: 'positive', score: 0.67 },
+// ── Landing Heatmap (MapLibre GL) ──
+const LandingHeatmap = () => {
+  const mapContainer = useRef(null);
+  const mapRef = useRef(null);
+  const dataRef = useRef({});
+
+  const sampleData = [
+    { state: 'Selangor', avgSentiment: 0.15, articleCount: 93 },
+    { state: 'Kuala Lumpur', avgSentiment: 0.22, articleCount: 87 },
+    { state: 'Johor', avgSentiment: -0.08, articleCount: 45 },
+    { state: 'Penang', avgSentiment: 0.31, articleCount: 38 },
+    { state: 'Pahang', avgSentiment: 0.00, articleCount: 9 },
+    { state: 'Perak', avgSentiment: 0.12, articleCount: 28 },
+    { state: 'Sabah', avgSentiment: -0.15, articleCount: 22 },
+    { state: 'Sarawak', avgSentiment: 0.05, articleCount: 19 },
+    { state: 'Kedah', avgSentiment: -0.22, articleCount: 15 },
+    { state: 'Kelantan', avgSentiment: -0.18, articleCount: 12 },
+    { state: 'Terengganu', avgSentiment: 0.08, articleCount: 11 },
+    { state: 'Melaka', avgSentiment: 0.19, articleCount: 14 },
+    { state: 'Negeri Sembilan', avgSentiment: 0.03, articleCount: 10 },
+    { state: 'Perlis', avgSentiment: -0.05, articleCount: 6 },
+    { state: 'Putrajaya', avgSentiment: 0.25, articleCount: 8 },
+    { state: 'Labuan', avgSentiment: 0.00, articleCount: 3 },
   ];
 
-  const sentimentColors = {
-    positive: '#22c55e',
-    negative: '#ef4444',
-    neutral: '#f59e0b',
+  const getSentimentColor = (val) => {
+    if (val === null || val === undefined) return '#6b7280';
+    if (val > 0.1) return '#4ADE80';
+    if (val > -0.1) return '#FBBF24';
+    return '#FB7185';
   };
+
+  useEffect(() => {
+    if (!mapContainer.current || mapRef.current) return;
+
+    const map = new maplibregl.Map({
+      container: mapContainer.current,
+      style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+      center: [109.5, 4.0],
+      zoom: 5.2,
+      attributionControl: false,
+      interactive: true,
+    });
+
+    map.scrollZoom.disable();
+    map.boxZoom.disable();
+    map.dragRotate.disable();
+    map.keyboard.disable();
+    mapRef.current = map;
+
+    // Build lookup from sample data
+    const dataLookup = {};
+    sampleData.forEach((d) => { dataLookup[d.state] = d; });
+    dataRef.current = dataLookup;
+
+    // Sentiment color match expression
+    const colorExpr = [
+      'case',
+      ['>', ['coalesce', ['get', 'sentiment'], 0], 0.1], '#4ADE80',
+      ['>', ['coalesce', ['get', 'sentiment'], 0], -0.1], '#FBBF24',
+      ['==', ['get', 'sentiment'], null], '#6b7280',
+      '#FB7185',
+    ];
+
+    const stateNameNormalize = {
+      'W.P. Kuala Lumpur': 'Kuala Lumpur',
+      'W.P. Putrajaya': 'Putrajaya',
+      'W.P. Labuan': 'Labuan',
+      'Pulau Pinang': 'Penang',
+    };
+
+    let hoveredId = null;
+    let popup = null;
+
+    map.on('load', async () => {
+      try {
+        const res = await fetch(
+          'https://raw.githubusercontent.com/dosm-malaysia/data-open/main/datasets/geodata/administrative_1_state.geojson'
+        );
+        if (!res.ok) throw new Error('Failed to load GeoJSON');
+        const geojson = await res.json();
+
+        // Normalize state names and attach sentiment data
+        geojson.features.forEach((f, i) => {
+          const rawName = f.properties.state || f.properties.name || '';
+          const normalizedName = stateNameNormalize[rawName] || rawName;
+          f.properties.state = normalizedName;
+          f.id = i;
+          const d = dataLookup[normalizedName];
+          f.properties.sentiment = d ? d.avgSentiment : null;
+          f.properties.articleCount = d ? d.articleCount : 0;
+        });
+
+        map.addSource('states', { type: 'geojson', data: geojson });
+
+        map.addLayer({
+          id: 'state-fills',
+          type: 'fill',
+          source: 'states',
+          paint: {
+            'fill-color': [
+              'case',
+              ['==', ['get', 'sentiment'], null], '#6b7280',
+              ['>', ['get', 'sentiment'], 0.1], '#4ADE80',
+              ['>', ['get', 'sentiment'], -0.1], '#FBBF24',
+              '#FB7185',
+            ],
+            'fill-opacity': [
+              'case',
+              ['boolean', ['feature-state', 'hovered'], false],
+              0.85,
+              0.55,
+            ],
+          },
+        });
+
+        map.addLayer({
+          id: 'state-borders',
+          type: 'line',
+          source: 'states',
+          paint: {
+            'line-color': '#1A1A1A',
+            'line-width': [
+              'case',
+              ['boolean', ['feature-state', 'hovered'], false],
+              2,
+              0.8,
+            ],
+            'line-opacity': 0.4,
+          },
+        });
+
+        // Hover interactions
+        popup = new maplibregl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+          offset: 10,
+          className: 'landing-map-popup',
+        });
+
+        map.on('mousemove', 'state-fills', (e) => {
+          if (e.features.length > 0) {
+            if (hoveredId !== null) {
+              map.setFeatureState({ source: 'states', id: hoveredId }, { hovered: false });
+            }
+            hoveredId = e.features[0].id;
+            map.setFeatureState({ source: 'states', id: hoveredId }, { hovered: true });
+
+            const props = e.features[0].properties;
+            const stateName = props.state;
+            const lookup = dataRef.current[stateName];
+            const sentiment = lookup ? lookup.avgSentiment : null;
+            const articles = lookup ? lookup.articleCount : 0;
+
+            let label = 'N/A';
+            let labelColor = '#6b7280';
+            if (sentiment !== null && sentiment !== undefined) {
+              if (sentiment > 0.1) { label = 'Positive'; labelColor = '#4ADE80'; }
+              else if (sentiment > -0.1) { label = 'Neutral'; labelColor = '#FBBF24'; }
+              else { label = 'Negative'; labelColor = '#FB7185'; }
+            }
+
+            // Sentiment bar segments
+            const barPos = sentiment !== null ? Math.max(0, Math.min(1, (sentiment + 1) / 2)) * 100 : 50;
+
+            const html = `
+              <div style="font-family:Inter,sans-serif;padding:0;min-width:160px">
+                <div style="font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:#1A1A1A;margin-bottom:6px;">${stateName}</div>
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                  <span style="display:inline-block;width:8px;height:8px;background:${labelColor};"></span>
+                  <span style="font-size:12px;font-weight:600;color:#1A1A1A;">${label}</span>
+                </div>
+                <div style="font-size:11px;color:#6B6A65;margin-bottom:2px;">Sentiment: <strong style="color:#1A1A1A">${sentiment !== null ? sentiment.toFixed(2) : 'N/A'}</strong></div>
+                <div style="font-size:11px;color:#6B6A65;margin-bottom:6px;">Articles: <strong style="color:#1A1A1A">${articles}</strong></div>
+                <div style="height:4px;background:#E5E5E0;width:100%;overflow:hidden;">
+                  <div style="height:100%;width:${barPos}%;background:${labelColor};"></div>
+                </div>
+              </div>
+            `;
+
+            popup.setLngLat(e.lngLat).setHTML(html).addTo(map);
+          }
+        });
+
+        map.on('mouseleave', 'state-fills', () => {
+          if (hoveredId !== null) {
+            map.setFeatureState({ source: 'states', id: hoveredId }, { hovered: false });
+          }
+          hoveredId = null;
+          if (popup) popup.remove();
+        });
+
+      } catch (err) {
+        console.error('LandingHeatmap: failed to load GeoJSON', err);
+      }
+    });
+
+    return () => {
+      if (popup) popup.remove();
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
 
   return (
     <AnimatedSection className="py-16 px-6 border-t border-ink/10 dark:border-paper/10" variants={staggerContainer}>
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         <motion.div variants={staggerItem} className="text-center mb-10">
           <p className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-2">Coverage</p>
           <h2 className="font-['Playfair_Display'] text-3xl sm:text-4xl font-bold text-ink dark:text-paper mb-4">Malaysia Sentiment Map</h2>
@@ -521,100 +709,43 @@ const MalaysiaMapPreview = () => {
             <div className="w-full h-[2px] bg-ink/20 dark:bg-paper/20" />
             <div className="w-full h-px bg-ink/10 dark:bg-paper/10" />
           </div>
+          <p className="text-sm text-ink-muted dark:text-ink-faint font-sans">Explore real-time sentiment across all 13 states</p>
         </motion.div>
 
-        <motion.div variants={staggerItem} className="border border-ink/10 dark:border-paper/10 p-8">
-          <div className="flex flex-col lg:flex-row items-center gap-8">
-            <div className="flex-1 flex justify-center">
-              <svg viewBox="0 0 400 320" className="w-full max-w-md" fill="none" xmlns="http://www.w3.org/2000/svg">
-                {/* Peninsular Malaysia outline */}
-                <path
-                  d="M100,130 L115,115 L130,110 L145,105 L155,115 L170,120 L175,135 L180,155 L175,175 L165,200 L155,230 L145,255 L135,270 L120,260 L110,240 L105,220 L100,200 L95,180 L95,160 L100,140 Z"
-                  className="stroke-ink/20 dark:stroke-paper/20"
-                  strokeWidth="1.5"
-                  fill="none"
-                />
-                {/* Sabah outline */}
-                <path
-                  d="M290,70 L310,65 L330,75 L340,95 L335,115 L325,135 L310,145 L295,140 L285,125 L280,105 L285,85 Z"
-                  className="stroke-ink/20 dark:stroke-paper/20"
-                  strokeWidth="1.5"
-                  fill="none"
-                />
-                {/* Sarawak outline */}
-                <path
-                  d="M230,155 L250,150 L270,155 L290,165 L300,180 L295,200 L280,210 L260,215 L240,210 L225,200 L220,180 L225,165 Z"
-                  className="stroke-ink/20 dark:stroke-paper/20"
-                  strokeWidth="1.5"
-                  fill="none"
-                />
-                {/* State dots with pulse animation */}
-                {states.map((state) => (
-                  <g key={state.name}>
-                    <circle
-                      cx={state.x}
-                      cy={state.y}
-                      r="6"
-                      fill={sentimentColors[state.sentiment]}
-                      opacity="0.9"
-                    />
-                    <circle
-                      cx={state.x}
-                      cy={state.y}
-                      r="6"
-                      fill="none"
-                      stroke={sentimentColors[state.sentiment]}
-                      strokeWidth="1"
-                      opacity="0.4"
-                    >
-                      <animate attributeName="r" from="6" to="14" dur="2s" repeatCount="indefinite" />
-                      <animate attributeName="opacity" from="0.4" to="0" dur="2s" repeatCount="indefinite" />
-                    </circle>
-                    <text
-                      x={state.x}
-                      y={state.y - 14}
-                      textAnchor="middle"
-                      className="fill-ink dark:fill-paper"
-                      fontSize="8"
-                      fontFamily="Inter, sans-serif"
-                      fontWeight="600"
-                    >
-                      {state.name}
-                    </text>
-                    <text
-                      x={state.x}
-                      y={state.y + 20}
-                      textAnchor="middle"
-                      className="fill-ink-muted dark:fill-ink-faint"
-                      fontSize="7"
-                      fontFamily="Inter, sans-serif"
-                    >
-                      {(state.score * 100).toFixed(0)}%
-                    </text>
-                  </g>
-                ))}
-              </svg>
+        <motion.div variants={staggerItem}>
+          <div
+            ref={mapContainer}
+            style={{ height: '400px', width: '100%', border: '1px solid rgba(26,26,26,0.1)' }}
+          />
+        </motion.div>
+
+        <motion.div variants={staggerItem} className="mt-6 flex items-center justify-center gap-6">
+          {[
+            { label: 'Positive', color: '#4ADE80' },
+            { label: 'Neutral', color: '#FBBF24' },
+            { label: 'Negative', color: '#FB7185' },
+          ].map((item) => (
+            <div key={item.label} className="flex items-center gap-2">
+              <span style={{ width: 10, height: 10, backgroundColor: item.color, display: 'inline-block' }} />
+              <span className="text-[10px] uppercase tracking-[0.15em] text-ink-muted dark:text-ink-faint font-sans">{item.label}</span>
             </div>
-            <div className="flex-1 text-center lg:text-left">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-accent font-sans mb-3">Interactive Heatmap</p>
-              <h3 className="font-['Playfair_Display'] text-2xl font-bold text-ink dark:text-paper mb-3">Explore real-time sentiment across all 13 states</h3>
-              <p className="text-sm text-ink-muted dark:text-ink-faint font-sans leading-relaxed mb-6">Track how sentiment varies by region — from urban Kuala Lumpur to rural Sabah and Sarawak. Our AI analyzes state-specific news coverage in real-time.</p>
-              <div className="flex flex-wrap justify-center lg:justify-start gap-4">
-                {[
-                  { label: 'Positive', color: 'bg-green-500' },
-                  { label: 'Neutral', color: 'bg-amber-500' },
-                  { label: 'Negative', color: 'bg-red-500' },
-                ].map((item) => (
-                  <div key={item.label} className="flex items-center gap-2">
-                    <span className={`w-2.5 h-2.5 ${item.color}`} />
-                    <span className="text-[10px] uppercase tracking-[0.15em] text-ink-muted dark:text-ink-faint font-sans">{item.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          ))}
         </motion.div>
       </div>
+
+      <style>{`
+        .landing-map-popup .maplibregl-popup-content {
+          background: #FAF8F3;
+          border: 1px solid rgba(26,26,26,0.15);
+          border-radius: 0;
+          box-shadow: none;
+          padding: 10px 12px;
+        }
+        .landing-map-popup .maplibregl-popup-tip {
+          border-top-color: #FAF8F3;
+          border-bottom-color: #FAF8F3;
+        }
+      `}</style>
     </AnimatedSection>
   );
 };
@@ -913,7 +1044,7 @@ const LandingPage = () => {
       </AnimatedSection>
 
       {/* ─── MALAYSIA MAP ─── */}
-      <MalaysiaMapPreview />
+      <LandingHeatmap />
 
       {/* ─── TECHNOLOGY STACK ─── */}
       <TechStackBar />
