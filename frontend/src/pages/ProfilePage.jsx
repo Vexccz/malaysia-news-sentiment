@@ -24,15 +24,15 @@ const Section = ({ title, icon, children, className = '' }) => (
   </div>
 );
 
-/* ── Info Row (like Fiverr's From/Member since) ── */
+/* ── Info Row ── */
 const InfoRow = ({ icon, label, value, onClick }) => (
   <div
     className={`flex items-center gap-3 px-5 py-2.5 text-sm ${onClick ? 'cursor-pointer hover:bg-paper dark:hover:bg-white/5 transition-colors' : ''}`}
     onClick={onClick}
   >
     <span className="text-ink-muted dark:text-ink-faint w-4 flex justify-center">{icon}</span>
-    <span className="text-ink-faint dark:text-ink-faint font-sans text-xs uppercase tracking-wider w-24">{label}</span>
-    <span className="text-ink dark:text-paper font-sans text-sm flex-1">{value}</span>
+    <span className="text-ink-faint dark:text-ink-faint font-sans text-xs uppercase tracking-wider w-28 shrink-0">{label}</span>
+    <span className="text-ink dark:text-paper font-sans text-sm flex-1 truncate">{value}</span>
   </div>
 );
 
@@ -54,19 +54,20 @@ const ActivityItem = ({ icon, text, time, color = 'text-ink-muted dark:text-ink-
   <div className="flex items-start gap-3 px-5 py-3 border-b border-[#e5e5e5] dark:border-[#222] last:border-b-0">
     <span className={`mt-0.5 ${color}`}>{icon}</span>
     <div className="flex-1 min-w-0">
-      <p className="text-sm text-ink dark:text-paper font-sans">{text}</p>
+      <p className="text-sm text-ink dark:text-paper font-sans leading-snug">{text}</p>
       <p className="text-[11px] text-ink-faint mt-0.5 font-sans">{time}</p>
     </div>
   </div>
 );
 
-/* ── Badge Component ── */
+/* ── Badge ── */
 const Badge = ({ children, variant = 'default' }) => {
   const variants = {
     default: 'border-[#e5e5e5] dark:border-[#222] text-ink-muted dark:text-ink-faint',
     accent: 'border-accent text-accent',
     success: 'border-emerald-500 text-emerald-600 dark:text-emerald-400',
     admin: 'border-red-500 text-red-600 dark:text-red-400',
+    warning: 'border-amber-500 text-amber-600 dark:text-amber-400',
   };
   return (
     <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider border font-sans ${variants[variant]}`}>
@@ -75,12 +76,34 @@ const Badge = ({ children, variant = 'default' }) => {
   );
 };
 
+/* ── Time formatting ── */
+const formatTimeAgo = (dateStr) => {
+  if (!dateStr) return '';
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
 const ProfilePage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { t } = useLanguage();
   const { theme } = useTheme();
-  const [stats, setStats] = useState({ articles: 0, bookmarks: 0, comments: 0, shared: 0 });
+  const [stats, setStats] = useState({
+    articlesViewed: 0,
+    bookmarks: 0,
+    shared: 0,
+    comments: 0,
+  });
   const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -88,62 +111,125 @@ const ProfilePage = () => {
     .split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
   const memberSince = user?.createdAt
-    ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     : 'N/A';
 
   const roleLabel = user?.role === 'admin' ? 'Administrator' : 'Member';
   const roleVariant = user?.role === 'admin' ? 'admin' : 'default';
 
+  // Real preferences from user data
+  const emailNotifs = user?.preferences?.emailNotifications !== false;
+  const alertNotifs = user?.preferences?.alertNotifications !== false;
+  const twoFactor = user?.twoFactorEnabled || false;
+  const preferredLang = user?.preferences?.language === 'ms' ? 'Bahasa Malaysia' : 'English';
+  const preferredTheme = user?.preferences?.theme || theme || 'light';
+
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchAllData = async () => {
       setLoading(true);
       try {
-        const [historyRes, bookmarksRes, sharedRes] = await Promise.allSettled([
-          api.get('/history'),
+        // Fetch history, bookmarks, shared, comments in parallel
+        const [historyRes, bookmarksRes, sharedRes, commentsRes] = await Promise.allSettled([
+          api.get('/history?limit=50'),
           api.get('/bookmarks'),
           api.get('/collab/shared'),
+          api.get('/collab/discussions'),
         ]);
 
-        const history = historyRes.status === 'fulfilled' ? (historyRes.value.data || []) : [];
-        const bookmarks = bookmarksRes.status === 'fulfilled' ? (bookmarksRes.value.data?.bookmarks || bookmarksRes.value.data || []) : [];
-        const shared = sharedRes.status === 'fulfilled' ? (sharedRes.value.data?.articles || sharedRes.value.data || []) : [];
+        // History — articles viewed
+        const historyData = historyRes.status === 'fulfilled' ? historyRes.value.data : {};
+        const history = historyData.articles || historyData.data || historyData || [];
+        const historyArr = Array.isArray(history) ? history : [];
+        const totalArticles = historyData.total || historyArr.length;
+
+        // Bookmarks
+        const bookmarksData = bookmarksRes.status === 'fulfilled' ? bookmarksRes.value.data : {};
+        const bookmarks = bookmarksData.bookmarks || bookmarksData || [];
+        const bookmarksArr = Array.isArray(bookmarks) ? bookmarks : [];
+
+        // Shared articles
+        const sharedData = sharedRes.status === 'fulfilled' ? sharedRes.value.data : {};
+        const shared = sharedData.articles || sharedData || [];
+        const sharedArr = Array.isArray(shared) ? shared : [];
+
+        // Comments/discussions
+        const commentsData = commentsRes.status === 'fulfilled' ? commentsRes.value.data : {};
+        const discussions = commentsData.discussions || commentsData || [];
+        const discussionsArr = Array.isArray(discussions) ? discussions : [];
+        const totalComments = discussionsArr.reduce((sum, d) => sum + (d.commentCount || d.comments?.length || 0), 0);
+
+        // Also use user.analysisCount and user.bookmarksCount from /auth/me
+        const articlesViewed = user?.analysisCount || totalArticles || 0;
+        const bookmarkCount = user?.bookmarksCount || bookmarksArr.length || 0;
 
         setStats({
-          articles: history.length,
-          bookmarks: Array.isArray(bookmarks) ? bookmarks.length : 0,
-          comments: 0,
-          shared: Array.isArray(shared) ? shared.length : 0,
+          articlesViewed,
+          bookmarks: bookmarkCount,
+          shared: sharedArr.length,
+          comments: totalComments,
         });
 
-        // Build recent activity from history
-        const activities = history.slice(0, 5).map((item, i) => ({
-          id: i,
-          icon: <Eye size={14} />,
-          text: `Viewed "${item.title || item.articleTitle || 'an article'}"`,
-          time: item.viewedAt ? new Date(item.viewedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '',
-          color: 'text-ink-muted dark:text-ink-faint',
-        }));
-
-        if (bookmarks.length > 0) {
+        // Build recent activity from history (most recent 5)
+        const activities = [];
+        historyArr.slice(0, 5).forEach((item) => {
+          const title = item.title || item.articleTitle || 'an article';
+          const sentiment = item.sentiment ? ` (${item.sentiment})` : '';
           activities.push({
-            id: 'bm',
+            id: `h-${item._id || Math.random()}`,
+            icon: <Eye size={14} />,
+            text: `Viewed "${title}"${sentiment}`,
+            time: formatTimeAgo(item.viewedAt || item.createdAt || item.publishedAt),
+            color: 'text-ink-muted dark:text-ink-faint',
+          });
+        });
+
+        // Add bookmark activity
+        if (bookmarksArr.length > 0) {
+          const latestBm = bookmarksArr[0];
+          activities.push({
+            id: 'bm-latest',
             icon: <Bookmark size={14} />,
-            text: `Saved ${bookmarks.length} article${bookmarks.length > 1 ? 's' : ''} to bookmarks`,
-            time: '',
+            text: `Saved "${latestBm.title || 'an article'}" to bookmarks`,
+            time: formatTimeAgo(latestBm.createdAt || latestBm.savedAt),
             color: 'text-accent',
           });
         }
 
-        setRecentActivity(activities);
+        // Add shared activity
+        if (sharedArr.length > 0) {
+          const latestShared = sharedArr[0];
+          activities.push({
+            id: 'sh-latest',
+            icon: <Share2 size={14} />,
+            text: `Shared "${latestShared.title || latestShared.articleTitle || 'an article'}" with community`,
+            time: formatTimeAgo(latestShared.createdAt || latestShared.sharedAt),
+            color: 'text-emerald-600 dark:text-emerald-400',
+          });
+        }
+
+        // Add comment activity
+        if (discussionsArr.length > 0) {
+          const latestDisc = discussionsArr[0];
+          activities.push({
+            id: 'cmt-latest',
+            icon: <MessageSquare size={14} />,
+            text: `Commented on "${latestDisc.title || latestDisc.articleTitle || 'a discussion'}"`,
+            time: formatTimeAgo(latestDisc.lastCommentAt || latestDisc.createdAt),
+            color: 'text-blue-600 dark:text-blue-400',
+          });
+        }
+
+        // Sort by time (most recent first) and take 6
+        setRecentActivity(activities.slice(0, 6));
       } catch (err) {
-        console.error('Failed to fetch profile stats:', err);
+        console.error('Failed to fetch profile data:', err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStats();
-  }, []);
+    fetchAllData();
+  }, [user]);
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -161,7 +247,7 @@ const ProfilePage = () => {
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* ── LEFT COLUMN: Profile Card (Fiverr-style) ── */}
+        {/* ── LEFT COLUMN ── */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -171,7 +257,6 @@ const ProfilePage = () => {
           {/* Profile Card */}
           <Section title={t('profile') || 'Profile'}>
             <div className="p-5 flex flex-col items-center text-center border-b border-[#e5e5e5] dark:border-[#222]">
-              {/* Avatar */}
               {user?.avatar ? (
                 <img
                   src={user.avatar}
@@ -185,11 +270,9 @@ const ProfilePage = () => {
                 </div>
               )}
 
-              {/* Name + Role */}
               <h2 className="font-display text-xl font-bold text-ink dark:text-paper mt-3">{user?.name || 'User'}</h2>
               <p className="text-sm text-ink-muted dark:text-ink-faint font-sans">{user?.email || ''}</p>
 
-              {/* Badges */}
               <div className="flex items-center gap-2 mt-2">
                 <Badge variant={roleVariant}>{roleLabel}</Badge>
                 <Badge variant="success">
@@ -198,7 +281,6 @@ const ProfilePage = () => {
                 </Badge>
               </div>
 
-              {/* Edit Profile Button */}
               <button
                 onClick={() => navigate('/settings')}
                 className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 border border-[#e5e5e5] dark:border-[#222] text-sm font-sans text-ink dark:text-paper hover:bg-paper dark:hover:bg-white/5 transition-colors"
@@ -208,28 +290,11 @@ const ProfilePage = () => {
               </button>
             </div>
 
-            {/* Info Rows */}
             <div className="divide-y divide-[#e5e5e5] dark:divide-[#222]">
-              <InfoRow
-                icon={<Mail size={14} />}
-                label={t('email') || 'Email'}
-                value={user?.email || 'N/A'}
-              />
-              <InfoRow
-                icon={<Shield size={14} />}
-                label={t('role') || 'Role'}
-                value={roleLabel}
-              />
-              <InfoRow
-                icon={<Calendar size={14} />}
-                label={t('memberSince') || 'Member since'}
-                value={memberSince}
-              />
-              <InfoRow
-                icon={<Globe size={14} />}
-                label={t('language') || 'Language'}
-                value={user?.preferredLanguage === 'ms' ? 'Bahasa Malaysia' : 'English'}
-              />
+              <InfoRow icon={<Mail size={14} />} label={t('email') || 'Email'} value={user?.email || 'N/A'} />
+              <InfoRow icon={<Shield size={14} />} label={t('role') || 'Role'} value={roleLabel} />
+              <InfoRow icon={<Calendar size={14} />} label={t('memberSince') || 'Member since'} value={memberSince} />
+              <InfoRow icon={<Globe size={14} />} label={t('language') || 'Language'} value={preferredLang} />
             </div>
           </Section>
 
@@ -256,7 +321,7 @@ const ProfilePage = () => {
           </Section>
         </motion.div>
 
-        {/* ── RIGHT COLUMN: Stats + Activity ── */}
+        {/* ── RIGHT COLUMN ── */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -268,24 +333,24 @@ const ProfilePage = () => {
             <StatCard
               icon={<Eye size={18} />}
               label={t('articlesViewed') || 'Articles Viewed'}
-              value={loading ? '—' : stats.articles}
+              value={loading ? '—' : stats.articlesViewed.toLocaleString()}
             />
             <StatCard
               icon={<Bookmark size={18} />}
               label={t('bookmarks') || 'Bookmarks'}
-              value={loading ? '—' : stats.bookmarks}
+              value={loading ? '—' : stats.bookmarks.toLocaleString()}
               color="text-accent"
             />
             <StatCard
               icon={<Share2 size={18} />}
               label={t('shared') || 'Shared'}
-              value={loading ? '—' : stats.shared}
+              value={loading ? '—' : stats.shared.toLocaleString()}
               color="text-emerald-600 dark:text-emerald-400"
             />
             <StatCard
               icon={<MessageSquare size={18} />}
               label={t('comments') || 'Comments'}
-              value={loading ? '—' : stats.comments}
+              value={loading ? '—' : stats.comments.toLocaleString()}
               color="text-blue-600 dark:text-blue-400"
             />
           </div>
@@ -320,11 +385,20 @@ const ProfilePage = () => {
             <div className="divide-y divide-[#e5e5e5] dark:divide-[#222]">
               <div className="flex items-center justify-between px-5 py-3">
                 <div className="flex items-center gap-3">
-                  <Bell size={14} className="text-ink-muted dark:text-ink-faint" />
-                  <span className="text-sm font-sans text-ink dark:text-paper">{t('notifications') || 'Notifications'}</span>
+                  <Mail size={14} className="text-ink-muted dark:text-ink-faint" />
+                  <span className="text-sm font-sans text-ink dark:text-paper">{t('notifications') || 'Email Notifications'}</span>
                 </div>
-                <Badge variant={user?.notificationsEnabled !== false ? 'success' : 'default'}>
-                  {user?.notificationsEnabled !== false ? 'Enabled' : 'Disabled'}
+                <Badge variant={emailNotifs ? 'success' : 'default'}>
+                  {emailNotifs ? 'Enabled' : 'Disabled'}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between px-5 py-3">
+                <div className="flex items-center gap-3">
+                  <Bell size={14} className="text-ink-muted dark:text-ink-faint" />
+                  <span className="text-sm font-sans text-ink dark:text-paper">Alert Notifications</span>
+                </div>
+                <Badge variant={alertNotifs ? 'success' : 'default'}>
+                  {alertNotifs ? 'Enabled' : 'Disabled'}
                 </Badge>
               </div>
               <div className="flex items-center justify-between px-5 py-3">
@@ -332,27 +406,33 @@ const ProfilePage = () => {
                   <Shield size={14} className="text-ink-muted dark:text-ink-faint" />
                   <span className="text-sm font-sans text-ink dark:text-paper">{t('twoFactor') || 'Two-Factor Auth'}</span>
                 </div>
-                <Badge>Not configured</Badge>
+                <Badge variant={twoFactor ? 'success' : 'warning'}>
+                  {twoFactor ? 'Enabled' : 'Not configured'}
+                </Badge>
               </div>
               <div className="flex items-center justify-between px-5 py-3">
                 <div className="flex items-center gap-3">
                   <Globe size={14} className="text-ink-muted dark:text-ink-faint" />
                   <span className="text-sm font-sans text-ink dark:text-paper">{t('preferredLanguage') || 'Preferred Language'}</span>
                 </div>
-                <span className="text-sm font-sans text-ink-muted dark:text-ink-faint">
-                  {user?.preferredLanguage === 'ms' ? 'Bahasa Malaysia' : 'English'}
-                </span>
+                <span className="text-sm font-sans text-ink-muted dark:text-ink-faint">{preferredLang}</span>
               </div>
               <div className="flex items-center justify-between px-5 py-3">
                 <div className="flex items-center gap-3">
                   <Eye size={14} className="text-ink-muted dark:text-ink-faint" />
                   <span className="text-sm font-sans text-ink dark:text-paper">{t('theme') || 'Theme'}</span>
                 </div>
-                <span className="text-sm font-sans text-ink-muted dark:text-ink-faint capitalize">{theme}</span>
+                <span className="text-sm font-sans text-ink-muted dark:text-ink-faint capitalize">{preferredTheme}</span>
+              </div>
+              <div className="flex items-center justify-between px-5 py-3">
+                <div className="flex items-center gap-3">
+                  <BarChart3 size={14} className="text-ink-muted dark:text-ink-faint" />
+                  <span className="text-sm font-sans text-ink dark:text-paper">Total Analyses</span>
+                </div>
+                <span className="text-sm font-sans text-ink-muted dark:text-ink-faint">{user?.analysisCount?.toLocaleString() || '0'}</span>
               </div>
             </div>
 
-            {/* Go to Settings */}
             <div className="px-5 py-3 border-t border-[#e5e5e5] dark:border-[#222]">
               <button
                 onClick={() => navigate('/settings')}

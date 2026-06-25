@@ -309,7 +309,17 @@ const getMe = async (req, res) => {
     }
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ error: 'User not found.' });
-    res.json({ user: { id: user._id, name: user.name, email: user.email, phone: user.phone, avatar: user.avatar, role: user.role, provider: user.provider, preferences: user.preferences } });
+    res.json({
+      user: {
+        id: user._id, name: user.name, email: user.email, phone: user.phone,
+        avatar: user.avatar, role: user.role, provider: user.provider,
+        preferences: user.preferences, createdAt: user.createdAt,
+        twoFactorEnabled: user.twoFactorEnabled || false,
+        analysisCount: user.analysisCount || 0,
+        bookmarksCount: Array.isArray(user.bookmarks) ? user.bookmarks.length : 0,
+        recentlyViewedCount: Array.isArray(user.recentlyViewed) ? user.recentlyViewed.length : 0,
+      }
+    });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch user.' });
   }
