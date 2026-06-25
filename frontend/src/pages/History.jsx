@@ -478,7 +478,7 @@ const History = () => {
                           )}
 
                           {/* Actions — minimal, only visible on hover */}
-                          <div className="flex items-center gap-1 ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center gap-1 ml-auto opacity-60 group-hover:opacity-100 transition-opacity">
                             <Link
                               to={'/articles/' + articleId}
                               onClick={(e) => e.stopPropagation()}
