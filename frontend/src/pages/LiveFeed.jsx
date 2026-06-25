@@ -6,6 +6,11 @@ import { useLanguage } from '../context/LanguageContext';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5001/api/v1';
 
+/* ── Constants ──────────────────────────────────────────────── */
+const SOURCE_CHIPS = [
+  'Bernama', 'The Star', 'Malaysiakini', 'NST', 'Astro Awani', 'FMT',
+];
+
 /* ── Helpers ─────────────────────────────────────────────────── */
 const timeAgo = (date) => {
   const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
@@ -22,6 +27,16 @@ const sentimentColor = (s) =>
 
 const sentimentDot = (s) =>
   s === 'Positive' ? 'bg-green-500' : s === 'Negative' ? 'bg-red-500' : 'bg-gray-400';
+
+/* ── Sentiment glow classes for new-article pulse ───────────── */
+const sentimentGlow = (s) =>
+  s === 'Positive' ? 'shadow-[0_0_6px_2px_rgba(34,197,94,0.6)] dark:shadow-[0_0_8px_3px_rgba(34,197,94,0.5)]'
+  : s === 'Negative' ? 'shadow-[0_0_6px_2px_rgba(239,68,68,0.6)] dark:shadow-[0_0_8px_3px_rgba(239,68,68,0.5)]'
+  : 'shadow-[0_0_6px_2px_rgba(156,163,175,0.5)] dark:shadow-[0_0_8px_3px_rgba(156,163,175,0.4)]';
+
+/* ── Breaking threshold ─────────────────────────────────────── */
+const isBreakingArticle = (a) =>
+  a.isAlert || (typeof a.sentimentScore === 'number' && a.sentimentScore < -0.5);
 
 /* ── Connection Badge ────────────────────────────────────────── */
 const ConnectionBadge = ({ status }) => {
@@ -154,57 +169,99 @@ const HourlyChart = ({ breakdown, t }) => {
 };
 
 /* ── Article Card ────────────────────────────────────────────── */
-const ArticleCard = ({ article, isNew }) => (
-  <a
-    href={article.url}
-    target="_blank"
-    rel="noopener noreferrer"
-    className={`block no-underline border-b border-paper-line dark:border-paper-dark-line last:border-b-0 px-5 py-3.5 transition-colors hover:bg-paper/50 dark:hover:bg-paper-dark/50
-      ${isNew ? 'bg-accent/5 dark:bg-accent/10' : ''}
-    `}
-  >
-    <div className="flex items-start gap-3">
-      <div className="flex-shrink-0 pt-0.5">
-        <span className={`w-2 h-2 rounded-full inline-block ${sentimentDot(article.sentiment)}`} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <h3 className="text-[13px] font-semibold text-ink dark:text-paper leading-snug line-clamp-2 mb-1 font-sans">
-          {article.title}
-        </h3>
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-ink-muted dark:text-ink-faint font-sans">
-            {article.source}
-          </span>
-          <span className="text-ink-faint">·</span>
-          <span className="text-[10px] text-ink-faint font-sans">{timeAgo(article.publishedAt)}</span>
-          {article.sentiment && (
-            <>
-              <span className="text-ink-faint">·</span>
-              <span className={`text-[9px] font-bold uppercase tracking-[0.15em] font-sans ${sentimentColor(article.sentiment)}`}>
-                {article.sentiment}
-              </span>
-            </>
-          )}
-          {article.language && (
-            <>
-              <span className="text-ink-faint">·</span>
-              <span className="text-[9px] font-medium text-ink-faint uppercase font-sans">
-                {article.language === 'ms' ? 'BM' : 'EN'}
-              </span>
-            </>
-          )}
-          {article.isAlert && (
-            <span className="text-[9px] font-black uppercase tracking-[0.15em] text-red-700 dark:text-red-400 font-sans ml-auto">
-              ALERT
-            </span>
-          )}
+const ArticleCard = ({ article, isNew, t }) => {
+  const breaking = isBreakingArticle(article);
+
+  return (
+    <a
+      href={article.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`block no-underline border-b border-paper-line dark:border-paper-dark-line last:border-b-0 px-5 py-3.5 transition-colors hover:bg-paper/50 dark:hover:bg-paper-dark/50
+        ${isNew ? 'bg-accent/5 dark:bg-accent/10' : ''}
+        ${breaking ? 'border-l-[3px] border-l-red-600 dark:border-l-red-500 bg-red-50/40 dark:bg-red-950/20' : ''}
+      `}
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 pt-0.5">
+          <span className={`w-2 h-2 rounded-full inline-block ${sentimentDot(article.sentiment)} ${isNew ? 'animate-pulse' : ''}`} />
         </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            {breaking && (
+              <span className="flex-shrink-0 text-[9px] font-black uppercase tracking-[0.15em] text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-900/40 px-1.5 py-0.5 font-sans animate-pulse">
+                {t('breaking')}
+              </span>
+            )}
+            <h3 className="text-[13px] font-semibold text-ink dark:text-paper leading-snug line-clamp-2 font-sans">
+              {article.title}
+            </h3>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-ink-muted dark:text-ink-faint font-sans">
+              {article.source}
+            </span>
+            <span className="text-ink-faint">·</span>
+            <span className="text-[10px] text-ink-faint font-sans">{timeAgo(article.publishedAt)}</span>
+            {article.sentiment && (
+              <>
+                <span className="text-ink-faint">·</span>
+                <span className={`inline-flex items-center text-[9px] font-bold uppercase tracking-[0.15em] font-sans px-1.5 py-0.5 transition-shadow duration-700
+                  ${sentimentColor(article.sentiment)}
+                  ${isNew ? sentimentGlow(article.sentiment) : ''}
+                `}>
+                  {article.sentiment}
+                </span>
+              </>
+            )}
+            {article.language && (
+              <>
+                <span className="text-ink-faint">·</span>
+                <span className="text-[9px] font-medium text-ink-faint uppercase font-sans">
+                  {article.language === 'ms' ? 'BM' : 'EN'}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+        {isNew && (
+          <span className="flex-shrink-0 text-[9px] font-black uppercase tracking-[0.2em] text-accent bg-accent/10 px-2 py-0.5 font-sans">NEW</span>
+        )}
       </div>
-      {isNew && (
-        <span className="flex-shrink-0 text-[9px] font-black uppercase tracking-[0.2em] text-accent bg-accent/10 px-2 py-0.5 font-sans">NEW</span>
-      )}
-    </div>
-  </a>
+    </a>
+  );
+};
+
+/* ── Source Filter Chips ─────────────────────────────────────── */
+const SourceChips = ({ sources, activeSource, onSelect, t }) => (
+  <div className="flex items-center gap-2 flex-wrap">
+    <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mr-1">
+      {t('filterSources')}:
+    </span>
+    <button
+      onClick={() => onSelect('all')}
+      className={`text-[10px] font-bold uppercase tracking-[0.12em] font-sans px-3 py-1 border transition-colors cursor-pointer
+        ${activeSource === 'all'
+          ? 'border-ink dark:border-paper bg-ink dark:bg-paper text-paper dark:text-ink'
+          : 'border-paper-line dark:border-paper-dark-line text-ink-muted dark:text-ink-faint hover:border-ink-muted dark:hover:border-ink-faint'
+        }`}
+    >
+      {t('allSources')}
+    </button>
+    {sources.map((src) => (
+      <button
+        key={src}
+        onClick={() => onSelect(src)}
+        className={`text-[10px] font-bold uppercase tracking-[0.12em] font-sans px-3 py-1 border transition-colors cursor-pointer
+          ${activeSource === src
+            ? 'border-ink dark:border-paper bg-ink dark:bg-paper text-paper dark:text-ink'
+            : 'border-paper-line dark:border-paper-dark-line text-ink-muted dark:text-ink-faint hover:border-ink-muted dark:hover:border-ink-faint'
+          }`}
+      >
+        {src}
+      </button>
+    ))}
+  </div>
 );
 
 /* ── Main Component ──────────────────────────────────────────── */
@@ -216,17 +273,40 @@ const LiveFeed = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [langFilter, setLangFilter] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState('all');
   const [newCount, setNewCount] = useState(0);
   const [newIds, setNewIds] = useState(new Set());
   const [autoScroll, setAutoScroll] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState('connecting');
   const [lastUpdate, setLastUpdate] = useState(null);
   const containerRef = useRef(null);
+  const listRef = useRef(null);
   const sseRef = useRef(null);
   const refreshTimerRef = useRef(null);
   const autoScrollRef = useRef(autoScroll);
+  const isHoveringRef = useRef(false);
+  const autoScrollTimerRef = useRef(null);
 
   useEffect(() => { autoScrollRef.current = autoScroll; }, [autoScroll]);
+
+  /* ── Auto-scroll effect ─────────────────────────────────────── */
+  useEffect(() => {
+    if (!autoScroll || !listRef.current) return;
+
+    const el = listRef.current;
+    const tick = () => {
+      if (isHoveringRef.current) return;
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 4;
+      if (atBottom) {
+        el.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        el.scrollBy({ top: 1, behavior: 'auto' });
+      }
+    };
+
+    autoScrollTimerRef.current = setInterval(tick, 80);
+    return () => clearInterval(autoScrollTimerRef.current);
+  }, [autoScroll]);
 
   // Fetch stats from monitor endpoint
   const fetchStats = useCallback(async () => {
@@ -368,6 +448,10 @@ const LiveFeed = () => {
       const artLang = a.language === 'ms' ? 'ms' : 'en';
       if (artLang !== langFilter) return false;
     }
+    if (sourceFilter !== 'all') {
+      const src = (a.source || '').toLowerCase();
+      if (!src.includes(sourceFilter.toLowerCase())) return false;
+    }
     return true;
   });
 
@@ -429,7 +513,7 @@ const LiveFeed = () => {
         <StatCard label={t('articlesPerHour')} value={stats?.articlesPerHour ?? '—'} sub={t('last60Minutes')} />
         <StatCard label={t('today')} value={stats?.totalToday ?? '—'} sub={t('articlesCollected')} />
         <StatCard label={t('activeSources')} value={stats?.activeSources ?? '—'} sub={t('uniquePublishers24h')} />
-        <StatCard label={t('alerts')} value={articles.filter(a => a.isAlert).length} sub={t('activeAlerts')} />
+        <StatCard label={t('alerts')} value={articles.filter(a => isBreakingArticle(a)).length} sub={t('activeAlerts')} />
       </div>
 
       {/* ── Sentiment Distribution + Hourly ──────────────── */}
@@ -438,8 +522,18 @@ const LiveFeed = () => {
         {stats?.hourlyBreakdown?.length > 0 && <HourlyChart breakdown={stats.hourlyBreakdown} t={t} />}
       </div>
 
-      {/* ── Filters ──────────────────────────────────────── */}
-      <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card mt-5 mb-4">
+      {/* ── Source Filter Chips ───────────────────────────── */}
+      <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card mt-5 px-4 py-3">
+        <SourceChips
+          sources={SOURCE_CHIPS}
+          activeSource={sourceFilter}
+          onSelect={setSourceFilter}
+          t={t}
+        />
+      </div>
+
+      {/* ── Sentiment / Language Filters ──────────────────── */}
+      <div className="border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card mt-0 mb-4">
         <div className="flex items-center justify-between px-4 py-2.5 gap-4 flex-wrap">
           <div className="flex items-center">
             {filterOptions.map((s, i) => (
@@ -499,7 +593,12 @@ const LiveFeed = () => {
           <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">{t('incomingArticles')}</span>
           <span className="text-[10px] text-ink-faint font-sans">{filteredArticles.length} {t('articles')}</span>
         </div>
-        <div className="max-h-[600px] overflow-y-auto">
+        <div
+          ref={listRef}
+          className="max-h-[600px] overflow-y-auto"
+          onMouseEnter={() => { isHoveringRef.current = true; }}
+          onMouseLeave={() => { isHoveringRef.current = false; }}
+        >
           <AnimatePresence initial={false}>
             {filteredArticles.length === 0 ? (
               <div className="text-center py-20">
@@ -508,11 +607,18 @@ const LiveFeed = () => {
               </div>
             ) : (
               filteredArticles.map((article) => (
-                <ArticleCard
+                <motion.div
                   key={article._id || article.url}
-                  article={article}
-                  isNew={newIds.has(article._id || article.url)}
-                />
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, ease: 'easeOut' }}
+                >
+                  <ArticleCard
+                    article={article}
+                    isNew={newIds.has(article._id || article.url)}
+                    t={t}
+                  />
+                </motion.div>
               ))
             )}
           </AnimatePresence>
