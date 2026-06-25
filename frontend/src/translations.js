@@ -55,6 +55,8 @@ export const translations = {
     displaying: 'Displaying',
     saving: 'Saving...',
     noBadges: 'No badges available yet. Start commenting to earn badges!',
+    unlocked: 'Unlocked',
+    selected: 'Selected',
 
     // Profile
     memberSince: 'Member since',
@@ -151,6 +153,8 @@ export const translations = {
     displaying: 'Paparkan',
     saving: 'Menyimpan...',
     noBadges: 'Tiada lencana lagi. Mula komen untuk mendapat lencana!',
+    unlocked: 'Dibuka',
+    selected: 'Dipilih',
 
     // Profile
     memberSince: 'Ahli sejak',

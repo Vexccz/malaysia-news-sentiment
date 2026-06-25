@@ -113,43 +113,67 @@ router.patch('/profile',            protect, updateProfile);
 router.get('/badges', protect, async (req, res) => {
   try {
     const User = require('../models/User');
-    const CommunityComment = require('../models/CommunityComment');
+    const mongoose = require('mongoose');
+    let CommunityComment;
+    try {
+      CommunityComment = require('../models/CommunityComment');
+    } catch (e) {
+      // If model doesn't exist, return all badges as not earned
+      const user = await User.findById(req.user.id).select('selectedBadges').lean();
+      return res.json({
+        badges: [
+          { id: 'commentator', icon: '💬', name: 'Commentator', description: 'Post 5 or more comments', earned: false, progress: 0, target: 5 },
+          { id: 'active_voice', icon: '⭐', name: 'Active Voice', description: 'Post 20 or more comments', earned: false, progress: 0, target: 20 },
+          { id: 'top_contributor', icon: '🏆', name: 'Top Contributor', description: 'Post 50 or more comments', earned: false, progress: 0, target: 50 },
+          { id: 'trendsetter', icon: '🚀', name: 'Trendsetter', description: 'Be first to comment in 10 discussions', earned: false, progress: 0, target: 10 },
+          { id: 'beloved', icon: '❤️', name: 'Beloved', description: 'Receive 100 likes on comments', earned: false, progress: 0, target: 100 },
+          { id: 'sentiment_expert', icon: '🎯', name: 'Sentiment Expert', description: 'Add sentiment to 20 comments', earned: false, progress: 0, target: 20 },
+          { id: 'ghost_writer', icon: '👤', name: 'Ghost Writer', description: 'Post 20 anonymous comments', earned: false, progress: 0, target: 20 },
+        ],
+        selectedBadges: user?.selectedBadges || [],
+      });
+    }
+
     const user = await User.findById(req.user.id).select('selectedBadges').lean();
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
-    // Compute earned badges
-    const totalComments = await CommunityComment.countDocuments({ author: req.user.id });
-    const firstComments = await CommunityComment.aggregate([
-      { $sort: { createdAt: 1 } },
-      { $group: { _id: '$discussionId', firstCommenter: { $first: '$author' } } },
-      { $match: { firstCommenter: require('mongoose').Types.ObjectId(req.user.id) } },
-      { $count: 'count' }
-    ]);
-    const firstCommentCount = firstComments[0]?.count || 0;
-    const likesResult = await CommunityComment.aggregate([
-      { $match: { author: require('mongoose').Types.ObjectId(req.user.id) } },
-      { $group: { _id: null, totalLikes: { $sum: '$likeCount' } } }
-    ]);
-    const totalLikes = likesResult[0]?.totalLikes || 0;
-    const sentimentComments = await CommunityComment.countDocuments({
-      author: req.user.id, sentiment: { $exists: true, $ne: null }
-    });
-    const anonymousComments = await CommunityComment.countDocuments({
-      author: req.user.id, isAnonymous: true
-    });
+    const userId = new mongoose.Types.ObjectId(req.user.id);
+
+    // Compute metrics with fallbacks
+    let totalComments = 0, firstCommentCount = 0, totalLikes = 0;
+    let sentimentComments = 0, anonymousComments = 0;
+
+    try { totalComments = await CommunityComment.countDocuments({ author: userId }); } catch (e) {}
+    try {
+      const firstComments = await CommunityComment.aggregate([
+        { $sort: { createdAt: 1 } },
+        { $group: { _id: '$discussionId', firstCommenter: { $first: '$author' } } },
+        { $match: { firstCommenter: userId } },
+        { $count: 'count' }
+      ]);
+      firstCommentCount = firstComments[0]?.count || 0;
+    } catch (e) {}
+    try {
+      const likesResult = await CommunityComment.aggregate([
+        { $match: { author: userId } },
+        { $group: { _id: null, totalLikes: { $sum: '$likeCount' } } }
+      ]);
+      totalLikes = likesResult[0]?.totalLikes || 0;
+    } catch (e) {}
+    try { sentimentComments = await CommunityComment.countDocuments({ author: userId, sentiment: { $exists: true, $ne: null } }); } catch (e) {}
+    try { anonymousComments = await CommunityComment.countDocuments({ author: userId, isAnonymous: true }); } catch (e) {}
 
     const allBadges = [
-      { id: 'commentator', icon: '💬', name: 'Commentator', description: 'Posted 5 or more comments', earned: totalComments >= 5 },
-      { id: 'active_voice', icon: '⭐', name: 'Active Voice', description: 'Posted 20 or more comments', earned: totalComments >= 20 },
-      { id: 'top_contributor', icon: '🏆', name: 'Top Contributor', description: 'Posted 50 or more comments', earned: totalComments >= 50 },
-      { id: 'trendsetter', icon: '🚀', name: 'Trendsetter', description: 'First to comment in 10+ discussions', earned: firstCommentCount >= 10 },
-      { id: 'beloved', icon: '❤️', name: 'Beloved', description: 'Received 100+ likes', earned: totalLikes >= 100 },
-      { id: 'sentiment_expert', icon: '🎯', name: 'Sentiment Expert', description: 'Sentiment on 20+ comments', earned: sentimentComments >= 20 },
-      { id: 'ghost_writer', icon: '👤', name: 'Ghost Writer', description: '20+ anonymous comments', earned: anonymousComments >= 20 },
+      { id: 'commentator', icon: '💬', name: 'Commentator', description: 'Post 5 or more comments', earned: totalComments >= 5, progress: totalComments, target: 5 },
+      { id: 'active_voice', icon: '⭐', name: 'Active Voice', description: 'Post 20 or more comments', earned: totalComments >= 20, progress: totalComments, target: 20 },
+      { id: 'top_contributor', icon: '🏆', name: 'Top Contributor', description: 'Post 50 or more comments', earned: totalComments >= 50, progress: totalComments, target: 50 },
+      { id: 'trendsetter', icon: '🚀', name: 'Trendsetter', description: 'Be first to comment in 10 discussions', earned: firstCommentCount >= 10, progress: firstCommentCount, target: 10 },
+      { id: 'beloved', icon: '❤️', name: 'Beloved', description: 'Receive 100 likes on comments', earned: totalLikes >= 100, progress: totalLikes, target: 100 },
+      { id: 'sentiment_expert', icon: '🎯', name: 'Sentiment Expert', description: 'Add sentiment to 20 comments', earned: sentimentComments >= 20, progress: sentimentComments, target: 20 },
+      { id: 'ghost_writer', icon: '👤', name: 'Ghost Writer', description: 'Post 20 anonymous comments', earned: anonymousComments >= 20, progress: anonymousComments, target: 20 },
     ];
 
-    const selectedBadges = user.selectedBadges || [];
-    res.json({ badges: allBadges, selectedBadges });
+    res.json({ badges: allBadges, selectedBadges: user.selectedBadges || [] });
   } catch (err) {
     console.error('[Auth] Get badges error:', err.message);
     res.status(500).json({ error: 'Failed to fetch badges.' });

@@ -425,6 +425,10 @@ const ProfilePage = () => {
             <div className="p-5">
               {badgesLoading ? (
                 <p className="text-sm text-ink-muted dark:text-ink-faint font-sans">{t('loading') || 'Loading...'}</p>
+              ) : badges.length === 0 ? (
+                <p className="text-sm text-ink-muted dark:text-ink-faint font-sans text-center py-4">
+                  {t('noBadges') || 'No badges available. Start commenting to earn badges!'}
+                </p>
               ) : (
                 <>
                   {/* Selected badges display */}
@@ -453,73 +457,73 @@ const ProfilePage = () => {
                     </div>
                   )}
 
-                  {/* Earned badges (selectable) */}
-                  {earnedBadges.length > 0 && (
-                    <div className="mb-4">
-                      <p className="text-[10px] text-ink-faint dark:text-ink-faint uppercase tracking-wider font-sans mb-2">
-                        {t('earnedBadges') || 'Earned Badges'} ({earnedBadges.length}) — {t('selectUpTo3') || 'Select up to 3'}
-                      </p>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {earnedBadges.map(badge => {
-                          const isSelected = selectedBadges.includes(badge.id);
-                          return (
-                            <button
-                              key={badge.id}
-                              onClick={() => handleBadgeToggle(badge.id)}
-                              disabled={savingBadges || (!isSelected && selectedBadges.length >= 3)}
-                              className={`
-                                flex items-center gap-2 px-3 py-2.5 text-left border transition-all text-sm font-sans
-                                ${isSelected
-                                  ? 'border-accent bg-accent/5 text-accent'
-                                  : 'border-[#e5e5e5] dark:border-[#222] text-ink dark:text-paper hover:border-accent/50'
-                                }
-                                disabled:opacity-40 disabled:cursor-not-allowed
-                              `}
-                            >
-                              <span className="text-lg">{badge.icon}</span>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-xs truncate">{badge.name}</p>
-                                <p className="text-[10px] text-ink-faint truncate">{badge.description}</p>
-                              </div>
+                  <p className="text-[10px] text-ink-faint dark:text-ink-faint uppercase tracking-wider font-sans mb-3">
+                    {earnedBadges.length} / {badges.length} {t('unlocked') || 'Unlocked'} — {t('selectUpTo3') || 'Select up to 3 to display'}
+                  </p>
+
+                  {/* All badges grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {badges.map(badge => {
+                      const isEarned = badge.earned;
+                      const isSelected = selectedBadges.includes(badge.id);
+                      const progress = badge.progress || 0;
+                      const target = badge.target || 1;
+                      const pct = Math.min(Math.round((progress / target) * 100), 100);
+
+                      return (
+                        <button
+                          key={badge.id}
+                          onClick={() => isEarned && handleBadgeToggle(badge.id)}
+                          disabled={!isEarned || savingBadges || (!isSelected && selectedBadges.length >= 3)}
+                          className={`
+                            flex items-start gap-3 px-3 py-3 text-left border transition-all font-sans
+                            ${isEarned
+                              ? isSelected
+                                ? 'border-accent bg-accent/5'
+                                : 'border-[#e5e5e5] dark:border-[#222] hover:border-accent/50 cursor-pointer'
+                              : 'border-[#e5e5e5] dark:border-[#222] opacity-60 cursor-default'
+                            }
+                          `}
+                        >
+                          {/* Icon */}
+                          <span className={`text-xl mt-0.5 ${isEarned ? '' : 'grayscale'}`}>
+                            {badge.icon}
+                          </span>
+
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className={`font-semibold text-xs ${isEarned ? 'text-ink dark:text-paper' : 'text-ink-muted dark:text-ink-faint'}`}>
+                                {badge.name}
+                              </p>
                               {isSelected && (
-                                <span className="text-accent text-xs">✓</span>
+                                <span className="text-accent text-[10px]">✓ {t('selected') || 'Selected'}</span>
                               )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Locked badges (grayed out) */}
-                  {lockedBadges.length > 0 && (
-                    <div>
-                      <p className="text-[10px] text-ink-faint dark:text-ink-faint uppercase tracking-wider font-sans mb-2">
-                        {t('lockedBadges') || 'Locked Badges'} ({lockedBadges.length})
-                      </p>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {lockedBadges.map(badge => (
-                          <div
-                            key={badge.id}
-                            className="flex items-center gap-2 px-3 py-2.5 border border-[#e5e5e5] dark:border-[#222] opacity-40 text-sm font-sans"
-                          >
-                            <span className="text-lg grayscale">{badge.icon}</span>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-xs truncate text-ink-muted">{badge.name}</p>
-                              <p className="text-[10px] text-ink-faint truncate">{badge.description}</p>
+                              {!isEarned && (
+                                <span className="text-ink-faint text-[10px]">🔒</span>
+                              )}
                             </div>
-                            <span className="text-ink-faint text-xs">🔒</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                            <p className="text-[10px] text-ink-faint mt-0.5">
+                              {badge.description}
+                            </p>
 
-                  {earnedBadges.length === 0 && lockedBadges.length === 0 && (
-                    <p className="text-sm text-ink-muted dark:text-ink-faint font-sans text-center py-4">
-                      {t('noBadges') || 'No badges available yet. Start commenting to earn badges!'}
-                    </p>
-                  )}
+                            {/* Progress bar */}
+                            <div className="mt-1.5 flex items-center gap-2">
+                              <div className="flex-1 h-1.5 bg-[#e5e5e5] dark:bg-[#222] overflow-hidden">
+                                <div
+                                  className={`h-full transition-all duration-500 ${isEarned ? 'bg-emerald-500' : 'bg-ink-faint dark:bg-ink-muted'}`}
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                              <span className={`text-[10px] font-mono ${isEarned ? 'text-emerald-600 dark:text-emerald-400' : 'text-ink-faint'}`}>
+                                {progress}/{target}
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </>
               )}
             </div>
