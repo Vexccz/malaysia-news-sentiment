@@ -2,7 +2,116 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
+import { Calendar, Clock, Download, FileText, RefreshCw, Trash2, Plus, Check, ChevronDown, ChevronUp, BarChart3, PieChart, Newspaper, Globe } from 'lucide-react';
 
+/* ─── Localization helper ──────────────────────────────────────────── */
+const LABELS = {
+  en: {
+    reports: 'Reports',
+    subtitle: 'Generate and download sentiment analysis reports',
+    reportTemplate: 'Report Template',
+    savedTemplates: 'Saved Templates',
+    templatePreview: 'Template Preview',
+    collapse: 'Collapse',
+    expand: 'Expand',
+    sectionsIncluded: 'sections included',
+    selectSections: 'Select Sections',
+    saveAsTemplate: '+ Save as template',
+    templateName: 'Template name',
+    save: 'Save',
+    cancel: 'Cancel',
+    topic: 'Topic',
+    topicPlaceholder: 'e.g. economy, politics (leave empty for all)',
+    compareWith: 'Compare With (Topic B)',
+    comparePlaceholder: 'e.g. politics, economy',
+    reportType: 'Report Type',
+    fullReport: 'Full Report',
+    topicSpecific: 'Topic-Specific',
+    comparison: 'Comparison',
+    from: 'From',
+    to: 'To',
+    generating: 'Generating...',
+    downloadPdf: 'Download PDF',
+    history: 'History',
+    clear: 'Clear',
+    noHistory: 'No reports generated yet',
+    reDownload: 'Re-download',
+    scheduleTitle: 'Scheduled Reports',
+    scheduleSubtitle: 'Auto-generate reports on a recurring basis',
+    frequency: 'Frequency',
+    weekly: 'Weekly',
+    monthly: 'Monthly',
+    scheduledTopic: 'Topic',
+    scheduledTopicPlaceholder: 'e.g. economy (leave empty for all)',
+    addSchedule: 'Add Schedule',
+    noSchedules: 'No scheduled reports',
+    scheduleFreq: 'Frequency',
+    scheduleNextRun: 'Next run',
+    scheduleSections: 'Sections',
+    customSections: 'summary, charts, articles, sources, sentiment',
+    removeSchedule: 'Remove',
+    sectionsSummary: 'Summary',
+    sectionsCharts: 'Charts',
+    sectionsArticles: 'Articles',
+    sectionsSources: 'Sources',
+    sectionsSentiment: 'Sentiment Breakdown',
+    selectTemplateSections: 'Select Sections to Include',
+  },
+  ms: {
+    reports: 'Laporan',
+    subtitle: 'Janakan dan muat turun laporan analisis sentimen',
+    reportTemplate: 'Templat Laporan',
+    savedTemplates: 'Templat Disimpan',
+    templatePreview: 'Pratonton Templat',
+    collapse: 'Kuncup',
+    expand: 'Kembang',
+    sectionsIncluded: 'bahagian disertakan',
+    selectSections: 'Pilih Bahagian',
+    saveAsTemplate: '+ Simpan sebagai templat',
+    templateName: 'Nama templat',
+    save: 'Simpan',
+    cancel: 'Batal',
+    topic: 'Topik',
+    topicPlaceholder: 'cth. ekonomi, politik (biarkan kosong untuk semua)',
+    compareWith: 'Bandingkan Dengan (Topik B)',
+    comparePlaceholder: 'cth. politik, ekonomi',
+    reportType: 'Jenis Laporan',
+    fullReport: 'Laporan Penuh',
+    topicSpecific: 'Khusus Topik',
+    comparison: 'Perbandingan',
+    from: 'Dari',
+    to: 'Hingga',
+    generating: 'Menghasilkan...',
+    downloadPdf: 'Muat Turun PDF',
+    history: 'Sejarah',
+    clear: 'Padam',
+    noHistory: 'Tiada laporan dijana lagi',
+    reDownload: 'Muat Turun Semula',
+    scheduleTitle: 'Laporan Berjadual',
+    scheduleSubtitle: 'Janakan laporan secara automatik secara berkala',
+    frequency: 'Kekerapan',
+    weekly: 'Mingguan',
+    monthly: 'Bulanan',
+    scheduledTopic: 'Topik',
+    scheduledTopicPlaceholder: 'cth. ekonomi (biarkan kosong untuk semua)',
+    addSchedule: 'Tambah Jadual',
+    noSchedules: 'Tiada laporan berjadual',
+    scheduleFreq: 'Kekerapan',
+    scheduleNextRun: 'Seterusnya',
+    scheduleSections: 'Bahagian',
+    customSections: 'ringkasan, carta, artikel, sumber, sentimen',
+    removeSchedule: 'Buang',
+    sectionsSummary: 'Ringkasan',
+    sectionsCharts: 'Carta',
+    sectionsArticles: 'Artikel',
+    sectionsSources: 'Sumber',
+    sectionsSentiment: 'Pecahan Sentimen',
+    selectTemplateSections: 'Pilih Bahagian untuk Disertakan',
+  },
+};
+
+/* ─── Template / Section constants ─────────────────────────────────── */
 const TEMPLATES = [
   {
     id: 'executive',
@@ -67,16 +176,50 @@ const ALL_SECTIONS = [
   'Conclusions',
 ];
 
+/* Custom template section checkboxes (user-facing) */
+const CUSTOM_SECTION_OPTIONS = [
+  { key: 'summary', icon: FileText },
+  { key: 'charts', icon: BarChart3 },
+  { key: 'articles', icon: Newspaper },
+  { key: 'sources', icon: Globe },
+  { key: 'sentiment', icon: PieChart },
+];
+
+/* ─── Helpers ──────────────────────────────────────────────────────── */
+const nextRunDate = (frequency) => {
+  const d = new Date();
+  if (frequency === 'weekly') d.setDate(d.getDate() + 7);
+  else d.setMonth(d.getMonth() + 1);
+  return d.toISOString();
+};
+
+const fmtDate = (iso) => {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' }); }
+  catch { return iso; }
+};
+
+const fmtShort = (iso) => {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' }); }
+  catch { return iso; }
+};
+
+/* ─── Component ────────────────────────────────────────────────────── */
 const Reports = () => {
   const [topic, setTopic] = useState('');
-  const { t, lang } = useLanguage();
+  const { lang } = useLanguage();
+  const { theme } = useTheme();
+  const L = LABELS[lang] || LABELS.en;
+  const isDark = theme === 'dark';
+
   const [topicB, setTopicB] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [reportType, setReportType] = useState('full');
   const [loading, setLoading] = useState(false);
 
-  // Template state
+  /* Template state */
   const [selectedTemplate, setSelectedTemplate] = useState('executive');
   const [showPreview, setShowPreview] = useState(false);
   const [customSections, setCustomSections] = useState([]);
@@ -86,14 +229,26 @@ const Reports = () => {
   });
   const [showSaveForm, setShowSaveForm] = useState(false);
 
+  /* History */
   const [history, setHistory] = useState(() => {
     try { return JSON.parse(localStorage.getItem('report-history') || '[]'); } catch { return []; }
   });
+
+  /* Scheduled reports */
+  const [schedules, setSchedules] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('scheduled-reports') || '[]'); } catch { return []; }
+  });
+  const [showScheduleForm, setShowScheduleForm] = useState(false);
+  const [scheduleFrequency, setScheduleFrequency] = useState('weekly');
+  const [scheduleTopic, setScheduleTopic] = useState('');
+  const [scheduleSections, setScheduleSections] = useState(['summary', 'charts', 'articles', 'sources', 'sentiment']);
+  const [expandedSchedule, setExpandedSchedule] = useState(null);
 
   const activeTemplate = selectedTemplate === 'custom'
     ? { id: 'custom', name: 'Custom', sections: customSections }
     : TEMPLATES.find(t => t.id === selectedTemplate);
 
+  /* ─── Custom template helpers ──────────────────────────────────── */
   const toggleCustomSection = (section) => {
     setCustomSections(prev =>
       prev.includes(section) ? prev.filter(s => s !== section) : [...prev, section]
@@ -126,6 +281,37 @@ const Reports = () => {
     setCustomSections(template.sections);
   };
 
+  /* ─── Schedule helpers ─────────────────────────────────────────── */
+  const toggleScheduleSection = (key) => {
+    setScheduleSections(prev =>
+      prev.includes(key) ? prev.filter(s => s !== key) : [...prev, key]
+    );
+  };
+
+  const addSchedule = () => {
+    const entry = {
+      id: Date.now(),
+      frequency: scheduleFrequency,
+      topic: scheduleTopic.trim() || 'All Topics',
+      sections: [...scheduleSections],
+      template: activeTemplate?.name || 'Custom',
+      createdAt: new Date().toISOString(),
+      nextRun: nextRunDate(scheduleFrequency),
+    };
+    const updated = [...schedules, entry];
+    setSchedules(updated);
+    localStorage.setItem('scheduled-reports', JSON.stringify(updated));
+    setShowScheduleForm(false);
+    setScheduleTopic('');
+  };
+
+  const removeSchedule = (id) => {
+    const updated = schedules.filter(s => s.id !== id);
+    setSchedules(updated);
+    localStorage.setItem('scheduled-reports', JSON.stringify(updated));
+  };
+
+  /* ─── Report generation ────────────────────────────────────────── */
   const handleGenerate = async () => {
     setLoading(true);
     try {
@@ -164,10 +350,30 @@ const Reports = () => {
       localStorage.setItem('report-history', JSON.stringify(newHistory));
     } catch (err) {
       console.error('Report generation failed:', err);
-      let errMsg = 'Failed to generate report. Please try again.'; try { if (err.response?.data instanceof Blob) { const text = await err.response.data.text(); const parsed = JSON.parse(text); errMsg = parsed.error || errMsg; } else if (err.response?.data?.error) { errMsg = err.response.data.error; } } catch(e) {} alert(errMsg);
+      let errMsg = 'Failed to generate report. Please try again.';
+      try {
+        if (err.response?.data instanceof Blob) {
+          const text = await err.response.data.text();
+          const parsed = JSON.parse(text);
+          errMsg = parsed.error || errMsg;
+        } else if (err.response?.data?.error) {
+          errMsg = err.response.data.error;
+        }
+      } catch (e) { /* ignore */ }
+      alert(errMsg);
     } finally {
       setLoading(false);
     }
+  };
+
+  /* Re-download triggers the same generation flow using stored params */
+  const handleRedownload = async (entry) => {
+    setTopic(entry.topic === 'All Topics' ? '' : entry.topic);
+    setDateFrom(entry.dateFrom === 'All time' ? '' : entry.dateFrom);
+    setDateTo(entry.dateTo === 'Present' ? '' : entry.dateTo);
+    setReportType(entry.type || 'full');
+    /* small timeout so state settles before generating */
+    setTimeout(() => handleGenerate(), 60);
   };
 
   const clearHistory = () => {
@@ -175,28 +381,248 @@ const Reports = () => {
     localStorage.removeItem('report-history');
   };
 
+  /* ─── Section label resolver ───────────────────────────────────── */
+  const sectionLabel = (key) => {
+    const map = {
+      summary: L.sectionsSummary,
+      charts: L.sectionsCharts,
+      articles: L.sectionsArticles,
+      sources: L.sectionsSources,
+      sentiment: L.sectionsSentiment,
+    };
+    return map[key] || key;
+  };
+
+  /* ─── Reusable UI atoms ────────────────────────────────────────── */
+  const Label = ({ children }) => (
+    <label className="block text-[10px] font-medium text-ink-muted dark:text-ink-faint uppercase tracking-[0.2em]">
+      {children}
+    </label>
+  );
+
+  const inputCls = "w-full px-3 py-2.5 border border-ink/10 dark:border-paper/10 bg-white dark:bg-[#111] text-sm text-ink dark:text-paper focus:outline-none focus:border-ink dark:focus:border-paper";
+
+  /* ─── Render ────────────────────────────────────────────────────── */
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="max-w-3xl mx-auto space-y-6"
+      className="max-w-3xl mx-auto space-y-8"
     >
-      {/* Header */}
+      {/* ── Header ──────────────────────────────────────────────── */}
       <div className="border-b-2 border-ink dark:border-paper pb-3">
         <h1 className="font-['Playfair_Display'] text-2xl font-black text-ink dark:text-paper tracking-tight uppercase">
-          Reports
+          {L.reports}
         </h1>
         <p className="text-[10px] text-ink-muted dark:text-ink-faint mt-1 uppercase tracking-[0.2em]">
-          Generate and download sentiment analysis reports
+          {L.subtitle}
         </p>
       </div>
 
-      {/* Template Selection */}
+      {/* ═══════════════════════════════════════════════════════════
+          FEATURE 1 — SCHEDULED REPORTS
+          ═══════════════════════════════════════════════════════════ */}
+      <section className="space-y-4">
+        <div className="border-b-2 border-ink/10 dark:border-paper/10 pb-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Calendar size={14} className="text-ink dark:text-paper" />
+            <h2 className="font-['Playfair_Display'] text-sm font-bold text-ink dark:text-paper uppercase tracking-wide">
+              {L.scheduleTitle}
+            </h2>
+          </div>
+          <button
+            onClick={() => setShowScheduleForm(!showScheduleForm)}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-ink dark:border-paper text-[10px] font-medium text-ink dark:text-paper uppercase tracking-[0.15em] hover:bg-ink hover:text-paper dark:hover:bg-paper dark:hover:text-ink transition-all"
+          >
+            <Plus size={10} />
+            {L.addSchedule}
+          </button>
+        </div>
+
+        <p className="text-[10px] text-ink-muted dark:text-ink-faint uppercase tracking-[0.15em]">
+          {L.scheduleSubtitle}
+        </p>
+
+        {/* Schedule form */}
+        <AnimatePresence>
+          {showScheduleForm && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="border border-ink/10 dark:border-paper/10 p-4 space-y-4">
+                {/* Frequency */}
+                <div>
+                  <Label>{L.frequency}</Label>
+                  <div className="flex gap-2 mt-2">
+                    {[
+                      { value: 'weekly', label: L.weekly },
+                      { value: 'monthly', label: L.monthly },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setScheduleFrequency(opt.value)}
+                        className={`flex-1 py-2.5 border text-xs font-medium uppercase tracking-[0.1em] transition-all ${
+                          scheduleFrequency === opt.value
+                            ? 'border-ink dark:border-paper bg-ink/5 dark:bg-paper/5 text-ink dark:text-paper'
+                            : 'border-ink/10 dark:border-paper/10 text-ink-muted dark:text-ink-faint hover:border-ink/30 dark:hover:border-paper/30'
+                        }`}
+                      >
+                        <Clock size={12} className="inline mr-1.5 -mt-0.5" />
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Topic */}
+                <div>
+                  <Label>{L.scheduledTopic}</Label>
+                  <input
+                    type="text"
+                    value={scheduleTopic}
+                    onChange={e => setScheduleTopic(e.target.value)}
+                    placeholder={L.scheduledTopicPlaceholder}
+                    className={`${inputCls} mt-2 placeholder-ink-muted/50 dark:placeholder-ink-faint/50`}
+                  />
+                </div>
+
+                {/* Section toggles */}
+                <div>
+                  <Label>{L.selectTemplateSections}</Label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
+                    {CUSTOM_SECTION_OPTIONS.map((opt) => {
+                      const active = scheduleSections.includes(opt.key);
+                      return (
+                        <button
+                          key={opt.key}
+                          onClick={() => toggleScheduleSection(opt.key)}
+                          className={`flex items-center gap-2 px-3 py-2 border text-xs uppercase tracking-wide transition-all ${
+                            active
+                              ? 'border-ink dark:border-paper text-ink dark:text-paper bg-ink/5 dark:bg-paper/5'
+                              : 'border-ink/10 dark:border-paper/10 text-ink-muted dark:text-ink-faint hover:border-ink/30 dark:hover:border-paper/30'
+                          }`}
+                        >
+                          <span className={`w-3 h-3 border flex items-center justify-center ${
+                            active ? 'border-ink dark:border-paper' : 'border-ink/20 dark:border-paper/20'
+                          }`}>
+                            {active && <Check size={8} strokeWidth={3} />}
+                          </span>
+                          {sectionLabel(opt.key)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={addSchedule}
+                    disabled={scheduleSections.length === 0}
+                    className="px-5 py-2.5 border border-ink dark:border-paper text-xs font-medium text-ink dark:text-paper uppercase tracking-[0.15em] hover:bg-ink hover:text-paper dark:hover:bg-paper dark:hover:text-ink disabled:opacity-30 transition-all"
+                  >
+                    {L.save}
+                  </button>
+                  <button
+                    onClick={() => setShowScheduleForm(false)}
+                    className="px-4 py-2.5 text-xs text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper uppercase tracking-[0.1em] transition-colors"
+                  >
+                    {L.cancel}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Schedule list */}
+        {schedules.length === 0 && !showScheduleForm && (
+          <p className="text-xs text-ink-muted dark:text-ink-faint italic">
+            {L.noSchedules}
+          </p>
+        )}
+
+        {schedules.length > 0 && (
+          <div className="divide-y divide-ink/5 dark:divide-paper/5 border border-ink/10 dark:border-paper/10">
+            {schedules.map((sch) => (
+              <div key={sch.id} className="px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 border text-[10px] font-bold uppercase tracking-[0.15em] ${
+                      sch.frequency === 'weekly'
+                        ? 'border-ink dark:border-paper text-ink dark:text-paper'
+                        : 'border-ink/30 dark:border-paper/30 text-ink-muted dark:text-ink-faint'
+                    }`}>
+                      <Clock size={10} />
+                      {sch.frequency === 'weekly' ? L.weekly : L.monthly}
+                    </span>
+                    <span className="text-sm font-medium text-ink dark:text-paper">{sch.topic}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] text-ink-muted dark:text-ink-faint uppercase tracking-[0.1em]">
+                      {L.scheduleNextRun}: {fmtShort(sch.nextRun)}
+                    </span>
+                    <button
+                      onClick={() => setExpandedSchedule(expandedSchedule === sch.id ? null : sch.id)}
+                      className="text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-colors"
+                    >
+                      {expandedSchedule === sch.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                    <button
+                      onClick={() => removeSchedule(sch.id)}
+                      className="text-ink-muted dark:text-ink-faint hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+
+                <AnimatePresence>
+                  {expandedSchedule === sch.id && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="pt-3 mt-3 border-t border-ink/5 dark:border-paper/5 space-y-2">
+                        <p className="text-[10px] text-ink-muted dark:text-ink-faint uppercase tracking-[0.15em]">
+                          {L.scheduleSections}:
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {sch.sections.map((sec) => (
+                            <span
+                              key={sec}
+                              className="text-[10px] px-2 py-0.5 border border-ink/10 dark:border-paper/10 text-ink-muted dark:text-ink-faint uppercase tracking-wide"
+                            >
+                              {sectionLabel(sec)}
+                            </span>
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-ink-muted dark:text-ink-faint">
+                          Template: {sch.template} &middot; Created {fmtDate(sch.createdAt)}
+                        </p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════
+          TEMPLATE SELECTION (existing)
+          ═══════════════════════════════════════════════════════════ */}
       <div className="space-y-3">
-        <label className="block text-[10px] font-medium text-ink-muted dark:text-ink-faint uppercase tracking-[0.2em]">
-          Report Template
-        </label>
+        <Label>{L.reportTemplate}</Label>
         <div className="grid grid-cols-2 gap-3">
           {TEMPLATES.map((template) => (
             <button
@@ -231,7 +657,7 @@ const Reports = () => {
         {savedTemplates.length > 0 && (
           <div className="space-y-2">
             <p className="text-[10px] font-medium text-ink-muted dark:text-ink-faint uppercase tracking-[0.2em]">
-              Saved Templates
+              {L.savedTemplates}
             </p>
             <div className="flex flex-wrap gap-2">
               {savedTemplates.map((tpl) => (
@@ -262,13 +688,13 @@ const Reports = () => {
       <div className="border border-ink/10 dark:border-paper/10 p-4 space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-[10px] font-medium text-ink-muted dark:text-ink-faint uppercase tracking-[0.2em]">
-            Template Preview
+            {L.templatePreview}
           </p>
           <button
             onClick={() => setShowPreview(!showPreview)}
             className="text-[10px] text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper uppercase tracking-[0.2em] transition-colors"
           >
-            {showPreview ? 'Collapse' : 'Expand'}
+            {showPreview ? L.collapse : L.expand}
           </button>
         </div>
 
@@ -287,7 +713,7 @@ const Reports = () => {
                     {activeTemplate?.name || 'Custom Template'}
                   </p>
                   <p className="text-[10px] text-ink-muted dark:text-ink-faint mt-0.5">
-                    {activeTemplate?.sections?.length || 0} sections included
+                    {activeTemplate?.sections?.length || 0} {L.sectionsIncluded}
                   </p>
                 </div>
                 <div className="space-y-1.5">
@@ -323,7 +749,9 @@ const Reports = () => {
         )}
       </div>
 
-      {/* Custom Section Picker */}
+      {/* ═══════════════════════════════════════════════════════════
+          FEATURE 2 — CUSTOM SECTION PICKER
+          ═══════════════════════════════════════════════════════════ */}
       {selectedTemplate === 'custom' && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -331,7 +759,7 @@ const Reports = () => {
           className="space-y-3"
         >
           <p className="text-[10px] font-medium text-ink-muted dark:text-ink-faint uppercase tracking-[0.2em]">
-            Select Sections
+            {L.selectSections}
           </p>
           <div className="grid grid-cols-2 gap-2">
             {ALL_SECTIONS.map((section) => (
@@ -369,21 +797,21 @@ const Reports = () => {
                     type="text"
                     value={customTemplateName}
                     onChange={e => setCustomTemplateName(e.target.value)}
-                    placeholder="Template name"
-                    className="flex-1 px-3 py-2 border border-ink/10 dark:border-paper/10 bg-white dark:bg-[#111] text-sm text-ink dark:text-paper focus:outline-none focus:border-ink dark:focus:border-paper"
+                    placeholder={L.templateName}
+                    className={`${inputCls} flex-1 placeholder-ink-muted/50 dark:placeholder-ink-faint/50`}
                   />
                   <button
                     onClick={saveCustomTemplate}
                     disabled={!customTemplateName.trim()}
                     className="px-4 py-2 border border-ink dark:border-paper text-xs font-medium text-ink dark:text-paper uppercase tracking-[0.15em] hover:bg-ink hover:text-paper dark:hover:bg-paper dark:hover:text-ink disabled:opacity-30 transition-all"
                   >
-                    Save
+                    {L.save}
                   </button>
                   <button
                     onClick={() => { setShowSaveForm(false); setCustomTemplateName(''); }}
                     className="px-3 py-2 text-xs text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-colors"
                   >
-                    Cancel
+                    {L.cancel}
                   </button>
                 </div>
               ) : (
@@ -391,7 +819,7 @@ const Reports = () => {
                   onClick={() => setShowSaveForm(true)}
                   className="text-[10px] text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper uppercase tracking-[0.2em] transition-colors"
                 >
-                  + Save as template
+                  {L.saveAsTemplate}
                 </button>
               )}
             </div>
@@ -399,73 +827,63 @@ const Reports = () => {
         </motion.div>
       )}
 
-      {/* Generate Form */}
+      {/* ── Generate Form ───────────────────────────────────────── */}
       <div className="space-y-4 border-t border-ink/10 dark:border-paper/10 pt-5">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-[10px] font-medium text-ink-muted dark:text-ink-faint mb-1.5 uppercase tracking-[0.2em]">
-              Topic
-            </label>
+            <Label>{L.topic}</Label>
             <input
               type="text"
               value={topic}
               onChange={e => setTopic(e.target.value)}
-              placeholder="e.g. economy, politics (leave empty for all)"
-              className="w-full px-3 py-2.5 border border-ink/10 dark:border-paper/10 bg-white dark:bg-[#111] text-sm text-ink dark:text-paper focus:outline-none focus:border-ink dark:focus:border-paper placeholder-ink-muted/50 dark:placeholder-ink-faint/50"
+              placeholder={L.topicPlaceholder}
+              className={`${inputCls} mt-1.5 placeholder-ink-muted/50 dark:placeholder-ink-faint/50`}
             />
           </div>
 
           {selectedTemplate === 'comparison' && (
-          <div>
-            <label className="block text-[10px] font-medium text-ink-muted dark:text-ink-faint mb-1.5 uppercase tracking-[0.2em]">
-              Compare With (Topic B)
-            </label>
-            <input
-              type="text"
-              value={topicB}
-              onChange={e => setTopicB(e.target.value)}
-              placeholder="e.g. politics, economy"
-              className="w-full px-3 py-2.5 border border-ink/10 dark:border-paper/10 bg-white dark:bg-[#111] text-sm text-ink dark:text-paper focus:outline-none focus:border-ink dark:focus:border-paper placeholder-ink-muted/50 dark:placeholder-ink-faint/50"
-            />
-          </div>
+            <div>
+              <Label>{L.compareWith}</Label>
+              <input
+                type="text"
+                value={topicB}
+                onChange={e => setTopicB(e.target.value)}
+                placeholder={L.comparePlaceholder}
+                className={`${inputCls} mt-1.5 placeholder-ink-muted/50 dark:placeholder-ink-faint/50`}
+              />
+            </div>
           )}
 
           <div>
-            <label className="block text-[10px] font-medium text-ink-muted dark:text-ink-faint mb-1.5 uppercase tracking-[0.2em]">
-              Report Type
-            </label>
+            <Label>{L.reportType}</Label>
             <select
               value={reportType}
               onChange={e => setReportType(e.target.value)}
-              className="w-full px-3 py-2.5 border border-ink/10 dark:border-paper/10 bg-white dark:bg-[#111] text-sm text-ink dark:text-paper focus:outline-none focus:border-ink dark:focus:border-paper"
+              className={`${inputCls} mt-1.5`}
             >
-              <option value="full">Full Report</option>
-              <option value="topic">Topic-Specific</option>
-              <option value="comparison">Comparison</option>
+              <option value="full">{L.fullReport}</option>
+              <option value="topic">{L.topicSpecific}</option>
+              <option value="comparison">{L.comparison}</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-[10px] font-medium text-ink-muted dark:text-ink-faint mb-1.5 uppercase tracking-[0.2em]">
-              From
-            </label>
+            <Label>{L.from}</Label>
             <input
               type="date"
               value={dateFrom}
               onChange={e => setDateFrom(e.target.value)}
-              className="w-full px-3 py-2.5 border border-ink/10 dark:border-paper/10 bg-white dark:bg-[#111] text-sm text-ink dark:text-paper focus:outline-none focus:border-ink dark:focus:border-paper"
+              className={`${inputCls} mt-1.5`}
             />
           </div>
 
           <div>
-            <label className="block text-[10px] font-medium text-ink-muted dark:text-ink-faint mb-1.5 uppercase tracking-[0.2em]">
-              To
-            </label>
+            <Label>{L.to}</Label>
             <input
               type="date"
               value={dateTo}
               onChange={e => setDateTo(e.target.value)}
-              className="w-full px-3 py-2.5 border border-ink/10 dark:border-paper/10 bg-white dark:bg-[#111] text-sm text-ink dark:text-paper focus:outline-none focus:border-ink dark:focus:border-paper"
+              className={`${inputCls} mt-1.5`}
             />
           </div>
         </div>
@@ -477,55 +895,80 @@ const Reports = () => {
         >
           {loading ? (
             <>
-              <div className="w-4 h-4 border-2 border-ink dark:border-paper border-t-transparent rounded-full animate-spin" />
-              Generating...
+              <div className="w-4 h-4 border-2 border-ink dark:border-paper border-t-transparent animate-spin" />
+              {L.generating}
             </>
           ) : (
             <>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-              Download PDF
+              <Download size={14} />
+              {L.downloadPdf}
             </>
           )}
         </button>
       </div>
 
-      {/* History */}
-      {history.length > 0 && (
-        <div className="border-t border-ink/10 dark:border-paper/10 pt-5">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[10px] font-bold text-ink dark:text-paper uppercase tracking-[0.2em]">
-              History
+      {/* ═══════════════════════════════════════════════════════════
+          FEATURE 3 — REPORT HISTORY with re-download
+          ═══════════════════════════════════════════════════════════ */}
+      <div className="border-t border-ink/10 dark:border-paper/10 pt-5 space-y-3">
+        <div className="flex items-center justify-between border-b-2 border-ink/10 dark:border-paper/10 pb-2">
+          <div className="flex items-center gap-2">
+            <FileText size={14} className="text-ink dark:text-paper" />
+            <h2 className="font-['Playfair_Display'] text-sm font-bold text-ink dark:text-paper uppercase tracking-wide">
+              {L.history}
             </h2>
+            {history.length > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 border border-ink/10 dark:border-paper/10 text-ink-muted dark:text-ink-faint font-mono">
+                {history.length}
+              </span>
+            )}
+          </div>
+          {history.length > 0 && (
             <button
               onClick={clearHistory}
               className="text-[10px] text-ink-muted dark:text-ink-faint hover:text-red-500 uppercase tracking-[0.15em] transition-colors"
             >
-              Clear
+              {L.clear}
             </button>
-          </div>
+          )}
+        </div>
 
-          <div className="space-y-0 divide-y divide-ink/5 dark:divide-paper/5">
+        {history.length === 0 ? (
+          <p className="text-xs text-ink-muted dark:text-ink-faint italic py-4 text-center">
+            {L.noHistory}
+          </p>
+        ) : (
+          <div className="divide-y divide-ink/5 dark:divide-paper/5">
             {history.map((entry) => (
-              <div
+              <motion.div
                 key={entry.id}
-                className="flex items-center justify-between py-2.5"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex items-center justify-between py-3 group"
               >
-                <div>
-                  <p className="text-sm font-medium text-ink dark:text-paper">{entry.topic}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-ink dark:text-paper truncate">{entry.topic}</p>
                   <p className="text-[10px] text-ink-muted dark:text-ink-faint uppercase tracking-[0.15em]">
-                    {entry.template || entry.type} &middot; {entry.dateFrom} to {entry.dateTo}
+                    {entry.template || entry.type} &middot; {entry.dateFrom} — {entry.dateTo}
                   </p>
                 </div>
-                <span className="text-[10px] text-ink-muted dark:text-ink-faint">
-                  {new Date(entry.generatedAt).toLocaleDateString('en-MY')}
-                </span>
-              </div>
+                <div className="flex items-center gap-3 ml-3">
+                  <span className="text-[10px] text-ink-muted dark:text-ink-faint whitespace-nowrap">
+                    {fmtDate(entry.generatedAt)}
+                  </span>
+                  <button
+                    onClick={() => handleRedownload(entry)}
+                    title={L.reDownload}
+                    className="opacity-0 group-hover:opacity-100 text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper transition-all"
+                  >
+                    <Download size={13} />
+                  </button>
+                </div>
+              </motion.div>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </motion.div>
   );
 };
