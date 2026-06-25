@@ -1,10 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { settingsTranslations } from '../services/settingsTranslations';
 import api from '../services/api';
+import {
+  Download, Clock, Key, Copy, Trash2, Eye, EyeOff, Plus, Shield, X,
+} from 'lucide-react';
 
 const Section = ({ title, children }) => (
   <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] mb-6">
@@ -286,9 +289,157 @@ const SettingsPage = () => {
   const [pwError, setPwError] = useState('');
   const [pwSuccess, setPwSuccess] = useState(false);
 
+  // ── Data Export state ──
+  const [exporting, setExporting] = useState(false);
+  const [exportDone, setExportDone] = useState(false);
+
+  // ── Theme Scheduler state ──
+  const [scheduleEnabled, setScheduleEnabled] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('theme_scheduler'))?.enabled || false; } catch { return false; }
+  });
+  const [darkStart, setDarkStart] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('theme_scheduler'))?.darkStart || '19:00'; } catch { return '19:00'; }
+  });
+  const [darkEnd, setDarkEnd] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('theme_scheduler'))?.darkEnd || '06:00'; } catch { return '06:00'; }
+  });
+
+  // ── API Key Management state ──
+  const [apiKeys, setApiKeys] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('api_keys')) || []; } catch { return []; }
+  });
+  const [showGenerateForm, setShowGenerateForm] = useState(false);
+  const [newKeyName, setNewKeyName] = useState('');
+  const [newKeyExpiry, setNewKeyExpiry] = useState('30');
+  const [newKeyPermissions, setNewKeyPermissions] = useState('read');
+  const [visibleKeys, setVisibleKeys] = useState({});
+  const [copiedKey, setCopiedKey] = useState(null);
+  const [justGenerated, setJustGenerated] = useState(null);
+
   useEffect(() => {
     if (!isGuest && user?.name) setName(user.name);
   }, [isGuest, user?.name]);
+
+  // ── Theme Scheduler: persist + apply on mount ──
+  useEffect(() => {
+    localStorage.setItem('theme_scheduler', JSON.stringify({
+      enabled: scheduleEnabled, darkStart, darkEnd,
+    }));
+  }, [scheduleEnabled, darkStart, darkEnd]);
+
+  const applyScheduledTheme = useCallback(() => {
+    if (!scheduleEnabled) return;
+    const now = new Date();
+    const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const isDark = darkStart > darkEnd
+      ? (hhmm >= darkStart || hhmm < darkEnd)
+      : (hhmm >= darkStart && hhmm < darkEnd);
+    setTheme(isDark ? 'dark' : 'light');
+  }, [scheduleEnabled, darkStart, darkEnd, setTheme]);
+
+  useEffect(() => {
+    applyScheduledTheme();
+    if (!scheduleEnabled) return;
+    const id = setInterval(applyScheduledTheme, 60 * 1000);
+    return () => clearInterval(id);
+  }, [scheduleEnabled, applyScheduledTheme]);
+
+  // ── Data Export handler ──
+  const handleExportAllData = async () => {
+    setExporting(true);
+    setExportDone(false);
+    try {
+      // Gather all localStorage keys
+      const lsData = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        try { lsData[k] = JSON.parse(localStorage.getItem(k)); }
+        catch { lsData[k] = localStorage.getItem(k); }
+      }
+
+      // Try to fetch server-side data (bookmarks, alert rules, saved searches)
+      let serverData = {};
+      try {
+        const [bookmarksRes, alertsRes, searchesRes] = await Promise.allSettled([
+          api.get('/bookmarks'),
+          api.get('/alert-rules'),
+          api.get('/saved-searches'),
+        ]);
+        serverData = {
+          bookmarks: bookmarksRes.status === 'fulfilled' ? bookmarksRes.value.data : [],
+          alertRules: alertsRes.status === 'fulfilled' ? alertsRes.value.data : [],
+          savedSearches: searchesRes.status === 'fulfilled' ? searchesRes.value.data : [],
+        };
+      } catch { /* guest or API unavailable */ }
+
+      const exportPayload = {
+        exportedAt: new Date().toISOString(),
+        version: '1.0.0',
+        localStorage: lsData,
+        serverData,
+      };
+
+      const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `statusmy-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setExportDone(true);
+      setTimeout(() => setExportDone(false), 3000);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // ── API Key Management helpers ──
+  const generateRandomKey = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const segments = [4, 4, 4, 4, 4].map(len =>
+      Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+    );
+    return `snm_${segments.join('_')}`;
+  };
+
+  const handleGenerateApiKey = () => {
+    if (!newKeyName.trim()) return;
+    const expiryDays = parseInt(newKeyExpiry, 10);
+    const now = new Date();
+    const expires = new Date(now.getTime() + expiryDays * 86400000);
+    const newKey = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      name: newKeyName.trim(),
+      key: generateRandomKey(),
+      permissions: newKeyPermissions,
+      createdAt: now.toISOString(),
+      expiresAt: expires.toISOString(),
+    };
+    const updated = [...apiKeys, newKey];
+    setApiKeys(updated);
+    localStorage.setItem('api_keys', JSON.stringify(updated));
+    setJustGenerated(newKey.id);
+    setShowGenerateForm(false);
+    setNewKeyName('');
+    setNewKeyExpiry('30');
+    setNewKeyPermissions('read');
+  };
+
+  const handleRevokeApiKey = (id) => {
+    const updated = apiKeys.filter(k => k.id !== id);
+    setApiKeys(updated);
+    localStorage.setItem('api_keys', JSON.stringify(updated));
+  };
+
+  const handleCopyKey = (key) => {
+    navigator.clipboard.writeText(key).then(() => {
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(null), 2000);
+    });
+  };
 
   const savePreference = async (key, value) => {
     setSaving(key);
@@ -762,6 +913,212 @@ const SettingsPage = () => {
         <SettingRow label="Data Source">
           <span className="text-xs text-ink-faint font-sans">NewsAPI · AI Processing · MongoDB</span>
         </SettingRow>
+      </Section>
+
+      {/* ─── Data Export ─── */}
+      <Section title={ts('dataExport')}>
+        <div className="px-5 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex-1 min-w-0 mr-4">
+              <span className="text-sm font-medium text-ink dark:text-paper font-sans">{ts('exportAllData')}</span>
+              <p className="text-[11px] text-ink-faint mt-0.5 font-sans">{ts('exportAllDataDesc')}</p>
+            </div>
+            <button
+              onClick={handleExportAllData}
+              disabled={exporting}
+              className="flex items-center gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-wider border border-paper-line dark:border-paper-dark-line text-ink dark:text-paper hover:bg-paper dark:hover:bg-paper-dark transition-colors font-sans disabled:opacity-50"
+            >
+              <Download size={14} strokeWidth={2.5} />
+              {exporting ? ts('exporting') : exportDone ? ts('exportSuccess') : ts('exportAllData')}
+            </button>
+          </div>
+          <div className="border border-[#e5e5e5] dark:border-[#222] bg-paper dark:bg-paper-dark px-4 py-3">
+            <p className="text-[10px] text-ink-faint uppercase tracking-wider font-sans mb-1">Included in export</p>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {['Bookmarks', 'History', 'Preferences', 'Alert Rules', 'Saved Searches'].map(item => (
+                <span key={item} className="px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-ink-muted dark:text-ink-faint border border-[#e5e5e5] dark:border-[#222] font-sans">
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Section>
+
+      {/* ─── Theme Scheduler ─── */}
+      <Section title={ts('themeScheduler')}>
+        <SettingRow label={ts('themeSchedulerEnabled')} desc={ts('themeSchedulerDesc')}>
+          <Toggle
+            id="theme-scheduler"
+            checked={scheduleEnabled}
+            onChange={setScheduleEnabled}
+          />
+        </SettingRow>
+        {scheduleEnabled && (
+          <>
+            <SettingRow label={ts('darkModeStart')} desc="Switch to dark mode at this time">
+              <div className="flex items-center gap-2">
+                <Clock size={13} className="text-ink-faint" strokeWidth={2} />
+                <input
+                  type="time"
+                  value={darkStart}
+                  onChange={e => setDarkStart(e.target.value)}
+                  className="px-2 py-1 text-sm border border-paper-line dark:border-paper-dark-line bg-paper dark:bg-paper-dark text-ink dark:text-paper focus:outline-none focus:border-accent transition-colors font-mono"
+                />
+              </div>
+            </SettingRow>
+            <SettingRow label={ts('darkModeEnd')} desc="Switch back to light mode at this time">
+              <div className="flex items-center gap-2">
+                <Clock size={13} className="text-ink-faint" strokeWidth={2} />
+                <input
+                  type="time"
+                  value={darkEnd}
+                  onChange={e => setDarkEnd(e.target.value)}
+                  className="px-2 py-1 text-sm border border-paper-line dark:border-paper-dark-line bg-paper dark:bg-paper-dark text-ink dark:text-paper focus:outline-none focus:border-accent transition-colors font-mono"
+                />
+              </div>
+            </SettingRow>
+          </>
+        )}
+      </Section>
+
+      {/* ─── API Key Management ─── */}
+      <Section title={ts('apiKeyManagement')}>
+        {/* Existing keys list */}
+        {apiKeys.length === 0 && !showGenerateForm && (
+          <div className="px-5 py-6 flex flex-col items-center">
+            <Key size={20} className="text-ink-faint mb-2" strokeWidth={1.5} />
+            <p className="text-xs text-ink-faint font-sans">{ts('noApiKeys')}</p>
+          </div>
+        )}
+        {apiKeys.map(k => (
+          <div key={k.id} className="px-5 py-3 border-b border-[#e5e5e5] dark:border-[#222] last:border-b-0">
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <Shield size={13} className="text-ink-faint shrink-0" strokeWidth={2} />
+                <span className="text-sm font-medium text-ink dark:text-paper font-sans truncate">{k.name}</span>
+                {k.id === justGenerated && (
+                  <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 font-sans">
+                    NEW
+                  </span>
+                )}
+                <span className="px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-ink-faint border border-[#e5e5e5] dark:border-[#222] font-sans">
+                  {k.permissions === 'read' ? ts('apiKeyPermRead') : k.permissions === 'readwrite' ? ts('apiKeyPermReadWrite') : ts('apiKeyPermFull')}
+                </span>
+              </div>
+              <button
+                onClick={() => handleRevokeApiKey(k.id)}
+                className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors font-sans"
+              >
+                <Trash2 size={11} strokeWidth={2} />
+                {ts('revokeKey')}
+              </button>
+            </div>
+            {/* Key display */}
+            <div className="flex items-center gap-2 mb-1.5">
+              <code className="flex-1 px-2 py-1 text-[11px] font-mono tracking-wider text-ink dark:text-paper bg-paper dark:bg-paper-dark border border-[#e5e5e5] dark:border-[#222] overflow-hidden text-ellipsis whitespace-nowrap">
+                {visibleKeys[k.id] ? k.key : k.key.slice(0, 10) + '••••••••••••••••'}
+              </code>
+              <button
+                onClick={() => setVisibleKeys(prev => ({ ...prev, [k.id]: !prev[k.id] }))}
+                className="p-1 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors"
+                title={visibleKeys[k.id] ? 'Hide' : 'Reveal'}
+              >
+                {visibleKeys[k.id] ? <EyeOff size={13} strokeWidth={2} /> : <Eye size={13} strokeWidth={2} />}
+              </button>
+              <button
+                onClick={() => handleCopyKey(k.key)}
+                className="p-1 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors"
+                title={ts('copyKey')}
+              >
+                {copiedKey === k.key ? (
+                  <span className="text-[10px] font-medium text-green-600 dark:text-green-400 font-sans">{ts('copied')}</span>
+                ) : (
+                  <Copy size={13} strokeWidth={2} />
+                )}
+              </button>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-[10px] text-ink-faint font-sans">
+                {ts('generatedOn')} {new Date(k.createdAt).toLocaleDateString()}
+              </span>
+              <span className="text-[10px] text-ink-faint font-sans">
+                {ts('expiresOn')} {new Date(k.expiresAt).toLocaleDateString()}
+              </span>
+            </div>
+          </div>
+        ))}
+
+        {/* Generate form */}
+        {showGenerateForm && (
+          <div className="px-5 py-4 border-t border-[#e5e5e5] dark:border-[#222]">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-ink dark:text-paper font-sans">{ts('generateApiKey')}</span>
+              <button onClick={() => { setShowGenerateForm(false); setNewKeyName(''); }} className="text-ink-faint hover:text-ink dark:hover:text-paper transition-colors">
+                <X size={14} strokeWidth={2} />
+              </button>
+            </div>
+            <div className="flex flex-col gap-3 max-w-sm">
+              <label className="flex flex-col gap-1">
+                <span className="text-[10px] font-semibold text-ink-faint uppercase tracking-wider font-sans">{ts('apiKeyName')}</span>
+                <input
+                  type="text"
+                  className="px-3 py-1.5 text-sm border border-paper-line dark:border-paper-dark-line bg-paper dark:bg-paper-dark text-ink dark:text-paper placeholder:text-ink-faint focus:outline-none focus:border-accent transition-colors font-sans"
+                  value={newKeyName}
+                  onChange={e => setNewKeyName(e.target.value)}
+                  placeholder={ts('apiKeyNamePlaceholder')}
+                />
+              </label>
+              <div className="flex gap-3">
+                <label className="flex flex-col gap-1 flex-1">
+                  <span className="text-[10px] font-semibold text-ink-faint uppercase tracking-wider font-sans">{ts('apiKeyExpiry')}</span>
+                  <select
+                    className="px-3 py-1.5 text-sm border border-paper-line dark:border-paper-dark-line bg-paper dark:bg-paper-dark text-ink dark:text-paper focus:outline-none focus:border-accent transition-colors font-sans"
+                    value={newKeyExpiry}
+                    onChange={e => setNewKeyExpiry(e.target.value)}
+                  >
+                    <option value="30">{ts('apiKeyDays30')}</option>
+                    <option value="90">{ts('apiKeyDays90')}</option>
+                    <option value="365">{ts('apiKeyDays365')}</option>
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 flex-1">
+                  <span className="text-[10px] font-semibold text-ink-faint uppercase tracking-wider font-sans">{ts('apiKeyPermissions')}</span>
+                  <select
+                    className="px-3 py-1.5 text-sm border border-paper-line dark:border-paper-dark-line bg-paper dark:bg-paper-dark text-ink dark:text-paper focus:outline-none focus:border-accent transition-colors font-sans"
+                    value={newKeyPermissions}
+                    onChange={e => setNewKeyPermissions(e.target.value)}
+                  >
+                    <option value="read">{ts('apiKeyPermRead')}</option>
+                    <option value="readwrite">{ts('apiKeyPermReadWrite')}</option>
+                    <option value="full">{ts('apiKeyPermFull')}</option>
+                  </select>
+                </label>
+              </div>
+              <button
+                onClick={handleGenerateApiKey}
+                disabled={!newKeyName.trim()}
+                className="self-start flex items-center gap-2 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider bg-ink text-paper hover:bg-accent transition-colors font-sans disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Plus size={13} strokeWidth={2.5} />
+                {ts('generateApiKey')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Generate button (when form is hidden) */}
+        {!showGenerateForm && (
+          <div className="px-5 py-3 border-t border-[#e5e5e5] dark:border-[#222]">
+            <button
+              onClick={() => setShowGenerateForm(true)}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium uppercase tracking-wider text-ink dark:text-paper border border-paper-line dark:border-paper-dark-line hover:bg-paper dark:hover:bg-paper-dark transition-colors font-sans"
+            >
+              <Plus size={13} strokeWidth={2.5} />
+              {ts('generateApiKey')}
+            </button>
+          </div>
+        )}
       </Section>
 
       {/* Session */}
