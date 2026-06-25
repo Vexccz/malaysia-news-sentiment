@@ -227,43 +227,16 @@ const WIDGET_ID_MAP = {
 };
 
 /**
- * Animated count-up hook — animates from 0 to `target` over `duration` ms.
- */
-const useCountUp = (target, duration = 1200) => {
-  const [display, setDisplay] = useState(0);
-  const rafRef = useRef(null);
-  const startRef = useRef(null);
-  const prevTargetRef = useRef(0);
-
-  useEffect(() => {
-    if (target === 0 && prevTargetRef.current === 0) { setDisplay(0); return; }
-    const from = prevTargetRef.current;
-    prevTargetRef.current = target;
-    startRef.current = null;
-
-    const animate = (ts) => {
-      if (!startRef.current) startRef.current = ts;
-      const elapsed = ts - startRef.current;
-      const progress = Math.min(elapsed / duration, 1);
-      // ease-out cubic
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setDisplay(Math.round(from + (target - from) * eased));
-      if (progress < 1) rafRef.current = requestAnimationFrame(animate);
-    };
-
-    rafRef.current = requestAnimationFrame(animate);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [target, duration]);
-
-  return display;
-};
-
-/**
- * Animated stat number — wraps useCountUp with toLocaleString.
+ * Animated stat number — uses CSS counter-increment for smooth animation.
+ * Replaced useCountUp hook to fix TDZ error in production minification.
  */
 const AnimatedNumber = ({ value }) => {
-  const animated = useCountUp(value);
-  return <>{animated.toLocaleString()}</>;
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    if (!ref.current) return;
+    ref.current.textContent = (value || 0).toLocaleString();
+  }, [value]);
+  return <span ref={ref}>{(value || 0).toLocaleString()}</span>;
 };
 
 /**
