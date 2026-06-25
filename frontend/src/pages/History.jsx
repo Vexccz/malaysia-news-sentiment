@@ -1,17 +1,18 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { StaggerList, StaggerItem } from '../components/StaggerList';
 import toast from 'react-hot-toast';
-import ArticleCard from '../components/ArticleCard';
 import ArticlePreviewModal from '../components/ArticlePreviewModal';
 import { getHistory, deleteArticle, bulkDeleteArticles, getStats } from '../services/api';
 import { exportToCSV } from '../services/exportUtils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../context/LanguageContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Trash2, Clock, Eye, TrendingUp, Download, Filter } from 'lucide-react';
+import { Trash2, Clock, Eye, TrendingUp, Download, Filter, BarChart3, ChevronLeft, ChevronRight, ExternalLink, ArrowUpRight } from 'lucide-react';
+import { formatRelativeTime } from '../utils/dateFormat';
+import { Link } from 'react-router-dom';
 
 const SENTIMENT_COLORS = { Positive: '#10B981', Negative: '#EF4444', Neutral: '#F59E0B' };
+const SENTIMENT_DOT = { Positive: '#4ADE80', Negative: '#FB7185', Neutral: '#FBBF24' };
 
 const History = () => {
   const queryClient = useQueryClient();
@@ -151,11 +152,18 @@ const History = () => {
   const isSomeSelected = selectedIds.size > 0;
 
   const KPI = stats ? [
-    { label: 'Total Analyzed', value: stats.total, sub: 'in database' },
-    { label: 'Positive', value: stats.sentiments.Positive, sub: `${stats.total ? Math.round(stats.sentiments.Positive/stats.total*100) : 0}%` },
-    { label: 'Negative', value: stats.sentiments.Negative, sub: `${stats.total ? Math.round(stats.sentiments.Negative/stats.total*100) : 0}%` },
-    { label: 'Neutral', value: stats.sentiments.Neutral, sub: `${stats.total ? Math.round(stats.sentiments.Neutral/stats.total*100) : 0}%` },
+    { label: 'Total Analyzed', value: stats.total, sub: 'in database', icon: BarChart3 },
+    { label: 'Positive', value: stats.sentiments.Positive, sub: `${stats.total ? Math.round(stats.sentiments.Positive/stats.total*100) : 0}%`, icon: TrendingUp },
+    { label: 'Negative', value: stats.sentiments.Negative, sub: `${stats.total ? Math.round(stats.sentiments.Negative/stats.total*100) : 0}%`, icon: TrendingUp },
+    { label: 'Neutral', value: stats.sentiments.Neutral, sub: `${stats.total ? Math.round(stats.sentiments.Neutral/stats.total*100) : 0}%`, icon: TrendingUp },
   ] : [];
+
+  const getSentimentColor = (s) => SENTIMENT_DOT[s] || '#FBBF24';
+  const getSentimentBg = (s) => {
+    if (s === 'Positive') return 'bg-emerald-500/10 text-emerald-400';
+    if (s === 'Negative') return 'bg-red-500/10 text-red-400';
+    return 'bg-amber-500/10 text-amber-400';
+  };
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -339,7 +347,7 @@ const History = () => {
         </div>
       )}
 
-      {/* Articles */}
+      {/* Articles - Clean Editorial List */}
       <div>
         {loading ? (
           <div className="border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#111] divide-y divide-[#e5e5e5] dark:divide-[#222]">
@@ -358,6 +366,7 @@ const History = () => {
           </div>
         ) : (
           <>
+            {/* Select all bar */}
             <div className="border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#111] px-5 py-2.5 flex items-center gap-3">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={isAllSelected} onChange={toggleSelectAll}
@@ -366,44 +375,160 @@ const History = () => {
               </label>
               <span className="text-[10px] text-gray-400 dark:text-[#666] ml-auto">{totalCount} item{totalCount !== 1 ? 's' : ''}</span>
             </div>
-            <StaggerList className="border border-t-0 border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#111] divide-y divide-[#e5e5e5] dark:divide-[#222]">
-              {articles.map((article) => {
+
+            {/* Article list — clean editorial rows */}
+            <div className="border border-t-0 border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#111] divide-y divide-[#e5e5e5] dark:divide-[#222]">
+              {articles.map((article, idx) => {
                 const articleId = article._id || article.id;
                 const isSelected = selectedIds.has(articleId);
-                const sentimentBorderColor = article.sentiment === 'Positive' ? 'border-l-[#4ADE80]' :
-                  article.sentiment === 'Negative' ? 'border-l-[#FB7185]' : 'border-l-[#FBBF24]';
+                const sentimentColor = getSentimentColor(article.sentiment);
                 const revisitCount = visitLog[articleId]?.count || 0;
+                const relativeTime = formatRelativeTime(article.publishedAt, lang, true);
+
                 return (
-                  <StaggerItem key={articleId} className={`flex items-start gap-0 border-l-2 ${sentimentBorderColor}`}>
-                    <div className="flex-shrink-0 flex flex-col items-start pt-4 pl-4 gap-1">
-                      <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(articleId)} onClick={(e) => e.stopPropagation()}
-                        className="w-4 h-4 border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#0a0a0a] accent-black dark:accent-white cursor-pointer mt-1" />
-                      {revisitCount > 1 && (
-                        <span className="flex items-center gap-0.5 text-[9px] text-ink-muted font-mono" title="Times revisited">
-                          <Eye size={9} /> {revisitCount}
-                        </span>
-                      )}
+                  <motion.div
+                    key={articleId}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2, delay: Math.min(idx * 0.03, 0.3) }}
+                    className="group relative"
+                    style={{ borderLeft: `3px solid ${sentimentColor}` }}
+                  >
+                    <div className="flex items-start gap-4 px-5 py-4">
+                      {/* Checkbox */}
+                      <input 
+                        type="checkbox" 
+                        checked={isSelected} 
+                        onChange={() => toggleSelect(articleId)}
+                        className="w-4 h-4 mt-1 flex-shrink-0 border border-[#e5e5e5] dark:border-[#333] bg-white dark:bg-[#0a0a0a] accent-black dark:accent-white cursor-pointer" 
+                      />
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        {/* Source + Time row */}
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-gray-600 dark:text-[#aaa]">
+                            {article.source || 'Unknown'}
+                          </span>
+                          <span className="text-[10px] text-gray-400 dark:text-[#666]">·</span>
+                          <span className="text-[10px] text-gray-400 dark:text-[#666] flex items-center gap-1">
+                            <Clock size={9} />
+                            {relativeTime}
+                          </span>
+                          {article.topic && (
+                            <>
+                              <span className="text-[10px] text-gray-400 dark:text-[#666]">·</span>
+                              <span className="text-[10px] text-gray-500 dark:text-[#888]">#{article.topic}</span>
+                            </>
+                          )}
+                          {revisitCount > 1 && (
+                            <span className="text-[10px] text-gray-400 dark:text-[#666] flex items-center gap-0.5 ml-auto">
+                              <Eye size={9} /> {revisitCount} views
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Title */}
+                        <h3 
+                          onClick={() => handlePreview(article)}
+                          className="text-[15px] font-semibold text-black dark:text-white leading-snug mb-1.5 cursor-pointer hover:text-gray-700 dark:hover:text-[#ccc] transition-colors line-clamp-2"
+                          style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+                        >
+                          {article.title}
+                        </h3>
+
+                        {/* Description */}
+                        {article.description && (
+                          <p className="text-[13px] text-gray-500 dark:text-[#888] leading-relaxed line-clamp-1 mb-2">
+                            {article.description.slice(0, 180)}{article.description.length > 180 ? '...' : ''}
+                          </p>
+                        )}
+
+                        {/* Bottom row: Sentiment + Confidence + Actions */}
+                        <div className="flex items-center gap-3">
+                          {/* Sentiment badge */}
+                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${getSentimentBg(article.sentiment)}`}>
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ background: sentimentColor }} />
+                            {article.sentiment || 'Neutral'}
+                          </span>
+
+                          {/* Confidence bar */}
+                          {article.confidence !== undefined && article.confidence > 0 && (
+                            <div className="flex items-center gap-2">
+                              <div className="w-16 h-1.5 bg-gray-200 dark:bg-[#333] overflow-hidden">
+                                <div 
+                                  className="h-full transition-all duration-500"
+                                  style={{ 
+                                    width: `${Math.round(article.confidence * 100)}%`, 
+                                    background: sentimentColor 
+                                  }} 
+                                />
+                              </div>
+                              <span className="text-[10px] text-gray-400 dark:text-[#666] font-mono">
+                                {Math.round(article.confidence * 100)}%
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Reason snippet */}
+                          {article.reason && (
+                            <span className="text-[10px] text-gray-400 dark:text-[#666] italic truncate max-w-[200px]">
+                              "{article.reason}"
+                            </span>
+                          )}
+
+                          {/* Actions — minimal, only visible on hover */}
+                          <div className="flex items-center gap-1 ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Link
+                              to={'/articles/' + articleId}
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-gray-500 dark:text-[#888] hover:text-black dark:hover:text-white border border-transparent hover:border-[#e5e5e5] dark:hover:border-[#333] transition-all"
+                              title="View full analysis"
+                            >
+                              Details <ArrowUpRight size={10} />
+                            </Link>
+                            {article.url && (
+                              <a 
+                                href={article.url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-gray-500 dark:text-[#888] hover:text-black dark:hover:text-white border border-transparent hover:border-[#e5e5e5] dark:hover:border-[#333] transition-all"
+                                title="Open original source"
+                              >
+                                Source <ExternalLink size={10} />
+                              </a>
+                            )}
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleDelete(articleId); }}
+                              className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-gray-400 dark:text-[#666] hover:text-red-500 border border-transparent hover:border-red-200 dark:hover:border-red-900 transition-all"
+                              title="Delete from history"
+                            >
+                              <Trash2 size={10} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <ArticleCard article={article} onPreview={handlePreview} onDelete={handleDelete} />
-                    </div>
-                  </StaggerItem>
+                  </motion.div>
                 );
               })}
-            </StaggerList>
+            </div>
+
+            {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between mt-6 px-1">
                 <button disabled={params.page === 1} onClick={() => handleParamChange('page', params.page - 1)}
-                  className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-[#999] hover:text-black dark:hover:text-white disabled:opacity-30 transition-colors">
-                  ← Previous
+                  className="flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-[#999] hover:text-black dark:hover:text-white disabled:opacity-30 transition-colors">
+                  <ChevronLeft size={14} /> Previous
                 </button>
                 <div className="text-xs text-gray-400 dark:text-[#666]">
                   Page <strong className="text-black dark:text-white">{params.page}</strong> of {totalPages}
                   <span className="ml-2">({totalCount} items)</span>
                 </div>
                 <button disabled={params.page === totalPages} onClick={() => handleParamChange('page', params.page + 1)}
-                  className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-[#999] hover:text-black dark:hover:text-white disabled:opacity-30 transition-colors">
-                  Next →
+                  className="flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-[#999] hover:text-black dark:hover:text-white disabled:opacity-30 transition-colors">
+                  Next <ChevronRight size={14} />
                 </button>
               </div>
             )}
