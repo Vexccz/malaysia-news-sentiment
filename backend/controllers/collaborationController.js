@@ -592,6 +592,49 @@ exports.getRecentDiscussions = async (req, res) => {
 
 // ── Trending Keywords from Comments ──────────────────────────────
 
+// @desc    Toggle emoji reaction on a comment
+// @route   POST /api/v1/collab/comments/:id/react
+// @access  Private
+exports.toggleReaction = async (req, res) => {
+  try {
+    const { emoji } = req.body;
+    const allowedEmojis = ['😂', '😢', '😡', '🔥', '👏', '❤️', '🤔', '💯'];
+    if (!emoji || !allowedEmojis.includes(emoji)) {
+      return res.status(400).json({ error: 'Invalid emoji.' });
+    }
+
+    const comment = await Comment.findById(req.params.id);
+    if (!comment) return res.status(404).json({ error: 'Comment not found.' });
+
+    const uid = req.userId;
+    // Check if user already reacted with this emoji
+    const existingIdx = comment.reactions.findIndex(
+      r => r.emoji === emoji && r.userId.toString() === uid
+    );
+
+    if (existingIdx > -1) {
+      comment.reactions.splice(existingIdx, 1); // remove reaction
+    } else {
+      comment.reactions.push({ emoji, userId: uid }); // add reaction
+    }
+
+    await comment.save();
+
+    // Group reactions by emoji for response
+    const grouped = {};
+    comment.reactions.forEach(r => {
+      if (!grouped[r.emoji]) grouped[r.emoji] = { emoji: r.emoji, count: 0, userReacted: false };
+      grouped[r.emoji].count++;
+      if (r.userId.toString() === uid) grouped[r.emoji].userReacted = true;
+    });
+
+    res.json({ reactions: Object.values(grouped) });
+  } catch (err) {
+    console.error('[Collab] toggleReaction error:', err.message);
+    res.status(500).json({ error: 'Failed to toggle reaction.' });
+  }
+};
+
 // @desc    Get trending keywords from recent comments
 // @route   GET /api/v1/collab/trending-keywords
 // @access  Public
@@ -721,5 +764,59 @@ exports.getSentimentPulse = async (req, res) => {
   } catch (err) {
     console.error('[Collab] getSentimentPulse error:', err.message);
     res.status(500).json({ error: 'Failed to fetch sentiment pulse.' });
+  }
+};
+
+// ── User Leaderboard ─────────────────────────────────────────────
+
+// @desc    Get top commenters this week
+// @route   GET /api/v1/collab/leaderboard
+// @access  Public
+exports.getLeaderboard = async (req, res) => {
+  try {
+    const days = parseInt(req.query.days) || 7;
+    const limit = parseInt(req.query.limit) || 10;
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const pipeline = [
+      { $match: { createdAt: { $gte: since }, isAnonymous: { $ne: true } } },
+      {
+        $group: {
+          _id: '$userId',
+          commentCount: { $sum: 1 },
+          totalLikes: { $sum: { $size: '$likes' } },
+          lastCommentAt: { $max: '$createdAt' },
+        },
+      },
+      { $sort: { commentCount: -1 } },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: 'users',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      { $unwind: '$user' },
+      {
+        $project: {
+          userId: '$_id',
+          name: '$user.name',
+          avatar: '$user.avatar',
+          role: '$user.role',
+          commentCount: 1,
+          totalLikes: 1,
+          lastCommentAt: 1,
+        },
+      },
+    ];
+
+    const leaderboard = await Comment.aggregate(pipeline);
+
+    res.json({ leaderboard, days });
+  } catch (err) {
+    console.error('[Collab] getLeaderboard error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch leaderboard.' });
   }
 };

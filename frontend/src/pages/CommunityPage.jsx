@@ -138,7 +138,9 @@ const SentimentMarkInline = ({ sentiment }) => {
   return <span className={`inline-block text-xs font-bold ${m.color} mr-1`}>{m.symbol}</span>;
 };
 
-const CommentItem = ({ c, onLike, timeAgo, sentimentColor, onUserClick, currentUserId }) => {
+const ALLOWED_REACTIONS = ['😂', '😢', '😡', '🔥', '👏', '❤️', '🤔', '💯'];
+
+const CommentItem = ({ c, onLike, timeAgo, sentimentColor, onUserClick, currentUserId, onReact }) => {
   const [showReply, setShowReply] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [replying, setReplying] = useState(false);
@@ -148,6 +150,18 @@ const CommentItem = ({ c, onLike, timeAgo, sentimentColor, onUserClick, currentU
   const [liked, setLiked] = useState(c.likes?.some(id => id === currentUserId || id?.toString() === currentUserId) || false);
   const [likeCount, setLikeCount] = useState(c.likes?.length || 0);
   const [liking, setLiking] = useState(false);
+  const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [localReactions, setLocalReactions] = useState(() => {
+    // Group reactions from comment data
+    const grouped = {};
+    (c.reactions || []).forEach(r => {
+      const emoji = r.emoji;
+      if (!grouped[emoji]) grouped[emoji] = { emoji, count: 0, userReacted: false };
+      grouped[emoji].count++;
+      if (r.userId === currentUserId || r.userId?.toString() === currentUserId) grouped[emoji].userReacted = true;
+    });
+    return Object.values(grouped);
+  });
 
   const userInitials = (c.user?.name || 'A').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
@@ -168,6 +182,14 @@ const CommentItem = ({ c, onLike, timeAgo, sentimentColor, onUserClick, currentU
     } finally {
       setLiking(false);
     }
+  };
+
+  const handleReact = async (emoji) => {
+    setShowReactionPicker(false);
+    try {
+      const { data } = await onReact(c._id, emoji);
+      setLocalReactions(data.reactions || []);
+    } catch {}
   };
 
   const submitReply = async () => {
@@ -250,7 +272,41 @@ const CommentItem = ({ c, onLike, timeAgo, sentimentColor, onUserClick, currentU
             </svg>
           </button>
         )}
+        {/* Reaction button */}
+        <div className="relative ml-auto">
+          <button onClick={() => setShowReactionPicker(!showReactionPicker)}
+            className="text-[10px] text-ink-faint hover:text-ink dark:hover:text-paper transition-colors px-1">
+            😊+
+          </button>
+          {showReactionPicker && (
+            <div className="absolute bottom-full right-0 mb-1 flex gap-0.5 p-1.5 bg-white dark:bg-[#1a1a1a] border border-[#e5e5e5] dark:border-[#333] shadow-lg z-20">
+              {ALLOWED_REACTIONS.map(emoji => (
+                <button key={emoji} onClick={() => handleReact(emoji)}
+                  className="w-7 h-7 flex items-center justify-center text-sm hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Reaction display */}
+      {localReactions.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-1.5 ml-[38px]">
+          {localReactions.map(r => (
+            <button key={r.emoji} onClick={() => handleReact(r.emoji)}
+              className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] border transition-colors ${
+                r.userReacted
+                  ? 'border-accent bg-accent/10 text-accent'
+                  : 'border-[#e5e5e5] dark:border-[#333] text-ink-muted dark:text-ink-faint hover:border-ink/30 dark:hover:border-paper/30'
+              }`}>
+              <span className="text-xs">{r.emoji}</span>
+              <span>{r.count}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {showReply && (
         <div className="mt-2 ml-[38px] pl-3 border-l-2 border-[#e5e5e5] dark:border-[#333]">
@@ -326,6 +382,7 @@ const CommunityPage = () => {
   const [viewingUserId, setViewingUserId] = useState(null);
   const [trendingKeywords, setTrendingKeywords] = useState([]);
   const [sentimentPulse, setSentimentPulse] = useState(null);
+  const [leaderboard, setLeaderboard] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -337,6 +394,7 @@ const CommunityPage = () => {
           api.get('/collab/discussion-of-day'),
           api.get('/collab/trending-keywords?days=7&limit=15'),
           api.get('/collab/sentiment-pulse?days=7'),
+          api.get('/collab/leaderboard?days=7&limit=5'),
         ]);
         if (!cancelled) {
           setDiscussions(discRes.data.discussions || []);
@@ -344,6 +402,7 @@ const CommunityPage = () => {
           setDotd(dotdRes.data.discussion || null);
           setTrendingKeywords(kwRes.data.keywords || []);
           setSentimentPulse(spRes.data || null);
+          setLeaderboard(lbRes.data.leaderboard || []);
         }
       } catch (err) {
         console.error('Community fetch failed:', err);
@@ -381,6 +440,11 @@ const CommunityPage = () => {
 
   const likeComment = async (commentId) => {
     const { data } = await api.post(`/collab/comments/${commentId}/like`);
+    return { data };
+  };
+
+  const reactToComment = async (commentId, emoji) => {
+    const { data } = await api.post(`/collab/comments/${commentId}/react`, { emoji });
     return { data };
   };
 
@@ -476,7 +540,7 @@ const CommunityPage = () => {
                     <div className="p-4 animate-pulse space-y-2"><div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4" /></div>
                   ) : (
                     <div className="max-h-60 overflow-y-auto divide-y divide-[#e5e5e5] dark:divide-[#222]">
-                      {comments.map(c => <CommentItem key={c._id} c={c} onLike={likeComment} timeAgo={timeAgo} sentimentColor={sentimentColor} onUserClick={setViewingUserId} currentUserId={user?._id || user?.id} />)}
+                      {comments.map(c => <CommentItem key={c._id} c={c} onLike={likeComment} timeAgo={timeAgo} sentimentColor={sentimentColor} onUserClick={setViewingUserId} currentUserId={user?._id || user?.id} onReact={reactToComment} />)}
                       {comments.length === 0 && <div className="p-4 text-center text-xs text-ink-faint">No comments yet.</div>}
                     </div>
                   )}
@@ -548,7 +612,7 @@ const CommunityPage = () => {
                           <div className="p-4 animate-pulse space-y-2"><div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4" /></div>
                         ) : (
                           <div className="max-h-60 overflow-y-auto divide-y divide-[#e5e5e5] dark:divide-[#222]">
-                            {comments.map(c => <CommentItem key={c._id} c={c} onLike={likeComment} timeAgo={timeAgo} sentimentColor={sentimentColor} onUserClick={setViewingUserId} currentUserId={user?._id || user?.id} />)}
+                            {comments.map(c => <CommentItem key={c._id} c={c} onLike={likeComment} timeAgo={timeAgo} sentimentColor={sentimentColor} onUserClick={setViewingUserId} currentUserId={user?._id || user?.id} onReact={reactToComment} />)}
                             {comments.length === 0 && <div className="p-4 text-center text-xs text-ink-faint">No comments yet.</div>}
                           </div>
                         )}
@@ -603,7 +667,6 @@ const CommunityPage = () => {
               </h3>
               <div className="flex flex-wrap gap-1.5">
                 {trendingKeywords.map((kw, i) => {
-                  // Size based on count (top 3 bigger)
                   const isTop = i < 3;
                   return (
                     <span
@@ -617,6 +680,35 @@ const CommunityPage = () => {
                       {kw.word}
                       <span className="ml-1 text-[8px] opacity-50">{kw.count}</span>
                     </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Leaderboard */}
+          {leaderboard.length > 0 && (
+            <div className={`${CARD} p-4`}>
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-ink-muted dark:text-ink-faint mb-3 flex items-center gap-1.5">
+                {'\uD83C\uDFC6'} Top Contributors <span className="text-ink-faint font-normal">7d</span>
+              </h3>
+              <div className="space-y-2">
+                {leaderboard.map((u, i) => {
+                  const lbInitials = (u.name || 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+                  const medals = ['🥇', '🥈', '🥉'];
+                  return (
+                    <div key={u.userId} className="flex items-center gap-2.5 py-1">
+                      <span className="text-sm w-5 text-center">{i < 3 ? medals[i] : <span className="text-[10px] text-ink-faint">{i + 1}</span>}</span>
+                      {u.avatar ? (
+                        <img src={u.avatar} alt={u.name} className="w-6 h-6 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-accent/10 text-accent flex items-center justify-center text-[8px] font-bold">{lbInitials}</div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[11px] font-semibold text-ink dark:text-paper truncate block">{u.name}</span>
+                        <span className="text-[9px] text-ink-faint">{u.commentCount} comments · {u.totalLikes} likes</span>
+                      </div>
+                    </div>
                   );
                 })}
               </div>

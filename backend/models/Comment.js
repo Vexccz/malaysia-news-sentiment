@@ -18,6 +18,10 @@ const commentSchema = new mongoose.Schema(
     isAnonymous:     { type: Boolean, default: false },
     likes:           [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     replies:         [replySchema],
+    reactions:       [{
+      emoji:    { type: String, required: true },
+      userId:   { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    }],
   },
   { timestamps: true }
 );

@@ -14,6 +14,8 @@ const {
   getDiscussionOfDay,
   getTrendingKeywords,
   getSentimentPulse,
+  toggleReaction,
+  getLeaderboard,
 } = require('../controllers/collaborationController');
 
 // ── Comments ────────────────────────────────────────────────
@@ -21,6 +23,7 @@ router.post('/comments', protect, addComment);
 router.get('/comments/:articleId', getComments);
 router.post('/comments/:id/like', protect, likeComment);
 router.post('/comments/:id/reply', protect, replyToComment);
+router.post('/comments/:id/react', protect, toggleReaction);
 
 // ── Discussions ─────────────────────────────────────────────
 router.get('/discussions', getRecentDiscussions);
@@ -34,6 +37,7 @@ router.post('/share', protect, trackShare);
 // ── Community Features ───────────────────────────────────────
 router.get('/trending-keywords', getTrendingKeywords);
 router.get('/sentiment-pulse', getSentimentPulse);
+router.get('/leaderboard', getLeaderboard);
 router.get('/shared', getSharedArticles);
 
 module.exports = router;
