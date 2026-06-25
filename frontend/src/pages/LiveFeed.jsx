@@ -66,9 +66,6 @@ const LiveTicker = ({ articles }) => {
   return (
     <div className="w-full overflow-hidden border-y-2 border-ink dark:border-paper bg-ink dark:bg-paper">
       <div className="flex items-center">
-        <span className="flex-shrink-0 px-3 py-2 text-[9px] font-black uppercase tracking-[0.3em] text-white/70 dark:text-black/70 font-sans border-r border-white/20 dark:border-black/20 bg-ink dark:bg-paper">
-          WIRE
-        </span>
       <motion.div
         className="flex gap-0 whitespace-nowrap"
         animate={{ x: ['0%', '-50%'] }}
