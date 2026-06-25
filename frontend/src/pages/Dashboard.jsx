@@ -380,38 +380,113 @@ const CommunityInline = () => {
 };
 
 /* Shared comment item component */
-const CommentItem = ({ c, onLike, timeAgo, sentimentColor }) => (
-  <div className="px-4 py-3">
-    <div className="flex items-center gap-2 mb-1">
-      <span className="text-xs font-semibold text-ink dark:text-paper">
-        {c.isAnonymous ? '👤 Anonymous' : (c.user?.name || 'Anonymous')}
-      </span>
-      {c.commentSentiment && (
-        <span className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider"
-          style={{ background: sentimentColor(c.commentSentiment) + '15', color: sentimentColor(c.commentSentiment) }}>
-          {c.commentSentiment}
+const CommentItem = ({ c, onLike, timeAgo, sentimentColor }) => {
+  const [showReply, setShowReply] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [replying, setReplying] = useState(false);
+  const [showReplies, setShowReplies] = useState(false);
+  const [localReplies, setLocalReplies] = useState(c.replies || []);
+  const [replyAnonymous, setReplyAnonymous] = useState(false);
+
+  const submitReply = async () => {
+    if (!replyText.trim() || replying) return;
+    setReplying(true);
+    try {
+      const { data } = await api.post(`/collab/comments/${c._id}/reply`, { content: replyText.trim(), isAnonymous: replyAnonymous });
+      setLocalReplies(prev => [...prev, data.reply]);
+      setReplyText('');
+      setShowReply(false);
+      setShowReplies(true);
+    } catch { /* silent */ }
+    finally { setReplying(false); }
+  };
+
+  return (
+    <div className="px-4 py-3">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-xs font-semibold text-ink dark:text-paper">
+          {c.isAnonymous ? '👤 Anonymous' : (c.user?.name || 'Anonymous')}
         </span>
+        {c.commentSentiment && (
+          <span className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider"
+            style={{ background: sentimentColor(c.commentSentiment) + '15', color: sentimentColor(c.commentSentiment) }}>
+            {c.commentSentiment}
+          </span>
+        )}
+        {c.badges?.slice(0, 2).map((b, i) => (
+          <span key={i} title={b.label} className="text-[10px]">{b.icon}</span>
+        ))}
+        <span className="text-[10px] text-ink-faint ml-auto">{timeAgo(c.createdAt)}</span>
+      </div>
+      <p className="text-sm text-ink-secondary dark:text-ink-muted leading-relaxed">{c.content}</p>
+      <div className="flex items-center gap-3 mt-1.5">
+        <button onClick={() => onLike(c._id)}
+          className="flex items-center gap-1 text-[10px] text-ink-faint hover:text-ink dark:hover:text-paper transition-colors">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+          </svg>
+          {c.likes?.length || 0}
+        </button>
+        <button onClick={() => setShowReply(!showReply)}
+          className="flex items-center gap-1 text-[10px] text-ink-faint hover:text-ink dark:hover:text-paper transition-colors">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>
+          </svg>
+          Reply
+        </button>
+        {localReplies.length > 0 && (
+          <button onClick={() => setShowReplies(!showReplies)}
+            className="flex items-center gap-1 text-[10px] text-ink-faint hover:text-ink dark:hover:text-paper transition-colors">
+            {localReplies.length} repl{localReplies.length !== 1 ? 'ies' : 'y'}
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+              style={{ transform: showReplies ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {/* Reply input */}
+      {showReply && (
+        <div className="mt-2 ml-4 pl-3 border-l-2 border-[#e5e5e5] dark:border-[#333]">
+          <div className="flex items-center gap-2 mb-1.5">
+            <button onClick={() => setReplyAnonymous(!replyAnonymous)}
+              className={`flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-medium border transition-colors ${replyAnonymous ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/20 text-amber-600' : 'border-[#e5e5e5] dark:border-[#333] text-ink-faint'}`}>
+              {replyAnonymous ? '👤 Anonymous' : '🧑 Visible'}
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <input type="text" value={replyText} onChange={(e) => setReplyText(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && submitReply()}
+              placeholder="Write a reply..."
+              className="flex-1 px-2.5 py-1.5 text-xs border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#0a0a0a] text-ink dark:text-paper placeholder:text-ink-faint focus:outline-none focus:border-ink dark:focus:border-paper transition-colors" />
+            <button onClick={submitReply} disabled={!replyText.trim() || replying}
+              className="px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider bg-ink dark:bg-paper text-paper dark:text-ink hover:opacity-80 disabled:opacity-30 transition-all">
+              Reply
+            </button>
+          </div>
+        </div>
       )}
-      {c.badges?.slice(0, 2).map((b, i) => (
-        <span key={i} title={b.label} className="text-[10px]">{b.icon}</span>
-      ))}
-      <span className="text-[10px] text-ink-faint ml-auto">{timeAgo(c.createdAt)}</span>
-    </div>
-    <p className="text-sm text-ink-secondary dark:text-ink-muted leading-relaxed">{c.content}</p>
-    <div className="flex items-center gap-3 mt-1.5">
-      <button onClick={() => onLike(c._id)}
-        className="flex items-center gap-1 text-[10px] text-ink-faint hover:text-ink dark:hover:text-paper transition-colors">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
-        </svg>
-        {c.likes?.length || 0}
-      </button>
-      {c.replies?.length > 0 && (
-        <span className="text-[10px] text-ink-faint">{c.replies.length} repl{c.replies.length !== 1 ? 'ies' : 'y'}</span>
+
+      {/* Replies list */}
+      {showReplies && localReplies.length > 0 && (
+        <div className="mt-2 ml-4 pl-3 border-l-2 border-[#e5e5e5] dark:border-[#333] space-y-2">
+          {localReplies.map(r => (
+            <div key={r._id} className="py-1.5">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-[11px] font-semibold text-ink dark:text-paper">
+                  {r.isAnonymous ? '👤 Anonymous' : (r.user?.name || 'Anonymous')}
+                </span>
+                <span className="text-[9px] text-ink-faint">{timeAgo(r.createdAt)}</span>
+              </div>
+              <p className="text-xs text-ink-secondary dark:text-ink-muted leading-relaxed">{r.content}</p>
+            </div>
+          ))}
+        </div>
       )}
     </div>
-  </div>
-);
+  );
+};
 import { 
   fetchAndAnalyzeNews, getDashboardInit, getTopSources,
   generateDigest, generateForecast, getRegionalData, getHistory
