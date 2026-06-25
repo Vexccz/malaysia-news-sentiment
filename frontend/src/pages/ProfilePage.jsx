@@ -311,7 +311,7 @@ const ProfilePage = () => {
         </div>
 
         {/* Avatar + Info overlay */}
-        <div className="px-5 lg:px-8 -mt-12 relative z-10 flex flex-col sm:flex-row items-start sm:items-end gap-4">
+        <div className="px-5 lg:px-8 -mt-10 relative z-10 flex flex-col sm:flex-row items-start sm:items-end gap-4">
           {/* Avatar */}
           <div className="relative">
             {user?.avatar ? (
