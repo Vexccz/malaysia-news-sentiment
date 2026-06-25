@@ -280,3 +280,84 @@ exports.getSharedArticles = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch shared articles.' });
   }
 };
+
+// @desc    Get recent discussions across all articles
+// @route   GET /api/v1/collab/discussions
+// @access  Public
+exports.getRecentDiscussions = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 15;
+    const skip = (page - 1) * limit;
+
+    // Get recent comments grouped by article
+    const pipeline = [
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: '$articleId',
+          lastCommentAt: { $first: '$createdAt' },
+          commentCount: { $sum: 1 },
+          lastComment: { $first: '$content' },
+          lastUser: { $first: '$userId' },
+          lastSentiment: { $first: '$sentiment' },
+        },
+      },
+      { $sort: { lastCommentAt: -1 } },
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: 'articles',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'article',
+        },
+      },
+      { $unwind: { path: '$article', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'lastUser',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 0,
+          articleId: '$_id',
+          articleTitle: '$article.title',
+          articleSource: '$article.source',
+          articleSentiment: '$article.sentiment',
+          lastCommentAt: 1,
+          commentCount: 1,
+          lastComment: 1,
+          lastSentiment: 1,
+          userName: { $ifNull: ['$user.name', 'Anonymous'] },
+        },
+      },
+    ];
+
+    const [results, countResult] = await Promise.all([
+      Comment.aggregate(pipeline),
+      Comment.aggregate([
+        { $group: { _id: '$articleId' } },
+        { $count: 'total' },
+      ]),
+    ]);
+
+    const total = countResult[0]?.total || 0;
+
+    res.json({
+      discussions: results,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+    });
+  } catch (err) {
+    console.error('[Collab] getRecentDiscussions error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch discussions.' });
+  }
+};

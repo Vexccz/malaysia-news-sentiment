@@ -20,7 +20,7 @@ import AnalyzingOverlay from '../components/AnalyzingOverlay';
 import usePullToRefresh from '../hooks/usePullToRefresh';
 import useSwipeTabs from '../hooks/useSwipeTabs';
 import { hapticImpact } from '../utils/haptics';
-import { Search, Clock, ArrowLeft, Sparkles, FileDown, Printer, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Brain, Download, Settings2, Globe, GripVertical, Activity, Users } from 'lucide-react';
+import { Search, Clock, ArrowLeft, Sparkles, FileDown, Printer, ChevronLeft, ChevronRight, BarChart3, TrendingUp, Brain, Download, Settings2, Globe, GripVertical, Activity, Users, MessageSquare } from 'lucide-react';
 import DashboardCustomizer from '../components/DashboardCustomizer';
 import EmptyState from '../components/EmptyState';
 import DashboardSummary from '../components/DashboardSummary';
@@ -119,19 +119,24 @@ const SentimentMarkInline = ({ sentiment }) => {
   const m = map[sentiment] || map.Neutral;
   return <span className={`inline-block text-xs font-bold ${m.color} mr-1`}>{m.symbol}</span>;
 };
-/* ─── Inline: Community ────────────────────────────────────────────── */
+/* ─── Inline: Community (Discussion Threads) ──────────────────────── */
 const CommunityInline = () => {
-  const [shared, setShared] = useState([]);
+  const [discussions, setDiscussions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState(null);
+  const [comments, setComments] = useState([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await api.get('/collab/shared');
-        if (!cancelled) setShared(data.articles || data || []);
+        const { data } = await api.get('/collab/discussions');
+        if (!cancelled) setDiscussions(data.discussions || []);
       } catch (err) {
-        console.error('Community fetch failed:', err);
+        console.error('Discussions fetch failed:', err);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -139,43 +144,158 @@ const CommunityInline = () => {
     return () => { cancelled = true; };
   }, []);
 
+  const loadComments = async (articleId) => {
+    if (expandedId === articleId) { setExpandedId(null); return; }
+    setExpandedId(articleId);
+    setCommentsLoading(true);
+    try {
+      const { data } = await api.get(`/collab/comments/${articleId}`);
+      setComments(data.comments || []);
+    } catch { setComments([]); }
+    finally { setCommentsLoading(false); }
+  };
+
+  const submitComment = async (articleId) => {
+    if (!newComment.trim() || submitting) return;
+    setSubmitting(true);
+    try {
+      const { data } = await api.post('/collab/comments', { articleId, content: newComment.trim() });
+      setComments(prev => [data.comment, ...prev]);
+      setNewComment('');
+      setDiscussions(prev => prev.map(d => 
+        d.articleId === articleId ? { ...d, commentCount: d.commentCount + 1, lastComment: newComment.trim(), lastCommentAt: new Date().toISOString() } : d
+      ));
+    } catch { /* silent */ }
+    finally { setSubmitting(false); }
+  };
+
+  const likeComment = async (commentId) => {
+    try { await api.post(`/collab/comments/${commentId}/like`); } catch {}
+  };
+
+  const timeAgo = (dateStr) => {
+    if (!dateStr) return '';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  };
+
   if (loading) {
     return (
       <div className={`${CARD} p-5 animate-pulse space-y-3`}>
         <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-        <div className="h-14 bg-gray-100 dark:bg-gray-800 rounded" />
-        <div className="h-14 bg-gray-100 dark:bg-gray-800 rounded" />
+        <div className="h-16 bg-gray-100 dark:bg-gray-800 rounded" />
+        <div className="h-16 bg-gray-100 dark:bg-gray-800 rounded" />
       </div>
     );
   }
 
-  if (!shared.length) {
+  if (!discussions.length) {
     return (
       <div className={`${CARD} p-8 text-center`}>
-        <Users size={24} className="mx-auto mb-2 text-ink-faint" />
-        <p className="text-sm text-ink-faint">No shared articles yet.</p>
-        <p className="text-xs text-ink-faint mt-1">Share articles with your team to see them here.</p>
+        <MessageSquare size={24} className="mx-auto mb-2 text-ink-faint" />
+        <p className="text-sm text-ink-faint">No discussions yet.</p>
+        <p className="text-xs text-ink-faint mt-1">Open an article and leave a comment to start a discussion.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      {shared.map(article => (
-        <div key={article._id || article.url} className={`${CARD} p-4 flex items-start gap-3`}>
-          <div className="flex-shrink-0 pt-0.5"><SentimentMarkInline sentiment={article.sentiment} /></div>
-          <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-semibold text-ink dark:text-paper leading-snug line-clamp-2 mb-1">{article.title}</h4>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted dark:text-ink-faint">{article.source}</span>
-              {article.comments !== undefined && (
-                <>
-                  <span className="text-ink-faint">·</span>
-                  <span className="text-[10px] text-ink-faint">{article.comments} comment{article.comments !== 1 ? 's' : ''}</span>
-                </>
+    <div className="space-y-2">
+      {discussions.map(d => (
+        <div key={d.articleId} className={`${CARD} overflow-hidden`}>
+          <button
+            onClick={() => loadComments(d.articleId)}
+            className="w-full text-left p-4 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors"
+          >
+            <div className="flex-shrink-0 pt-0.5"><SentimentMarkInline sentiment={d.articleSentiment} /></div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-sm font-semibold text-ink dark:text-paper leading-snug line-clamp-1 mb-1">
+                {d.articleTitle || 'Untitled'}
+              </h4>
+              <p className="text-xs text-ink-muted dark:text-ink-faint line-clamp-1 mb-1.5">
+                “{d.lastComment}”
+              </p>
+              <div className="flex items-center gap-3 text-[10px] text-ink-faint">
+                <span className="font-semibold uppercase tracking-wider">{d.articleSource || 'Unknown'}</span>
+                <span>·</span>
+                <span>{d.commentCount} comment{d.commentCount !== 1 ? 's' : ''}</span>
+                <span>·</span>
+                <span>{timeAgo(d.lastCommentAt)}</span>
+                <span className="ml-auto text-ink-faint">{d.userName}</span>
+              </div>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" 
+              className={`flex-shrink-0 text-ink-faint transition-transform ${expandedId === d.articleId ? 'rotate-180' : ''}`}>
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+
+          {expandedId === d.articleId && (
+            <div className="border-t border-[#e5e5e5] dark:border-[#222]">
+              <div className="p-3 border-b border-[#e5e5e5] dark:border-[#222] bg-gray-50/50 dark:bg-white/[0.01]">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && submitComment(d.articleId)}
+                    placeholder="Add a comment..."
+                    className="flex-1 px-3 py-2 text-sm border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#0a0a0a] text-ink dark:text-paper placeholder:text-ink-faint focus:outline-none focus:border-ink dark:focus:border-paper transition-colors"
+                  />
+                  <button
+                    onClick={() => submitComment(d.articleId)}
+                    disabled={!newComment.trim() || submitting}
+                    className="px-3 py-2 text-xs font-semibold uppercase tracking-wider bg-ink dark:bg-paper text-paper dark:text-ink hover:opacity-80 disabled:opacity-30 transition-all"
+                  >
+                    Post
+                  </button>
+                </div>
+              </div>
+
+              {commentsLoading ? (
+                <div className="p-4 space-y-2 animate-pulse">
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+                  <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded w-1/2" />
+                </div>
+              ) : comments.length === 0 ? (
+                <div className="p-4 text-center text-xs text-ink-faint">No comments yet. Be the first!</div>
+              ) : (
+                <div className="max-h-60 overflow-y-auto divide-y divide-[#e5e5e5] dark:divide-[#222]">
+                  {comments.map(c => (
+                    <div key={c._id} className="px-4 py-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-semibold text-ink dark:text-paper">
+                          {c.user?.name || 'Anonymous'}
+                        </span>
+                        {c.sentiment && <SentimentMarkInline sentiment={c.sentiment} />}
+                        <span className="text-[10px] text-ink-faint ml-auto">{timeAgo(c.createdAt)}</span>
+                      </div>
+                      <p className="text-sm text-ink-secondary dark:text-ink-muted leading-relaxed">{c.content}</p>
+                      <div className="flex items-center gap-3 mt-1.5">
+                        <button 
+                          onClick={() => likeComment(c._id)}
+                          className="flex items-center gap-1 text-[10px] text-ink-faint hover:text-ink dark:hover:text-paper transition-colors"
+                        >
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+                          </svg>
+                          {c.likes?.length || 0}
+                        </button>
+                        {c.replies?.length > 0 && (
+                          <span className="text-[10px] text-ink-faint">{c.replies.length} repl{c.replies.length !== 1 ? 'ies' : 'y'}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-          </div>
+          )}
         </div>
       ))}
     </div>

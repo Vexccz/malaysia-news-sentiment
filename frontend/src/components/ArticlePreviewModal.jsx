@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import SentimentBadge from './SentimentBadge';
 import AlertBadge from './AlertBadge';
 import { trackView, voteSentiment, toggleBookmark } from '../services/api';
+import api from '../services/api';
 import { X, Bookmark, BookmarkCheck, ExternalLink, TrendingUp, TrendingDown, Minus, Lightbulb, MessageSquare } from 'lucide-react';
 
 const formatDate = (dateStr) => {
@@ -28,12 +29,23 @@ const ArticlePreviewModal = ({ article, isOpen, onClose }) => {
   const [voted, setVoted] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [localFeedback, setLocalFeedback] = useState(article?.feedback || null);
+  const [comments, setComments] = useState([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [showComments, setShowComments] = useState(false);
 
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
     if (isOpen && article?._id) {
       document.body.style.overflow = 'hidden';
       trackView(article._id).catch(() => {});
+      // Load comments
+      setCommentsLoading(true);
+      api.get(`/collab/comments/${article._id}`)
+        .then(({ data }) => setComments(data.comments || []))
+        .catch(() => {})
+        .finally(() => setCommentsLoading(false));
     }
     return () => { document.body.style.overflow = originalOverflow || ''; };
   }, [isOpen, article?._id]);
@@ -64,6 +76,33 @@ const ArticlePreviewModal = ({ article, isOpen, onClose }) => {
       setIsBookmarked(res.bookmarked);
       toast.success(res.bookmarked ? 'Saved!' : 'Removed!');
     } catch { toast.error('Bookmark error'); }
+  };
+
+  const submitComment = async () => {
+    if (!newComment.trim() || submitting) return;
+    setSubmitting(true);
+    try {
+      const { data } = await api.post('/collab/comments', { articleId: _id, content: newComment.trim() });
+      setComments(prev => [data.comment, ...prev]);
+      setNewComment('');
+      toast.success('Comment posted');
+    } catch { toast.error('Failed to post comment'); }
+    finally { setSubmitting(false); }
+  };
+
+  const likeComment = async (commentId) => {
+    try { await api.post(`/collab/comments/${commentId}/like`); } catch {}
+  };
+
+  const timeAgo = (dateStr) => {
+    if (!dateStr) return '';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + 'm ago';
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return hrs + 'h ago';
+    return Math.floor(hrs / 24) + 'd ago';
   };
 
   const cleanHtml = (html) => {
@@ -353,6 +392,99 @@ const ArticlePreviewModal = ({ article, isOpen, onClose }) => {
                 }}
               />
             </>
+          )}
+        </div>
+
+        {/* Discussion */}
+        <div style={{ padding: '0 20px 16px' }}>
+          <button
+            onClick={() => setShowComments(!showComments)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 10, fontWeight: 700, letterSpacing: '0.15em',
+              textTransform: 'uppercase', color: 'var(--text-muted, #999)',
+              padding: '8px 0',
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            Discussion ({comments.length})
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+              style={{ transform: showComments ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+
+          {showComments && (
+            <div style={{ marginTop: 8, border: '1px solid var(--border, #e5e5e5)' }}>
+              {/* Input */}
+              <div style={{ display: 'flex', gap: 8, padding: 12, borderBottom: '1px solid var(--border, #e5e5e5)', background: 'var(--card, #fafafa)' }}>
+                <input
+                  type="text"
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && submitComment()}
+                  placeholder="Add a comment..."
+                  style={{
+                    flex: 1, padding: '8px 12px', fontSize: 13,
+                    border: '1px solid var(--border, #e5e5e5)',
+                    background: 'var(--bg, #fff)', color: 'var(--text-primary, #000)',
+                    outline: 'none',
+                  }}
+                />
+                <button
+                  onClick={submitComment}
+                  disabled={!newComment.trim() || submitting}
+                  style={{
+                    padding: '8px 14px', fontSize: 11, fontWeight: 700,
+                    letterSpacing: '0.08em', textTransform: 'uppercase',
+                    background: 'var(--text-primary, #000)', color: '#fff',
+                    border: 'none', cursor: newComment.trim() ? 'pointer' : 'default',
+                    opacity: newComment.trim() ? 1 : 0.3,
+                  }}
+                >
+                  Post
+                </button>
+              </div>
+
+              {/* Comments */}
+              {commentsLoading ? (
+                <div style={{ padding: 16, textAlign: 'center', fontSize: 12, color: 'var(--text-muted, #999)' }}>Loading...</div>
+              ) : comments.length === 0 ? (
+                <div style={{ padding: 16, textAlign: 'center', fontSize: 12, color: 'var(--text-muted, #999)' }}>No comments yet. Be the first!</div>
+              ) : (
+                <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                  {comments.map(c => (
+                    <div key={c._id} style={{ padding: '10px 12px', borderBottom: '1px solid var(--border, #e5e5e5)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary, #000)' }}>
+                          {c.user?.name || 'Anonymous'}
+                        </span>
+                        <span style={{ fontSize: 10, color: 'var(--text-muted, #999)', marginLeft: 'auto' }}>
+                          {timeAgo(c.createdAt)}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--text-secondary, #444)', margin: 0 }}>
+                        {c.content}
+                      </p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                        <button
+                          onClick={() => likeComment(c._id)}
+                          style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: 'var(--text-muted, #999)' }}
+                        >
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+                          </svg>
+                          {c.likes?.length || 0}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
 
