@@ -10,7 +10,7 @@ const DRAFT_FADE_MS = 2000;
 
 const CommunityPage = () => {
   const { t } = useLanguage();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
 
   // ── State: Discussions ──
   const [discussions, setDiscussions] = useState([]);
@@ -44,7 +44,7 @@ const CommunityPage = () => {
 
   // ── Derived: draft key ──
   const draftKey = selectedDiscussion
-    ? `draft_comment_${selectedDiscussion.id}`
+    ? `draft_comment_${selectedDiscussion.articleId}`
     : 'draft_comment_standalone';
 
   // ── Character count ──
@@ -62,9 +62,10 @@ const CommunityPage = () => {
         const res = await fetch(`${API_BASE}/collab/discussions`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        setDiscussions(data);
-        if (data.length > 0 && !selectedDiscussion) {
-          setSelectedDiscussion(data[0]);
+        const list = data.discussions || [];
+        setDiscussions(list);
+        if (list.length > 0 && !selectedDiscussion) {
+          setSelectedDiscussion(list[0]);
         }
       } catch (err) {
         setDiscussionsError(err.message);
@@ -84,11 +85,11 @@ const CommunityPage = () => {
       setCommentsError(null);
       try {
         const res = await fetch(
-          `${API_BASE}/collab/discussions/${selectedDiscussion.id}/comments`
+          `${API_BASE}/collab/comments/${selectedDiscussion.articleId}`
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        setComments(data);
+        setComments(data.comments || []);
       } catch (err) {
         setCommentsError(err.message);
       } finally {
@@ -217,18 +218,20 @@ const CommunityPage = () => {
 
       try {
         const payload = {
-          text: commentText.trim(),
+          articleId: selectedDiscussion?.articleId,
+          content: commentText.trim(),
           sentiment: commentSentiment,
-          anonymous: isAnonymous,
+          isAnonymous: isAnonymous,
         };
 
-        const url = selectedDiscussion
-          ? `${API_BASE}/collab/discussions/${selectedDiscussion.id}/comments`
-          : `${API_BASE}/collab/comments`;
+        const url = `${API_BASE}/collab/comments`;
 
         const res = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify(payload),
         });
 
@@ -243,11 +246,11 @@ const CommunityPage = () => {
         // Refresh comments
         if (selectedDiscussion) {
           const refreshRes = await fetch(
-            `${API_BASE}/collab/discussions/${selectedDiscussion.id}/comments`
+            `${API_BASE}/collab/comments/${selectedDiscussion.articleId}`
           );
           if (refreshRes.ok) {
             const data = await refreshRes.json();
-            setComments(data);
+            setComments(data.comments || []);
           }
         }
       } catch (err) {
@@ -264,11 +267,11 @@ const CommunityPage = () => {
     if (!selectedDiscussion) return;
     try {
       const res = await fetch(
-        `${API_BASE}/collab/discussions/${selectedDiscussion.id}/comments`
+        `${API_BASE}/collab/comments/${selectedDiscussion.articleId}`
       );
       if (res.ok) {
         const data = await res.json();
-        setComments(data);
+        setComments(data.comments || []);
       }
     } catch {
       // silently fail refresh
@@ -321,10 +324,10 @@ const CommunityPage = () => {
           {discussions.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {discussions.map((d) => {
-                const isActive = selectedDiscussion?.id === d.id;
+                const isActive = selectedDiscussion?.articleId === d.articleId;
                 return (
                   <button
-                    key={d.id}
+                    key={d.articleId}
                     onClick={() => handleDiscussionSelect(d)}
                     className={`
                       px-4 py-2 text-sm font-medium border transition-colors
@@ -335,7 +338,7 @@ const CommunityPage = () => {
                       }
                     `}
                   >
-                    {d.title || `${t('discussions')} #${d.id}`}
+                    {d.articleTitle || `${t('discussions')} #${d.articleId}`}
                   </button>
                 );
               })}
