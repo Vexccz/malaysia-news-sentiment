@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 import { MessageSquare, X, Eye, Bookmark, MessageCircle, Calendar, Shield } from 'lucide-react';
 
 const CARD = 'bg-white dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222]';
@@ -137,15 +138,37 @@ const SentimentMarkInline = ({ sentiment }) => {
   return <span className={`inline-block text-xs font-bold ${m.color} mr-1`}>{m.symbol}</span>;
 };
 
-const CommentItem = ({ c, onLike, timeAgo, sentimentColor, onUserClick }) => {
+const CommentItem = ({ c, onLike, timeAgo, sentimentColor, onUserClick, currentUserId }) => {
   const [showReply, setShowReply] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [replying, setReplying] = useState(false);
   const [showReplies, setShowReplies] = useState(false);
   const [localReplies, setLocalReplies] = useState(c.replies || []);
   const [replyAnonymous, setReplyAnonymous] = useState(false);
+  const [liked, setLiked] = useState(c.likes?.some(id => id === currentUserId || id?.toString() === currentUserId) || false);
+  const [likeCount, setLikeCount] = useState(c.likes?.length || 0);
+  const [liking, setLiking] = useState(false);
 
   const userInitials = (c.user?.name || 'A').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+
+  const handleLike = async () => {
+    if (liking) return;
+    setLiking(true);
+    // Optimistic update
+    setLiked(prev => !prev);
+    setLikeCount(prev => liked ? prev - 1 : prev + 1);
+    try {
+      const { data } = await onLike(c._id);
+      setLiked(data.liked);
+      setLikeCount(data.likes);
+    } catch {
+      // Revert on error
+      setLiked(prev => !prev);
+      setLikeCount(prev => liked ? prev + 1 : prev - 1);
+    } finally {
+      setLiking(false);
+    }
+  };
 
   const submitReply = async () => {
     if (!replyText.trim() || replying) return;
@@ -203,12 +226,12 @@ const CommentItem = ({ c, onLike, timeAgo, sentimentColor, onUserClick }) => {
       </div>
       <p className="text-sm text-ink-secondary dark:text-ink-muted leading-relaxed ml-[38px]">{c.content}</p>
       <div className="flex items-center gap-3 mt-1.5 ml-[38px]">
-        <button onClick={() => onLike(c._id)}
-          className="flex items-center gap-1 text-[10px] text-ink-faint hover:text-ink dark:hover:text-paper transition-colors">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+        <button onClick={handleLike} disabled={liking}
+          className={`flex items-center gap-1 text-[10px] transition-colors ${liked ? 'text-red-500' : 'text-ink-faint hover:text-ink dark:hover:text-paper'}`}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
           </svg>
-          {c.likes?.length || 0}
+          {likeCount}
         </button>
         <button onClick={() => setShowReply(!showReply)}
           className="flex items-center gap-1 text-[10px] text-ink-faint hover:text-ink dark:hover:text-paper transition-colors">
@@ -289,6 +312,7 @@ const CommentItem = ({ c, onLike, timeAgo, sentimentColor, onUserClick }) => {
 
 const CommunityPage = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [discussions, setDiscussions] = useState([]);
   const [hotTakes, setHotTakes] = useState([]);
   const [dotd, setDotd] = useState(null);
@@ -350,7 +374,8 @@ const CommunityPage = () => {
   };
 
   const likeComment = async (commentId) => {
-    try { await api.post(`/collab/comments/${commentId}/like`); } catch {}
+    const { data } = await api.post(`/collab/comments/${commentId}/like`);
+    return { data };
   };
 
   const timeAgo = (dateStr) => {
@@ -445,7 +470,7 @@ const CommunityPage = () => {
                     <div className="p-4 animate-pulse space-y-2"><div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4" /></div>
                   ) : (
                     <div className="max-h-60 overflow-y-auto divide-y divide-[#e5e5e5] dark:divide-[#222]">
-                      {comments.map(c => <CommentItem key={c._id} c={c} onLike={likeComment} timeAgo={timeAgo} sentimentColor={sentimentColor} onUserClick={setViewingUserId} />)}
+                      {comments.map(c => <CommentItem key={c._id} c={c} onLike={likeComment} timeAgo={timeAgo} sentimentColor={sentimentColor} onUserClick={setViewingUserId} currentUserId={user?._id || user?.id} />)}
                       {comments.length === 0 && <div className="p-4 text-center text-xs text-ink-faint">No comments yet.</div>}
                     </div>
                   )}
@@ -517,7 +542,7 @@ const CommunityPage = () => {
                           <div className="p-4 animate-pulse space-y-2"><div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4" /></div>
                         ) : (
                           <div className="max-h-60 overflow-y-auto divide-y divide-[#e5e5e5] dark:divide-[#222]">
-                            {comments.map(c => <CommentItem key={c._id} c={c} onLike={likeComment} timeAgo={timeAgo} sentimentColor={sentimentColor} onUserClick={setViewingUserId} />)}
+                            {comments.map(c => <CommentItem key={c._id} c={c} onLike={likeComment} timeAgo={timeAgo} sentimentColor={sentimentColor} onUserClick={setViewingUserId} currentUserId={user?._id || user?.id} />)}
                             {comments.length === 0 && <div className="p-4 text-center text-xs text-ink-faint">No comments yet.</div>}
                           </div>
                         )}
