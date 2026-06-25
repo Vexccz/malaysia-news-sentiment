@@ -1,12 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Globe, Lock, Newspaper, Network, Radio, TrendingUp, FileText, Bell, ShieldCheck, BarChart3, FileDown, Clock, Share2, Settings, Shield, ChevronLeft, Search, Copy, Check, Play, ExternalLink, AlertTriangle } from 'lucide-react';
 import api from '../services/api';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5001/api/v1';
-const ICON_MAP = { Globe, Lock, Newspaper, Network, Radio, TrendingUp, FileText, Bell, ShieldCheck, BarChart3, FileDown, Clock, Share2, Settings, Shield, AlertTriangle, Search };
-const CatIcon = ({ name, className = 'w-5 h-5' }) => { const C = ICON_MAP[name]; return C ? <C className={className} strokeWidth={1.5} /> : null; };
 
 // ─── Method Badge ────────────────────────────────────────────────────────────
 const MethodBadge = ({ method }) => {
@@ -37,12 +34,12 @@ const CodeBlock = ({ code, language = 'json' }) => {
 
   return (
     <div className="relative group">
-      <pre className="bg-[#1A1A1A] dark:bg-black/50 text-gray-100 rounded-sm p-4 text-xs overflow-x-auto font-mono leading-relaxed border border-gray-800 dark:border-gray-700">
+      <pre className="bg-gray-900 dark:bg-black/50 text-gray-100 rounded-sm p-4 text-xs overflow-x-auto font-mono leading-relaxed border border-gray-800 dark:border-gray-700">
         <code>{text}</code>
       </pre>
       <button
         onClick={handleCopy}
-        className="absolute top-2 right-2 px-3 py-1.5 bg-white/10 text-white/70 text-xs opacity-0 group-hover:opacity-100 transition-all hover:bg-white/20 hover:text-white font-medium"
+        className="absolute top-2 right-2 px-3 py-1.5 rounded-lg bg-white/10 text-white/70 text-xs opacity-0 group-hover:opacity-100 transition-all hover:bg-white/20 hover:text-white font-medium"
       >
         {copied ? 'Copied' : 'Copy'}
       </button>
@@ -99,10 +96,10 @@ const TryItButton = ({ endpoint }) => {
       <button
         onClick={tryIt}
         disabled={loading}
-        className="px-4 py-2 bg-accent text-white text-xs font-medium hover:bg-accent/90 disabled:opacity-50 transition-all flex items-center gap-2"
+        className="px-4 py-2 rounded-lg bg-accent text-white text-xs font-medium hover:bg-accent/90 disabled:opacity-50 transition-all flex items-center gap-2"
       >
         {loading ? (
-          <div className="w-3 h-3 border-2 border-white border-t-transparent animate-spin" />
+          <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
         ) : (
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polygon points="5 3 19 12 5 21 5 3"/>
@@ -121,7 +118,7 @@ const apiCategories = [
   {
     id: 'public',
     title: 'Public',
-    icon: 'Globe',
+    icon: '',
     description: 'No authentication required. Access sentiment analysis and article data freely.',
     endpoints: [
       {
@@ -180,7 +177,7 @@ const apiCategories = [
   {
     id: 'auth',
     title: 'Authentication',
-    icon: 'Lock',
+    icon: '',
     description: 'User registration, login, and session management. Returns JWT tokens for protected endpoints.',
     endpoints: [
       {
@@ -272,7 +269,7 @@ const apiCategories = [
   {
     id: 'news',
     title: 'News & Analysis',
-    icon: 'Newspaper',
+    icon: '',
     description: 'Core news endpoints for searching, analyzing, and interacting with Malaysian news articles.',
     endpoints: [
       {
@@ -505,7 +502,7 @@ const apiCategories = [
   {
     id: 'entities',
     title: 'Entities',
-    icon: 'Network',
+    icon: '',
     description: 'Entity extraction and relationship graph. Discover connections between people, organizations, and topics.',
     endpoints: [
       {
@@ -554,7 +551,7 @@ const apiCategories = [
   {
     id: 'feed',
     title: 'Live Feed',
-    icon: 'Radio',
+    icon: '',
     description: 'Real-time news feed and Server-Sent Events (SSE) stream for live updates.',
     endpoints: [
       {
@@ -587,7 +584,7 @@ const apiCategories = [
   {
     id: 'forecast',
     title: 'Forecast',
-    icon: 'TrendingUp',
+    icon: '',
     description: 'AI-powered sentiment forecasting for specific topics.',
     endpoints: [
       {
@@ -609,7 +606,7 @@ const apiCategories = [
   {
     id: 'digest',
     title: 'Digest',
-    icon: 'FileText',
+    icon: '',
     description: 'AI-generated news digests summarizing key stories and trends.',
     endpoints: [
       {
@@ -652,7 +649,7 @@ const apiCategories = [
   {
     id: 'alerts',
     title: 'Alerts',
-    icon: 'Bell',
+    icon: '',
     description: 'Manage custom sentiment alerts. Get notified when topics match your criteria.',
     endpoints: [
       {
@@ -728,7 +725,7 @@ const apiCategories = [
   {
     id: 'credibility',
     title: 'Credibility',
-    icon: 'ShieldCheck',
+    icon: '',
     description: 'Source credibility scoring and analysis. Evaluate news source reliability.',
     endpoints: [
       {
@@ -760,7 +757,7 @@ const apiCategories = [
   {
     id: 'sources',
     title: 'Source Analysis',
-    icon: 'BarChart3',
+    icon: '',
     description: 'Calculated credibility scores based on algorithmic analysis.',
     endpoints: [
       {
@@ -779,7 +776,7 @@ const apiCategories = [
   {
     id: 'reports',
     title: 'Reports',
-    icon: 'FileDown',
+    icon: '',
     description: 'Generate downloadable PDF reports with charts and analysis.',
     endpoints: [
       {
@@ -814,7 +811,7 @@ const apiCategories = [
   {
     id: 'history',
     title: 'History',
-    icon: 'Clock',
+    icon: '',
     description: 'User browsing history, dashboard data, and trend analytics.',
     endpoints: [
       {
@@ -879,7 +876,7 @@ const apiCategories = [
   {
     id: 'share',
     title: 'Share & Embed',
-    icon: 'Share2',
+    icon: '',
     description: 'Public sharing and embedding of article analysis.',
     endpoints: [
       {
@@ -913,7 +910,7 @@ const apiCategories = [
   {
     id: 'user',
     title: 'User Settings',
-    icon: 'Settings',
+    icon: '',
     description: 'User dashboard layout and personalization settings.',
     endpoints: [
       {
@@ -946,7 +943,7 @@ const apiCategories = [
   {
     id: 'admin',
     title: 'Admin',
-    icon: 'Shield',
+    icon: '',
     description: 'Administrative endpoints for system monitoring and management. Requires admin role.',
     endpoints: [
       {
@@ -999,10 +996,10 @@ const apiCategories = [
 
 // ─── Route mapping ───────────────────────────────────────────────────────────
 const SECTION_ROUTES = [
-  { path: '', id: 'overview', label: 'Overview', icon: 'Search' },
-  { path: 'authentication', id: 'authentication', label: 'Authentication', icon: 'Lock' },
-  { path: 'errors', id: 'errors', label: 'Error Codes', icon: 'AlertTriangle' },
-  { path: 'realtime', id: 'realtime', label: 'Real-time / SSE', icon: 'Radio' },
+  { path: '', id: 'overview', label: 'Overview', icon: '' },
+  { path: 'authentication', id: 'authentication', label: 'Authentication', icon: '' },
+  { path: 'errors', id: 'errors', label: 'Error Codes', icon: '' },
+  { path: 'realtime', id: 'realtime', label: 'Real-time / SSE', icon: '' },
   ...apiCategories.map(cat => ({ path: cat.id, id: cat.id, label: cat.title, icon: cat.icon })),
 ];
 
@@ -1013,10 +1010,10 @@ const Sidebar = ({ activeSection, mobileMenuOpen = false, setMobileMenuOpen = ()
 
   return (
     <nav className={`w-60 shrink-0 sticky top-[4.5rem] self-start max-h-[calc(100vh-5rem)] overflow-y-auto pr-2 transition-transform duration-300 ${mobileMenuOpen ? 'md:translate-x-0 fixed left-0 top-0 bottom-0 z-50 translate-x-0 bg-[#fafaf9] dark:bg-[#0f0f0f] pt-6 px-4 border-r border-[#eee] dark:border-[#2a2a2a]' : 'md:block hidden'}`}>
-      <div className="bg-[#FAF8F3] dark:bg-[#1A1917] border border-[#1A1A1A]/10 dark:border-[#FAF8F3]/10 rounded-sm p-4 space-y-1">
+      <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-4 space-y-1">
         {/* Logo/Title */}
         <div className="px-3 pb-3 mb-2 border-b border-[#eee] dark:border-[#2a2a2a]">
-          <p className="text-xs font-bold text-gray-900 dark:text-white font-display">API Reference</p>
+          <p className="text-xs font-bold text-gray-900 dark:text-white">API Reference</p>
           <p className="text-[10px] text-gray-400 mt-0.5">v1.0 • REST + SSE</p>
         </div>
 
@@ -1030,13 +1027,13 @@ const Sidebar = ({ activeSection, mobileMenuOpen = false, setMobileMenuOpen = ()
                 e.preventDefault();
                 navigate(`/api-docs/${item.id}`);
               }}
-              className={`w-full text-left px-3 py-2 text-xs font-medium transition-all duration-200 flex items-center gap-2.5 ${
+              className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-2.5 ${
                 activeSection === item.id
                   ? 'bg-accent/10 text-accent border-l-2 border-accent pl-2.5'
                   : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 hover:pl-2.5'
               }`}
             >
-              <span className="text-sm w-5 text-center"><CatIcon name={item.icon} className="w-4 h-4" /></span>
+              <span className="text-sm w-5 text-center">{item.icon}</span>
               <span>{item.label}</span>
             </a>
           ))}
@@ -1044,7 +1041,7 @@ const Sidebar = ({ activeSection, mobileMenuOpen = false, setMobileMenuOpen = ()
 
         {/* Divider */}
         <div className="pt-3 pb-2 px-3">
-          <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-gray-400 dark:text-gray-500">Endpoints</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">Endpoints</span>
         </div>
 
         {/* Endpoint categories */}
@@ -1059,15 +1056,15 @@ const Sidebar = ({ activeSection, mobileMenuOpen = false, setMobileMenuOpen = ()
                   e.preventDefault();
                   navigate(`/api-docs/${item.id}`);
                 }}
-                className={`w-full text-left px-3 py-2 text-xs font-medium transition-all duration-200 flex items-center gap-2.5 ${
+                className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-2.5 ${
                   activeSection === item.id
                     ? 'bg-accent/10 text-accent border-l-2 border-accent pl-2.5'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 hover:pl-2.5'
                 }`}
               >
-                <span className="text-sm w-5 text-center"><CatIcon name={item.icon} className="w-4 h-4" /></span>
+                <span className="text-sm w-5 text-center">{item.icon}</span>
                 <span className="flex-1">{item.label}</span>
-                {cat && <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-white/5 text-gray-400">{cat.endpoints.length}</span>}
+                {cat && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-white/5 text-gray-400">{cat.endpoints.length}</span>}
               </a>
             );
           })}
@@ -1127,7 +1124,7 @@ const EndpointCard = ({ endpoint, isPublic, defaultExpanded = false }) => {
                   <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
                     {endpoint.bodyExample ? 'Body Parameters' : 'Query Parameters'}
                   </h4>
-                  <div className="border border-[#eee] dark:border-[#2a2a2a] overflow-hidden">
+                  <div className="border border-[#eee] dark:border-[#2a2a2a] rounded-lg overflow-hidden">
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="bg-gray-50 dark:bg-white/5">
@@ -1189,15 +1186,15 @@ const OverviewPage = () => {
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3 font-['Playfair_Display']">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/>
             </svg>
             API Documentation
           </h1>
-          <span className="px-2.5 py-1 text-[10px] font-bold bg-accent/10 text-accent border border-accent/20">v1.0</span>
-          <span className="px-2.5 py-1 text-[10px] font-bold bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-500/20 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 bg-green-500 animate-pulse" />
+          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-accent/10 text-accent border border-accent/20">v1.0</span>
+          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-500/20 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
             Operational
           </span>
         </div>
@@ -1206,7 +1203,7 @@ const OverviewPage = () => {
         </p>
 
         {/* Getting Started */}
-        <div className="mt-6 border-l-[3px] border-l-red-600 bg-[#FAF8F3] dark:bg-[#1A1917] border border-[#1A1A1A]/10 dark:border-[#FAF8F3]/10 rounded-sm p-5">
+        <div className="mt-6 bg-accent/5 border border-accent/20 rounded-sm p-5">
           <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Quick Start</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
             <div className="space-y-1">
@@ -1238,7 +1235,7 @@ const OverviewPage = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 + i * 0.05 }}
-            className="bg-white dark:bg-[#1a1a1a] border border-[#1A1A1A]/10 dark:border-[#FAF8F3]/10 rounded-sm p-4"
+            className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-4"
           >
             <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">{stat.label}</p>
             <p className={`text-sm font-medium text-gray-900 dark:text-white ${stat.mono ? 'font-mono text-xs break-all' : ''}`}>{stat.value}</p>
@@ -1247,9 +1244,9 @@ const OverviewPage = () => {
       </div>
 
       {/* Rate Limiting */}
-      <div className="border-l-[3px] border-l-amber-500 bg-[#FAF8F3] dark:bg-[#1A1917] border border-[#1A1A1A]/10 rounded-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Rate Limiting</h3>
-        <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+      <div className="bg-yellow-50 dark:bg-yellow-500/5 border border-yellow-200 dark:border-yellow-500/20 rounded-sm p-5">
+        <h3 className="text-sm font-semibold text-yellow-800 dark:text-yellow-400 mb-2">Rate Limiting</h3>
+        <ul className="text-xs text-yellow-700 dark:text-yellow-400/80 space-y-1">
           <li>• Without auth: <strong>100 requests/hour</strong> per IP</li>
           <li>• With auth token: <strong>1,000 requests/hour</strong></li>
           <li>• Admin accounts: <strong>10,000 requests/hour</strong></li>
@@ -1266,15 +1263,15 @@ const OverviewPage = () => {
             <Link
               key={cat.id}
               to={`/api-docs/${cat.id}`}
-              className="bg-white dark:bg-[#1a1a1a] border border-[#1A1A1A]/10 dark:border-[#FAF8F3]/10 rounded-sm p-4 hover:border-l-[3px] hover:border-l-red-600 transition-all group"
+              className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm p-4 hover:border-accent/30 transition-all group"
             >
               <div className="flex items-center gap-3">
-                <span className="text-xl"><CatIcon name={cat.icon} className="w-5 h-5" /></span>
+                <span className="text-xl">{cat.icon}</span>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-accent transition-colors">{cat.title}</p>
                   <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{cat.description}</p>
                 </div>
-                <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-white/5 text-gray-400">{cat.endpoints.length}</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-white/5 text-gray-400">{cat.endpoints.length}</span>
               </div>
             </Link>
           ))}
@@ -1427,9 +1424,9 @@ const CategoryPage = ({ category }) => {
       {/* Category Header */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center gap-3 mb-2">
-          <span className="text-2xl"><CatIcon name={category.icon} className="w-5 h-5" /></span>
+          <span className="text-2xl">{category.icon}</span>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{category.title}</h1>
-          <span className="text-xs text-gray-400 bg-gray-100 dark:bg-white/5 px-2 py-0.5">
+          <span className="text-xs text-gray-400 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded-full">
             {category.endpoints.length} endpoint{category.endpoints.length > 1 ? 's' : ''}
           </span>
         </div>
@@ -1509,18 +1506,18 @@ const ApiDocs = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF8F3] dark:bg-[#12110F] transition-colors">
+    <div className="min-h-screen bg-[#fafaf9] dark:bg-[#0f0f0f] transition-colors">
       {/* Standalone Navbar */}
-      <nav className="sticky top-0 z-50 bg-[#FAF8F3] dark:bg-[#12110F] border-b-2 border-[#1A1A1A] dark:border-[#FAF8F3]">
+      <nav className="sticky top-0 z-50 bg-white dark:bg-[#0f0f0f] border-b border-[#eee] dark:border-[#2a2a2a]">
         <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-white hover:text-accent transition-colors">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-            MY News <span className="italic text-red-600">Sentiment</span>
+            MY News Sentiment
           </Link>
           <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-            <Link to="/" className="hover:text-accent transition-colors uppercase tracking-wider text-[10px]">Home</Link>
-            <Link to="/login" className="hover:text-accent transition-colors uppercase tracking-wider text-[10px]">Login</Link>
-            <Link to="/register" className="px-3 py-1.5 bg-[#1A1A1A] dark:bg-[#FAF8F3] text-[#FAF8F3] dark:text-[#1A1A1A] font-medium hover:opacity-90 transition-colors uppercase tracking-wider text-[10px]">Get Started</Link>
+            <Link to="/" className="hover:text-accent transition-colors">Home</Link>
+            <Link to="/login" className="hover:text-accent transition-colors">Login</Link>
+            <Link to="/register" className="px-3 py-1.5 bg-accent text-white rounded-lg font-medium hover:bg-accent/90 transition-colors">Get Started</Link>
           </div>
         </div>
       </nav>
@@ -1528,7 +1525,7 @@ const ApiDocs = () => {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        className="md:hidden fixed bottom-6 right-6 z-50 w-14 h-14 bg-accent text-white border-2 border-accent flex items-center justify-center hover:bg-accent/90 transition-all active:scale-95"
+        className="md:hidden fixed bottom-6 right-6 z-50 w-14 h-14 bg-accent text-white rounded-full border-2 border-accent flex items-center justify-center hover:bg-accent/90 transition-all active:scale-95"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           {mobileMenuOpen ? (
