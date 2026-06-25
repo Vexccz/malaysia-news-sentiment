@@ -630,7 +630,7 @@ const Dashboard = () => {
   const { pullDistance, isRefreshing, onTouchStart: pullTouchStart, onTouchMove: pullTouchMove, onTouchEnd: pullTouchEnd } = usePullToRefresh(handlePullRefresh);
 
   // Swipe between tabs
-  const MOBILE_TABS = ['overview', 'charts', 'ai'];
+  const MOBILE_TABS = ['overview', 'charts', 'community', 'ai'];
   const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipeTabs(MOBILE_TABS, mobileTab, setMobileTab);
 
   // FAB label tooltip on first visit
@@ -1290,6 +1290,7 @@ const Dashboard = () => {
                     { key: 'overview', label: 'Overview', icon: <BarChart3 size={12} /> },
                     { key: 'charts', label: 'Charts', icon: <TrendingUp size={12} /> },
                     
+                    { key: 'community', label: 'Community', icon: <Users size={12} /> },
                     { key: 'ai', label: 'AI Insights', icon: <Brain size={12} /> },
                   ].map(tab => (
                     <button
@@ -1561,6 +1562,24 @@ const Dashboard = () => {
                   </motion.div>
                 )}
 
+                {mobileTab === 'community' && (
+                  <motion.div
+                    key="community"
+                    custom={slideDirection}
+                    variants={slideVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                  >
+                  <div className="space-y-5">
+                    <SectionHeader title="Community" />
+                    <InlineErrorBoundary name="Community">
+                      <CommunityInline />
+                    </InlineErrorBoundary>
+                  </div>
+                  </motion.div>
+                )}
 
                 {mobileTab === 'ai' && (
                   <motion.div
@@ -1900,6 +1919,12 @@ const Dashboard = () => {
                 </div>
                 )}
 
+                {/* Community Section */}
+                <div className="mt-10">
+                  <SectionHeader title="COMMUNITY" />
+                  <InlineErrorBoundary name="Community">
+                    <CommunityInline />
+                  </InlineErrorBoundary>
                 </div>
 
                 {/* Newspaper Footer */}
