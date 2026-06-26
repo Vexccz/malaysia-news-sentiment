@@ -11,3 +11,7 @@ __pycache__/
 .DS_Store
 nlp-service/venv*/
 .vercel
+
+# Debug logs
+backend/ai-prompt-debug.log
+*.log

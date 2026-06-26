@@ -40,13 +40,24 @@ const userSchema = new mongoose.Schema({
   }],
 
   // ── User Activity (#3 Dashboard) ─────────────────────────
-  role: { type: String, enum: ['user', 'admin'], default: 'user' },
-  bookmarks: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Article' }],
-  analysisCount: { type: Number, default: 0 },
-  recentlyViewed: [{ 
-    article: { type: mongoose.Schema.Types.ObjectId, ref: 'Article' },
-    viewedAt: { type: Date, default: Date.now }
-  }],
+    role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    bookmarks: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Article' }],
+    // Bookmark folders (user-created groupings)
+    bookmarkFolders: [{
+      id: { type: String, required: true },
+      name: { type: String, required: true },
+      createdAt: { type: String, default: () => new Date().toISOString() },
+    }],
+    // Bookmark metadata (folder assignment per article)
+    bookmarkMeta: [{
+      articleId: { type: String, required: true },
+      folderId: { type: String, default: null },
+    }],
+    analysisCount: { type: Number, default: 0 },
+    recentlyViewed: [{ 
+      article: { type: mongoose.Schema.Types.ObjectId, ref: 'Article' },
+      viewedAt: { type: Date, default: Date.now }
+    }],
 
   // ── Selected Badges (displayed on profile) ──────────────
   selectedBadges: [{ type: String }],

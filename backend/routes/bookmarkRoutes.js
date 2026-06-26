@@ -1,115 +1,126 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
+const { protect, blockGuest } = require('../middleware/auth');
+const User = require('../models/User');
 
-// Middleware to extract user from token
-const getUser = (req) => {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  if (!token) return null;
-  try {
-    return jwt.verify(token, process.env.JWT_SECRET || 'mynews_sentiment_secret');
-  } catch {
-    return null;
-  }
-};
-
-// In-memory storage (replace with MongoDB model in production)
-let bookmarkFolders = [];
-let bookmarks = {}; // { userId: [{ articleId, folderId, createdAt }] }
+// ── All bookmark folder routes require authentication ──
+router.use(protect, blockGuest);
 
 // GET /bookmarks/folders
-router.get('/folders', (req, res) => {
-  const user = getUser(req);
-  if (!user) return res.status(401).json({ error: 'Unauthorized' });
-  
-  const userFolders = bookmarkFolders.filter(f => f.userId === user.id);
-  res.json({ folders: userFolders });
+router.get('/folders', async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('bookmarkFolders').lean();
+    res.json({ folders: user?.bookmarkFolders || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // POST /bookmarks/folders
-router.post('/folders', (req, res) => {
-  const user = getUser(req);
-  if (!user) return res.status(401).json({ error: 'Unauthorized' });
-  
-  const { name } = req.body;
-  if (!name || !name.trim()) {
-    return res.status(400).json({ error: 'Folder name is required' });
+router.post('/folders', async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Folder name is required' });
+    }
+
+    const folder = {
+      id: new mongoose.Types.ObjectId().toString(),
+      name: name.trim(),
+      createdAt: new Date().toISOString(),
+    };
+
+    await User.findByIdAndUpdate(req.userId, {
+      $push: { bookmarkFolders: folder },
+    });
+
+    res.json({ folder });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-  
-  const folder = {
-    id: Date.now().toString(),
-    userId: user.id,
-    name: name.trim(),
-    createdAt: new Date().toISOString(),
-  };
-  
-  bookmarkFolders.push(folder);
-  res.json({ folder });
 });
 
 // PUT /bookmarks/folders/:id
-router.put('/folders/:id', (req, res) => {
-  const user = getUser(req);
-  if (!user) return res.status(401).json({ error: 'Unauthorized' });
-  
-  const { id } = req.params;
-  const { name } = req.body;
-  
-  const folder = bookmarkFolders.find(f => f.id === id && f.userId === user.id);
-  if (!folder) return res.status(404).json({ error: 'Folder not found' });
-  
-  if (name && name.trim()) {
-    folder.name = name.trim();
+router.put('/folders/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Folder name is required' });
+    }
+
+    const result = await User.findOneAndUpdate(
+      { _id: req.userId, 'bookmarkFolders.id': id },
+      { $set: { 'bookmarkFolders.$.name': name.trim() } },
+      { new: true }
+    );
+
+    if (!result) return res.status(404).json({ error: 'Folder not found' });
+
+    const folder = result.bookmarkFolders.find(f => f.id === id);
+    res.json({ folder });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-  
-  res.json({ folder });
 });
 
 // DELETE /bookmarks/folders/:id
-router.delete('/folders/:id', (req, res) => {
-  const user = getUser(req);
-  if (!user) return res.status(401).json({ error: 'Unauthorized' });
-  
-  const { id } = req.params;
-  const index = bookmarkFolders.findIndex(f => f.id === id && f.userId === user.id);
-  if (index === -1) return res.status(404).json({ error: 'Folder not found' });
-  
-  bookmarkFolders.splice(index, 1);
-  
-  // Remove folder reference from bookmarks
-  if (bookmarks[user.id]) {
-    bookmarks[user.id] = bookmarks[user.id].map(b => 
-      b.folderId === id ? { ...b, folderId: null } : b
-    );
+router.delete('/folders/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await User.findByIdAndUpdate(req.userId, {
+      $pull: { bookmarkFolders: { id } },
+    });
+
+    // Clear folder reference from bookmarks
+    await User.findByIdAndUpdate(req.userId, {
+      $set: { 'bookmarkMeta.$[elem].folderId': null },
+    }, {
+      arrayFilters: [{ 'elem.folderId': id }],
+    }).catch(() => {}); // bookmarkMeta may not exist yet
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-  
-  res.json({ success: true });
 });
 
-// PUT /bookmarks/:id/folder
-router.put('/:id/folder', (req, res) => {
-  const user = getUser(req);
-  if (!user) return res.status(401).json({ error: 'Unauthorized' });
-  
-  const { id } = req.params;
-  const { folderId } = req.body;
-  
-  if (!bookmarks[user.id]) {
-    bookmarks[user.id] = [];
-  }
-  
-  const existing = bookmarks[user.id].find(b => b.articleId === id);
-  if (existing) {
-    existing.folderId = folderId || null;
-  } else {
-    bookmarks[user.id].push({
-      articleId: id,
-      folderId: folderId || null,
-      createdAt: new Date().toISOString(),
+// PUT /bookmarks/:id/folder — assign article bookmark to folder
+router.put('/:id/folder', async (req, res) => {
+  try {
+    const { id } = req.params; // article id
+    const { folderId } = req.body;
+
+    // Verify folder exists if folderId provided
+    if (folderId) {
+      const user = await User.findById(req.userId).select('bookmarkFolders').lean();
+      const folderExists = user?.bookmarkFolders?.some(f => f.id === folderId);
+      if (!folderExists) return res.status(404).json({ error: 'Folder not found' });
+    }
+
+    // Upsert bookmark metadata
+    const existing = await User.findOne({
+      _id: req.userId,
+      'bookmarkMeta.articleId': id,
     });
+
+    if (existing) {
+      await User.updateOne(
+        { _id: req.userId, 'bookmarkMeta.articleId': id },
+        { $set: { 'bookmarkMeta.$.folderId': folderId || null } }
+      );
+    } else {
+      await User.findByIdAndUpdate(req.userId, {
+        $push: { bookmarkMeta: { articleId: id, folderId: folderId || null } },
+      });
+    }
+
+    res.json({ success: true, articleId: id, folderId: folderId || null });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-  
-  res.json({ success: true });
 });
 
 module.exports = router;

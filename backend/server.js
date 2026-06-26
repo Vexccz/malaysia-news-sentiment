@@ -73,11 +73,15 @@ app.use((req, res, next) => {
 // ── CORS ──────────────────────────────────────────────────────
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:5173',
+  // Production frontends (Vercel)
+  'https://malaysia-news-sentiment.vercel.app',
+  // Local dev
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:5175',
   'http://localhost',
   'https://localhost',
+  // Mobile (Capacitor/Ionic shells)
   'capacitor://localhost',
   'ionic://localhost',
   'http://192.168.188.214:5173',
@@ -85,15 +89,17 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, etc)
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else if (process.env.NODE_ENV === 'production') {
-      // In production, allow all origins for mobile app compatibility
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    // Strict whitelist — no wildcard in production
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
     }
+    // Allow Vercel preview deployments for THIS project only
+    if (/^https:\/\/malaysia-news-sentiment-[a-z0-9-]+\.vercel\.app$/i.test(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
 }));
@@ -104,13 +110,36 @@ app.use(helmet());
 // ── Body parsing ──────────────────────────────────────────────
 app.use(express.json({ limit: '2mb' }));
 
+// ── NoSQL Injection Protection ─────────────────────────────────
+// Strip Mongo operators ($gt, $ne, $where, etc) from req.body and
+// req.params recursively. Prevents auth bypass via
+// { email: { $gt: "" }, password: { $gt: "" } } and similar tricks.
+// Note: req.query is read-only in Express 5 so we only guard body+params,
+// which is where injection payloads land for all our auth/CRUD routes.
+const sanitizeMongo = (obj) => {
+  if (!obj || typeof obj !== 'object') return obj;
+  for (const key of Object.keys(obj)) {
+    if (key.startsWith('$') || key.includes('.')) {
+      delete obj[key];
+    } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+      sanitizeMongo(obj[key]);
+    }
+  }
+  return obj;
+};
+
+app.use((req, res, next) => {
+  if (req.body) sanitizeMongo(req.body);
+  if (req.params) sanitizeMongo(req.params);
+  next();
+});
+
+
 // ── Rate limiting ─────────────────────────────────────────────
 // Skip rate limiting for admin users
 const skipIfAdmin = (req) => req.userRole === 'admin';
 
-// DISABLED FOR LOCAL TESTING
-const authLimiter = (req, res, next) => next();
-/*
+// Auth rate limiter — 10 attempts per 15 min (brute-force protection)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -119,7 +148,6 @@ const authLimiter = rateLimit({
   skip: skipIfAdmin,
   message: { error: 'Too many auth attempts. Please try again in 15 minutes.' },
 });
-*/
 
 const analysisLimiter = rateLimit({
   windowMs: 60 * 1000,
