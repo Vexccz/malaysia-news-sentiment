@@ -396,17 +396,33 @@ export default function EntityGraphPage() {
         const pathIdxSrc = highlightedPath ? highlightedPath.indexOf(e.source) : -1;
         const pathIdxTgt = highlightedPath ? highlightedPath.indexOf(e.target) : -1;
         const isPathEdge = isOnPath && Math.abs(pathIdxSrc - pathIdxTgt) === 1;
-        // Feature: Focus neighborhood - dim edges not connected to focused node
+        // Feature 13: stronger contrast between high/low co-occurrence
+        const computedWidth = Math.min(7, 1 + Math.log2((e.weight || 1) + 1) * 1.6);
+        const isStrong = (e.weight || 0) >= 3;
         return {
           id: `edge-${i}`,
           source: e.source,
           target: e.target,
-          label: e.weight > 2 ? `${e.weight}x` : '',
+          label: isStrong ? `${e.weight}×` : (e.weight > 1 ? `${e.weight}` : ''),
           data: { weight: e.weight, avgSentiment: e.avgSentiment },
+          labelCfg: {
+            autoRotate: true,
+            style: {
+              fill: isDark ? '#f1f5f9' : '#0f172a',
+              fontSize: isStrong ? 11 : 9,
+              fontWeight: isStrong ? 700 : 500,
+              background: {
+                fill: isDark ? '#0a0a0a' : '#ffffff',
+                stroke: edgeColor,
+                lineWidth: 1,
+                padding: [2, 4, 2, 4],
+              },
+            },
+          },
           style: {
             stroke: isPathEdge ? '#6366F1' : edgeColor,
-            lineWidth: isPathEdge ? 5 : Math.min(5, 1.5 + e.weight * 0.6),
-            strokeOpacity: (highlightedPath && !isPathEdge) ? 0.05 : 0.6,
+            lineWidth: isPathEdge ? 5 : computedWidth,
+            strokeOpacity: (highlightedPath && !isPathEdge) ? 0.05 : (isStrong ? 0.85 : 0.55),
             endArrow: isPathEdge ? { path: 'M 0,0 L 8,4 L 8,-4 Z', fill: '#6366F1' } : false,
           },
         };
