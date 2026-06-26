@@ -14,25 +14,31 @@ exports.getAlerts = async (req, res) => {
 // POST /api/alerts — create alert
 exports.createAlert = async (req, res) => {
   try {
-    const { type, enabled, conditions, telegramChatId } = req.body;
+    const { type, enabled, mode, conditions, telegramChatId } = req.body;
 
-    if (!type || !['email', 'telegram'].includes(type)) {
-      return res.status(400).json({ error: 'Invalid alert type. Must be email or telegram.' });
+    if (!type || !['email', 'telegram', 'push'].includes(type)) {
+      return res.status(400).json({ error: 'Invalid alert type. Must be email, telegram, or push.' });
     }
 
     if (type === 'telegram' && !telegramChatId) {
       return res.status(400).json({ error: 'Telegram chat ID is required for telegram alerts.' });
     }
 
+    const resolvedMode = mode === 'trending' ? 'trending' : 'criteria';
+
     const alert = await Alert.create({
       user: req.userId,
       type,
+      mode: resolvedMode,
       enabled: enabled !== false,
       conditions: {
         sentiment: conditions?.sentiment || 'any',
-        threshold: conditions?.threshold || 0.7,
+        threshold: conditions?.threshold ?? 0.7,
         topics: conditions?.topics || [],
         sources: conditions?.sources || [],
+        trendingSpikePct: conditions?.trendingSpikePct ?? 50,
+        trendingWindowHours: conditions?.trendingWindowHours ?? 6,
+        trendingMinMentions: conditions?.trendingMinMentions ?? 5,
       },
       telegramChatId: type === 'telegram' ? telegramChatId : null,
     });
@@ -49,15 +55,19 @@ exports.updateAlert = async (req, res) => {
     const alert = await Alert.findOne({ _id: req.params.id, user: req.userId });
     if (!alert) return res.status(404).json({ error: 'Alert not found.' });
 
-    const { type, enabled, conditions, telegramChatId } = req.body;
+    const { type, enabled, mode, conditions, telegramChatId } = req.body;
 
     if (type) alert.type = type;
     if (typeof enabled === 'boolean') alert.enabled = enabled;
+    if (mode && ['criteria', 'trending'].includes(mode)) alert.mode = mode;
     if (conditions) {
       if (conditions.sentiment) alert.conditions.sentiment = conditions.sentiment;
       if (conditions.threshold !== undefined) alert.conditions.threshold = conditions.threshold;
       if (conditions.topics) alert.conditions.topics = conditions.topics;
       if (conditions.sources) alert.conditions.sources = conditions.sources;
+      if (conditions.trendingSpikePct !== undefined) alert.conditions.trendingSpikePct = conditions.trendingSpikePct;
+      if (conditions.trendingWindowHours !== undefined) alert.conditions.trendingWindowHours = conditions.trendingWindowHours;
+      if (conditions.trendingMinMentions !== undefined) alert.conditions.trendingMinMentions = conditions.trendingMinMentions;
     }
     if (telegramChatId !== undefined) alert.telegramChatId = telegramChatId;
 
@@ -87,22 +97,29 @@ exports.testAlert = async (req, res) => {
     if (!alert) return res.status(404).json({ error: 'Alert not found.' });
 
     const testArticle = {
-      title: 'Test Alert: Malaysia Economy Shows Growth',
+      title: alert.mode === 'trending' ? 'Trending Spike Detected: Ringgit Coverage' : 'Test Alert: Malaysia Economy Shows Growth',
       source: 'Test Source',
       sentiment: 'positive',
       confidence: 0.92,
       url: 'https://example.com/test-article',
+      topic: alert.mode === 'trending' ? (alert.conditions?.topics?.[0] || 'general') : 'general',
     };
 
-    if (alert.type === 'email' && alert.user?.email) {
-      await sendAlertEmailNotification(alert.user, testArticle, alert);
-    } else if (alert.type === 'telegram' && alert.telegramChatId) {
-      await sendTelegramAlert(alert.telegramChatId, testArticle);
-    } else {
-      return res.status(400).json({ error: 'Alert configuration incomplete.' });
-    }
+    const { deliverAlert } = require('../services/alertService');
+    await deliverAlert(alert, testArticle, alert.mode === 'trending' ? 'trending' : 'match');
 
     res.json({ message: 'Test notification sent!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// POST /api/alerts/evaluate-trending — manual trigger for trending evaluator
+exports.evaluateTrendingNow = async (req, res) => {
+  try {
+    const { evaluateTrendingAlerts } = require('../services/alertService');
+    await evaluateTrendingAlerts();
+    res.json({ message: 'Trending evaluator finished.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

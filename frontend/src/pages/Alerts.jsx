@@ -181,11 +181,15 @@ const Alerts = () => {
   const [editingAlert, setEditingAlert] = useState(null);
   const [form, setForm] = useState({
     type: 'email',
+    mode: 'criteria',
     sentiment: 'any',
     threshold: 0.7,
     topics: '',
     sources: '',
     telegramChatId: '',
+    trendingSpikePct: 50,
+    trendingWindowHours: 6,
+    trendingMinMentions: 5,
   });
 
   // ── Tab state ───────────────────────────────────────────────────────
@@ -229,11 +233,15 @@ const Alerts = () => {
     try {
       const payload = {
         type: form.type,
+        mode: form.mode,
         conditions: {
           sentiment: form.sentiment,
           threshold: parseFloat(form.threshold),
           topics: form.topics ? form.topics.split(',').map(t => t.trim()).filter(Boolean) : [],
           sources: form.sources ? form.sources.split(',').map(s => s.trim()).filter(Boolean) : [],
+          trendingSpikePct: Number(form.trendingSpikePct) || 50,
+          trendingWindowHours: Number(form.trendingWindowHours) || 6,
+          trendingMinMentions: Number(form.trendingMinMentions) || 5,
         },
         telegramChatId: form.type === 'telegram' ? form.telegramChatId : undefined,
       };
@@ -286,11 +294,15 @@ const Alerts = () => {
     setEditingAlert(alert);
     setForm({
       type: alert.type,
+      mode: alert.mode || 'criteria',
       sentiment: alert.conditions?.sentiment || 'any',
       threshold: alert.conditions?.threshold || 0.7,
       topics: (alert.conditions?.topics || []).join(', '),
       sources: (alert.conditions?.sources || []).join(', '),
       telegramChatId: alert.telegramChatId || '',
+      trendingSpikePct: alert.conditions?.trendingSpikePct ?? 50,
+      trendingWindowHours: alert.conditions?.trendingWindowHours ?? 6,
+      trendingMinMentions: alert.conditions?.trendingMinMentions ?? 5,
     });
     setShowModal(true);
   };
@@ -298,7 +310,18 @@ const Alerts = () => {
   const closeModal = () => {
     setShowModal(false);
     setEditingAlert(null);
-    setForm({ type: 'email', sentiment: 'any', threshold: 0.7, topics: '', sources: '', telegramChatId: '' });
+    setForm({
+      type: 'email',
+      mode: 'criteria',
+      sentiment: 'any',
+      threshold: 0.7,
+      topics: '',
+      sources: '',
+      telegramChatId: '',
+      trendingSpikePct: 50,
+      trendingWindowHours: 6,
+      trendingMinMentions: 5,
+    });
   };
 
   // ── Rule builder helpers ────────────────────────────────────────────
@@ -966,11 +989,39 @@ const Alerts = () => {
                 <div className="mt-2 mb-4 border-b-2 border-[#e5e5e5] dark:border-[#222]" />
 
                 <div className="space-y-4">
+                  {/* Mode */}
+                  <div>
+                    <label className="block text-[10px] font-medium text-gray-500 dark:text-[#999] uppercase tracking-[0.18em] mb-1.5">Mode</label>
+                    <div className="flex gap-2">
+                      {[
+                        { v: 'criteria', label: 'Match Article' },
+                        { v: 'trending', label: 'Trending Spike' },
+                      ].map(m => (
+                        <button
+                          key={m.v}
+                          onClick={() => setForm(f => ({ ...f, mode: m.v }))}
+                          className={`flex-1 py-2.5 text-[11px] font-medium uppercase tracking-[0.18em] border transition-colors ${
+                            form.mode === m.v
+                              ? 'bg-black dark:bg-white text-white dark:text-black border-black dark:border-white'
+                              : 'border-[#e5e5e5] dark:border-[#222] text-gray-500 dark:text-[#999] hover:border-black dark:hover:border-white'
+                          }`}
+                        >
+                          {m.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-1.5 text-[10px] text-gray-400 dark:text-[#777] leading-relaxed">
+                      {form.mode === 'trending'
+                        ? 'Fires when a topic mention rate exceeds your spike threshold in the rolling window.'
+                        : 'Fires on every new article that matches the conditions below.'}
+                    </p>
+                  </div>
+
                   {/* Type */}
                   <div>
                     <label className="block text-[10px] font-medium text-gray-500 dark:text-[#999] uppercase tracking-[0.18em] mb-1.5">{tr.alertType}</label>
                     <div className="flex gap-2">
-                      {['email', 'telegram'].map(t => (
+                      {['email', 'telegram', 'push'].map(t => (
                         <button
                           key={t}
                           onClick={() => setForm(f => ({ ...f, type: t }))}
@@ -1053,6 +1104,57 @@ const Alerts = () => {
                       className="w-full px-3 py-2.5 bg-[#fafafa] dark:bg-[#0a0a0a] border border-[#e5e5e5] dark:border-[#222] text-sm text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-[#666] focus:outline-none focus:border-black dark:focus:border-white"
                     />
                   </div>
+
+                  {/* Trending Spike Settings */}
+                  {form.mode === 'trending' && (
+                    <div className="border-t border-[#e5e5e5] dark:border-[#222] pt-4 space-y-3">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-accent font-medium">Trending Spike Settings</p>
+
+                      <div>
+                        <label className="block text-[10px] font-medium text-gray-500 dark:text-[#999] uppercase tracking-[0.18em] mb-1.5">
+                          Spike Threshold (% over baseline): {form.trendingSpikePct}%
+                        </label>
+                        <input
+                          type="range"
+                          min="10"
+                          max="500"
+                          step="10"
+                          value={form.trendingSpikePct}
+                          onChange={(e) => setForm(f => ({ ...f, trendingSpikePct: e.target.value }))}
+                          className="w-full accent-black dark:accent-white"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-medium text-gray-500 dark:text-[#999] uppercase tracking-[0.18em] mb-1.5">Window (hours)</label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="168"
+                            value={form.trendingWindowHours}
+                            onChange={(e) => setForm(f => ({ ...f, trendingWindowHours: e.target.value }))}
+                            className="w-full px-3 py-2 bg-[#fafafa] dark:bg-[#0a0a0a] border border-[#e5e5e5] dark:border-[#222] text-sm text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-medium text-gray-500 dark:text-[#999] uppercase tracking-[0.18em] mb-1.5">Min Mentions</label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="1000"
+                            value={form.trendingMinMentions}
+                            onChange={(e) => setForm(f => ({ ...f, trendingMinMentions: e.target.value }))}
+                            className="w-full px-3 py-2 bg-[#fafafa] dark:bg-[#0a0a0a] border border-[#e5e5e5] dark:border-[#222] text-sm text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+                          />
+                        </div>
+                      </div>
+
+                      <p className="text-[10px] text-gray-400 dark:text-[#777] leading-relaxed">
+                        Compares the last {form.trendingWindowHours}h vs the previous {form.trendingWindowHours}h. Cooldown: {form.trendingWindowHours}h between fires per alert.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Actions */}

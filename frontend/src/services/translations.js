@@ -5,6 +5,7 @@ export const translations = {
     dashboard: 'Dashboard',
     history: 'History',
     settings: 'Settings',
+    insightsLab: 'Insights Lab',
     logout: 'Logout',
     // Header
     searchPlaceholder: 'Enter a topic (e.g. Ringgit, Budget Malaysia)...',
@@ -777,6 +778,7 @@ export const translations = {
     dashboard: 'Papan Pemuka',
     history: 'Sejarah',
     settings: 'Tetapan',
+    insightsLab: 'Makmal Wawasan',
     logout: 'Log Keluar',
     // Header
     searchPlaceholder: 'Masukkan topik (Cth: Ringgit, Bajet Malaysia)...',

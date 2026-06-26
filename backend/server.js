@@ -172,6 +172,8 @@ app.use('/api/v1/reports', analysisLimiter, require('./routes/reportRoutes'));
 app.use('/api/v1/forecast', require('./routes/forecastRoutes'));
 app.use('/api/v1', require('./routes/shareRoutes'));
 app.use('/api/v1/notifications', require('./routes/notificationRoutes'));
+app.use('/api/v1/assistant', require('./routes/aiAssistantRoutes'));
+app.use('/api/v1/journal', require('./routes/sentimentJournalRoutes'));
 app.use('/api/v1/user', require('./routes/userRoutes'));
 app.use('/api/v1/admin', require('./routes/adminRoutes'));
 app.use('/api/v1/bookmarks', require('./routes/bookmarkRoutes'));
@@ -196,6 +198,8 @@ app.use('/api/reports', analysisLimiter, require('./routes/reportRoutes'));
 app.use('/api/forecast', require('./routes/forecastRoutes'));
 app.use('/api', require('./routes/shareRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/assistant', require('./routes/aiAssistantRoutes'));
+app.use('/api/journal', require('./routes/sentimentJournalRoutes'));
 app.use('/api/user', require('./routes/userRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/bookmarks', require('./routes/bookmarkRoutes'));
@@ -277,5 +281,15 @@ server.listen(PORT, () => {
   console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log('   Real-time: Socket.io Enabled');
   scheduleNewsletter();
+
+  // Feature 29 — trending alert evaluator (push/email/telegram) every 15 minutes
+  const { evaluateTrendingAlerts } = require('./services/alertService');
+  setInterval(() => {
+    evaluateTrendingAlerts().catch((err) => console.error('Trending eval interval failed:', err.message));
+  }, 15 * 60 * 1000);
+  // Kick off once shortly after boot so first window populates quickly
+  setTimeout(() => {
+    evaluateTrendingAlerts().catch(() => {});
+  }, 60 * 1000);
 });
 

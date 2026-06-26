@@ -1,22 +1,20 @@
 const Alert = require('../models/Alert');
+const Article = require('../models/Article');
+const Notification = require('../models/Notification');
 const { sendAlertEmail } = require('./emailService');
 
 /**
- * Check all enabled alerts against a newly analyzed article.
- * Called after each article is processed.
+ * Check all enabled CRITERIA alerts against a newly analyzed article.
+ * Called after each article is processed. Trending alerts are skipped here
+ * — they run on a periodic interval in evaluateTrendingAlerts().
  */
 const checkAlerts = async (article) => {
   try {
-    const alerts = await Alert.find({ enabled: true }).populate('user', 'name email');
+    const alerts = await Alert.find({ enabled: true, mode: { $ne: 'trending' } }).populate('user', 'name email');
 
     for (const alert of alerts) {
       if (!matchesConditions(alert, article)) continue;
-
-      if (alert.type === 'email' && alert.user?.email) {
-        await sendAlertEmailNotification(alert.user, article, alert);
-      } else if (alert.type === 'telegram' && alert.telegramChatId) {
-        await sendTelegramAlert(alert.telegramChatId, article);
-      }
+      await deliverAlert(alert, article, 'match');
     }
   } catch (err) {
     console.error('Alert check error:', err.message);
@@ -68,6 +66,100 @@ const sendAlertEmailNotification = async (user, article, alert) => {
   }
 };
 
+const sendPushAlert = async (userId, article, alert, triggerType = 'match') => {
+  try {
+    await Notification.create({
+      user: userId,
+      type: triggerType === 'trending' ? 'trending' : 'system',
+      title: triggerType === 'trending' ? `Trending spike: ${article.topic || article.title}` : 'Alert matched your rule',
+      body: `${article.title} · ${article.source || 'Unknown'} · ${article.sentiment || 'Neutral'}`,
+      link: article.url ? `/history` : '/alerts',
+      metadata: {
+        alertId: alert._id,
+        articleId: article._id,
+        triggerType,
+        topic: article.topic || null,
+      },
+    });
+  } catch (err) {
+    console.error('Push alert failed:', err.message);
+  }
+};
+
+const deliverAlert = async (alert, article, triggerType = 'match') => {
+  if (alert.type === 'email' && alert.user?.email) {
+    await sendAlertEmailNotification(alert.user, article, alert);
+  } else if (alert.type === 'telegram' && alert.telegramChatId) {
+    await sendTelegramAlert(alert.telegramChatId, article);
+  } else if (alert.type === 'push') {
+    await sendPushAlert(alert.user?._id || alert.user, article, alert, triggerType);
+  }
+
+  alert.lastTriggeredAt = new Date();
+  try { await alert.save(); } catch {}
+};
+
+const evaluateTrendingAlerts = async () => {
+  try {
+    const alerts = await Alert.find({ enabled: true, mode: 'trending' }).populate('user', 'name email');
+    const now = Date.now();
+
+    for (const alert of alerts) {
+      const hours = Number(alert.conditions?.trendingWindowHours || 6);
+      const spikePct = Number(alert.conditions?.trendingSpikePct || 50);
+      const minMentions = Number(alert.conditions?.trendingMinMentions || 5);
+      const topics = (alert.conditions?.topics || []).filter(Boolean);
+      const currentSince = new Date(now - hours * 60 * 60 * 1000);
+      const baselineSince = new Date(now - hours * 2 * 60 * 60 * 1000);
+      const baselineUntil = currentSince;
+
+      const currentMatch = {
+        createdAt: { $gte: currentSince },
+        ...(topics.length ? { topic: { $in: topics } } : {}),
+      };
+      const baselineMatch = {
+        createdAt: { $gte: baselineSince, $lt: baselineUntil },
+        ...(topics.length ? { topic: { $in: topics } } : {}),
+      };
+
+      const [current, baseline] = await Promise.all([
+        Article.aggregate([
+          { $match: currentMatch },
+          { $group: { _id: '$topic', count: { $sum: 1 }, topTitle: { $first: '$title' }, source: { $first: '$source' }, sentiment: { $first: '$sentiment' }, url: { $first: '$url' } } },
+          { $sort: { count: -1 } },
+        ]),
+        Article.aggregate([
+          { $match: baselineMatch },
+          { $group: { _id: '$topic', count: { $sum: 1 } } },
+        ]),
+      ]);
+
+      const baselineMap = new Map(baseline.map((b) => [b._id || 'general', b.count]));
+      for (const row of current) {
+        const topic = row._id || 'general';
+        const currentCount = row.count || 0;
+        const baselineCount = baselineMap.get(topic) || 0;
+        const growth = baselineCount <= 0 ? (currentCount >= minMentions ? 999 : 0) : (((currentCount - baselineCount) / baselineCount) * 100);
+        const cooldown = alert.lastTriggeredAt && (now - new Date(alert.lastTriggeredAt).getTime()) < (hours * 60 * 60 * 1000);
+
+        if (currentCount < minMentions || growth < spikePct || cooldown) continue;
+
+        await deliverAlert(alert, {
+          _id: null,
+          title: `Topic spike detected: ${topic}`,
+          source: row.source || 'MY News Sentiment',
+          sentiment: row.sentiment || 'Neutral',
+          topic,
+          url: row.url || '',
+        }, 'trending');
+        break;
+      }
+    }
+  } catch (err) {
+    console.error('Trending alert evaluation failed:', err.message);
+  }
+};
+
 /**
  * Send Telegram notification for an alert
  */
@@ -98,4 +190,4 @@ const sendTelegramAlert = async (chatId, article) => {
   }
 };
 
-module.exports = { checkAlerts, sendAlertEmailNotification, sendTelegramAlert };
+module.exports = { checkAlerts, sendAlertEmailNotification, sendTelegramAlert, evaluateTrendingAlerts, sendPushAlert, deliverAlert };
