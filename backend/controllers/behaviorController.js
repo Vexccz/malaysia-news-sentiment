@@ -121,10 +121,6 @@ const getStats = async (req, res) => {
 
     // Build heatmap data (7 days x 24 hours)
     const heatmap = Array(7).fill(null).map(() => Array(24).fill(0));
-    readingByHour.forEach(({ _id: hour, count }) => {
-      // Spread across all days for now; day-specific below
-      for (let d = 0; d < 7; d++) heatmap[d][hour] += 0; // placeholder
-    });
     // Rebuild with day-of-week data
     const dayHourHeatmap = await UserActivity.aggregate([
       { $match: { userId: userObjectId, action: 'view' } },

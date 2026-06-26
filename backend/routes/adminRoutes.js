@@ -149,4 +149,19 @@ router.put('/users/:id/status', protect, authorize('admin'), async (req, res) =>
   }
 });
 
+/**
+ * POST /api/v1/admin/recompute-impact
+ * Manually trigger impact score recompute for all articles.
+ * Replaces fake source-hash impact with real engagement-based score.
+ */
+router.post('/recompute-impact', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { recomputeAllImpactScores } = require('../services/impactService');
+    const result = await recomputeAllImpactScores();
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

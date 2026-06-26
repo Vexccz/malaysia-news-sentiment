@@ -291,5 +291,16 @@ server.listen(PORT, () => {
   setTimeout(() => {
     evaluateTrendingAlerts().catch(() => {});
   }, 60 * 1000);
+
+  // Impact score recompute — every 30 minutes
+  // Replaces fake source-hash impact with real engagement-based score
+  const { recomputeAllImpactScores } = require('./services/impactService');
+  setInterval(() => {
+    recomputeAllImpactScores().catch((err) => console.error('Impact recompute failed:', err.message));
+  }, 30 * 60 * 1000);
+  // Initial run 90s after boot
+  setTimeout(() => {
+    recomputeAllImpactScores().catch(() => {});
+  }, 90 * 1000);
 });
 

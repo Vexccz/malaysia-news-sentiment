@@ -18,19 +18,73 @@ const sentimentLimit = pLimit(5);
 
 const isDbConnected = () => mongoose.connection.readyState === 1;
 
-const calculateImpactScore = (name) => {
+// ─────────────────────────────────────────────────────────
+// Impact Score — REAL engagement-based metric (0-100)
+// ─────────────────────────────────────────────────────────
+// Formula: weighted sum of real interactions, clamped 0-100
+//   views × 0.5  + comments × 3 + bookmarks × 2 + shares × 5
+// For new articles with no interactions yet, fall back to a
+// small source-reputation seed (so cold-start articles still
+// appear ranked sensibly).
+//
+// For source-only context (e.g. RSS ingestion, no engagement
+// data yet), call calculateImpactScore(sourceName) — returns
+// seed value 5-25 based on source tier.
+//
+// For real-time score on an existing article, call
+//   computeArticleImpact(articleId) — async, queries DB.
+
+const SOURCE_SEED = (name) => {
   const n = (name || '').toLowerCase();
-  // Deterministic hash-based score within tier range (no Math.random)
+  // Deterministic hash for stable seed within tier
   let hash = 0;
   for (let i = 0; i < n.length; i++) hash = ((hash << 5) - hash + n.charCodeAt(i)) | 0;
-  const positiveHash = Math.abs(hash);
+  const h = Math.abs(hash);
 
+  // Tier A — established major outlets: seed 15-25
   if (['bernama', 'the star', 'astro awani', 'fmt', 'malay mail', 'malaysiakini'].some(s => n.includes(s)))
-    return 85 + (positiveHash % 11);   // 85-95
+    return 15 + (h % 11);
+  // Tier B — known outlets: seed 8-17
   if (['edge', 'new straits times', 'utusan', 'kosmo'].some(s => n.includes(s)))
-    return 65 + (positiveHash % 15);   // 65-79
-  return 20 + (positiveHash % 20);     // 20-39
+    return 8 + (h % 10);
+  // Tier C — unknown/local: seed 1-5
+  return 1 + (h % 5);
 };
+
+const calculateImpactScore = (name) => SOURCE_SEED(name);
+
+// Real engagement-based score (used by recompute jobs)
+const computeArticleImpact = async (articleId, sourceName = '') => {
+  const Comment = require('../models/Comment');
+  const Share = require('../models/Share');
+  const User = require('../models/User');
+  const ArticleModel = require('../models/Article');
+
+  const [article, commentCount, shareCount, bookmarkCount] = await Promise.all([
+    ArticleModel.findById(articleId).select('viewCount source').lean(),
+    Comment.countDocuments({ articleId }),
+    Share.countDocuments({ articleId }),
+    User.countDocuments({ bookmarks: articleId }),
+  ]);
+  if (!article) return 0;
+
+  const viewCount = article.viewCount || 0;
+  const engagement =
+    (viewCount * 0.5) +
+    (commentCount * 3) +
+    (bookmarkCount * 2) +
+    (shareCount * 5);
+
+  // Cold start: use source seed if zero engagement
+  if (engagement === 0) {
+    return SOURCE_SEED(sourceName || article.source || '');
+  }
+  // Log scale so a single viral article doesn't dominate.
+  // Each ~doubling of engagement adds ~7 points; caps at 100.
+  const score = Math.min(100, Math.round(Math.log2(engagement + 1) * 7));
+  return score;
+};
+
 
 // ── Decoders & Sanitizers ──────────────────
 const decodeHTMLEntities = (text) => {
@@ -764,4 +818,6 @@ module.exports = {
   getHeatmapData,
   getCategoriesOverview,
   getCategoryArticles,
+  calculateImpactScore,
+  computeArticleImpact,
 };
