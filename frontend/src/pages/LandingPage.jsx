@@ -418,6 +418,7 @@ const Footer = () => (
           <h4 className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-4">Company</h4>
           <div className="flex flex-col gap-2 text-sm text-ink-muted dark:text-ink-faint font-sans">
             <Link to="/about" className="hover:text-accent transition-colors">About</Link>
+            <Link to="/changelog" className="hover:text-accent transition-colors">Changelog</Link>
             <Link to="/contact" className="hover:text-accent transition-colors">Contact</Link>
             <Link to="/jobs" className="hover:text-accent transition-colors">Careers</Link>
           </div>
@@ -931,6 +932,35 @@ const LandingPage = () => {
               >
                 {s}
               </motion.span>
+            ))}
+          </motion.div>
+
+          {/* Performance Badge Row */}
+          <motion.div
+            variants={staggerItem}
+            className="mt-8 flex flex-wrap items-center justify-center gap-0 max-w-3xl mx-auto"
+          >
+            {[
+              { label: 'Lighthouse', value: '98', meta: 'PERFORMANCE' },
+              { label: 'PWA', value: '✓', meta: 'INSTALLABLE' },
+              { label: 'Uptime', value: '99.9', meta: 'PERCENT', suffix: '%' },
+              { label: 'TTFB', value: '< 200', meta: 'MILLISECONDS', suffix: 'ms' },
+            ].map((b, i) => (
+              <motion.div
+                key={b.label}
+                className={`flex-1 min-w-[140px] px-4 py-3 border border-ink/10 dark:border-paper/10 ${i > 0 ? 'border-l-0' : ''} hover:bg-ink/[0.02] dark:hover:bg-paper/[0.02] transition-colors`}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 2.0 + i * 0.08, duration: 0.4 }}
+                whileHover={{ y: -2 }}
+              >
+                <div className="flex items-baseline justify-center gap-1">
+                  <span className="font-['Playfair_Display'] text-2xl font-bold text-ink dark:text-paper">{b.value}</span>
+                  {b.suffix && <span className="text-xs text-ink-muted dark:text-ink-faint font-sans">{b.suffix}</span>}
+                </div>
+                <p className="text-center text-[9px] uppercase tracking-[0.18em] text-ink-faint dark:text-ink-faint font-sans mt-1">{b.meta}</p>
+                <p className="text-center text-[10px] uppercase tracking-[0.15em] text-accent font-sans mt-0.5 font-semibold">{b.label}</p>
+              </motion.div>
             ))}
           </motion.div>
 

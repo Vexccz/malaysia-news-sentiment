@@ -294,8 +294,70 @@ const AboutPage = () => {
         </div>
       </AnimatedSection>
 
-      {/* ─── TECH STACK ─── */}
+      {/* ─── 3-TIER NLP METHODOLOGY ─── */}
       <section className="py-16 px-6 border-t border-b border-ink/10 dark:border-paper/10">
+        <div className="max-w-6xl mx-auto">
+          <p className="text-center text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-2">Methodology</p>
+          <h2 className="text-center font-['Playfair_Display'] text-3xl font-bold text-ink dark:text-paper mb-3">3-Tier Sentiment Pipeline</h2>
+          <DoubleRule className="max-w-xs mx-auto mb-4" />
+          <p className="text-center text-ink-muted dark:text-ink-faint max-w-2xl mx-auto mb-12">
+            We classify each article through three independent models, then reconcile their verdicts with confidence-weighted voting.
+            This makes the system robust to single-model bias and gracefully degrades when one tier is unavailable.
+          </p>
+
+          <AnimatedSection className="grid grid-cols-1 md:grid-cols-3 gap-0" variants={staggerContainer}>
+            {[
+              {
+                tier: '01',
+                title: 'Malaya NLP',
+                tag: 'Primary · Local',
+                desc: 'Malaysian-trained BERT model via HuggingFace. Understands Malay slang, bahasa pasar, and code-switched headlines.',
+                meta: 'FastAPI microservice · ~120ms per article',
+              },
+              {
+                tier: '02',
+                title: 'Ollama Cloud',
+                tag: 'Reasoning · gpt-oss:120b',
+                desc: 'Large-context reasoning for nuanced framing and political tone. Catches sarcasm and editorial bias that BERT misses.',
+                meta: 'Async batch · ~800ms per article',
+              },
+              {
+                tier: '03',
+                title: 'Google Gemini',
+                tag: 'Fallback · 2.0 Flash',
+                desc: 'Independent second opinion. Triggered when tiers 1 and 2 disagree by more than 30%, or as standby if Ollama times out.',
+                meta: 'On-demand · ~400ms per article',
+              },
+            ].map((row, i) => (
+              <motion.div
+                key={row.tier}
+                className={`p-8 border border-ink/10 dark:border-paper/10 ${i > 0 ? 'md:border-l-0' : ''}`}
+                variants={staggerItem}
+              >
+                <div className="flex items-baseline justify-between mb-4">
+                  <span className="font-['Playfair_Display'] text-4xl font-bold text-accent">{row.tier}</span>
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">{row.tag}</span>
+                </div>
+                <h3 className="font-['Playfair_Display'] text-xl font-bold text-ink dark:text-paper mb-2">{row.title}</h3>
+                <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed mb-4">{row.desc}</p>
+                <p className="text-[10px] uppercase tracking-[0.15em] text-ink-faint dark:text-ink-faint/70 font-mono border-t border-ink/10 dark:border-paper/10 pt-3">{row.meta}</p>
+              </motion.div>
+            ))}
+          </AnimatedSection>
+
+          <div className="mt-10 max-w-3xl mx-auto border-l-2 border-accent pl-6 py-2">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-accent font-sans mb-2">Reconciliation Logic</p>
+            <p className="text-ink-muted dark:text-ink-faint leading-relaxed text-sm">
+              Each tier returns <span className="font-mono text-ink dark:text-paper">{`{label, confidence}`}</span>.
+              Final verdict = weighted majority vote (Malaya 0.4, Ollama 0.4, Gemini 0.2), with confidence as the harmonic mean.
+              All three verdicts are stored — the Source Credibility page lets analysts see where models disagreed.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── TECH STACK ─── */}
+      <section className="py-16 px-6 border-b border-ink/10 dark:border-paper/10">
         <div className="max-w-6xl mx-auto">
           <p className="text-center text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-2">Technology</p>
           <h2 className="text-center font-['Playfair_Display'] text-3xl font-bold text-ink dark:text-paper mb-3">Built with modern tools</h2>

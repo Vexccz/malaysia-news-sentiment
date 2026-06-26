@@ -56,6 +56,7 @@ import ContactPage from './pages/ContactPage';
 import FeaturesPage from './pages/FeaturesPage';
 import PricingPage from './pages/PricingPage';
 import AboutPage from './pages/AboutPage';
+import ChangelogPage from './pages/ChangelogPage';
 import NotFound from './pages/NotFound';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 
@@ -530,6 +531,7 @@ const AppInner = () => (
     <Route path="/features" element={<FeaturesPage />} />
     <Route path="/pricing" element={<PricingPage />} />
     <Route path="/about" element={<AboutPage />} />
+    <Route path="/changelog" element={<ChangelogPage />} />
     <Route path="/jobs" element={<StaticPage />} />
     <Route path="/privacy" element={<StaticPage />} />
     

@@ -1258,6 +1258,50 @@ const OverviewPage = () => {
         </ul>
       </div>
 
+      {/* CORS & SDKs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="border-l-[3px] border-l-blue-500 bg-white dark:bg-[#1a1a1a] border border-[#1A1A1A]/10 dark:border-[#FAF8F3]/10 rounded-sm p-5">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">CORS Policy</h3>
+          <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+            <li>• Origins allowed: <code>malaysia-news-sentiment.vercel.app</code></li>
+            <li>• Localhost (dev): <code>http://localhost:5173</code></li>
+            <li>• Methods: <code>GET, POST, PUT, DELETE, OPTIONS</code></li>
+            <li>• Credentials: <code>true</code> (cookies allowed)</li>
+            <li>• Custom origins: contact admin to allowlist</li>
+          </ul>
+        </div>
+        <div className="border-l-[3px] border-l-emerald-500 bg-white dark:bg-[#1a1a1a] border border-[#1A1A1A]/10 dark:border-[#FAF8F3]/10 rounded-sm p-5">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Try It Quickly</h3>
+          <div className="space-y-2 text-xs">
+            <a
+              href={`data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify({
+                info: { name: 'MY News Sentiment API', schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json' },
+                item: [
+                  { name: 'Health', request: { method: 'GET', url: `${API_BASE}/health` } },
+                  { name: 'List News', request: { method: 'GET', url: `${API_BASE}/news` } },
+                  { name: 'Login', request: { method: 'POST', header: [{ key: 'Content-Type', value: 'application/json' }], body: { mode: 'raw', raw: JSON.stringify({ email: 'demo@mynews.my', password: '...' }) }, url: `${API_BASE}/auth/login` } },
+                  { name: 'Analyze', request: { method: 'POST', header: [{ key: 'Authorization', value: 'Bearer <TOKEN>' }, { key: 'Content-Type', value: 'application/json' }], body: { mode: 'raw', raw: JSON.stringify({ text: 'Berita malaysia hari ini.' }) }, url: `${API_BASE}/news/analyze` } },
+                ],
+              }, null, 2))}`}
+              download="mynews-postman.json"
+              className="flex items-center justify-between px-3 py-2 border border-[#1A1A1A]/10 dark:border-[#FAF8F3]/10 hover:border-l-[3px] hover:border-l-accent text-gray-700 dark:text-gray-300 hover:text-accent transition-all"
+            >
+              <span>Postman Collection v2.1</span>
+              <span className="text-[10px] uppercase tracking-wider">↓ JSON</span>
+            </a>
+            <a
+              href={`data:application/yaml;charset=utf-8,${encodeURIComponent(`openapi: 3.0.0\ninfo:\n  title: MY News Sentiment API\n  version: 1.0.0\nservers:\n  - url: ${API_BASE}\npaths:\n  /health:\n    get:\n      summary: Health check\n      responses:\n        '200':\n          description: OK\n  /news:\n    get:\n      summary: List news\n      parameters:\n        - name: page\n          in: query\n          schema: { type: integer }\n        - name: limit\n          in: query\n          schema: { type: integer }\n      responses:\n        '200':\n          description: Array of articles\n  /auth/login:\n    post:\n      summary: Login\n      requestBody:\n        content:\n          application/json:\n            schema:\n              type: object\n              properties:\n                email: { type: string }\n                password: { type: string }\n      responses:\n        '200':\n          description: JWT token\n`)}`}
+              download="mynews-openapi.yaml"
+              className="flex items-center justify-between px-3 py-2 border border-[#1A1A1A]/10 dark:border-[#FAF8F3]/10 hover:border-l-[3px] hover:border-l-accent text-gray-700 dark:text-gray-300 hover:text-accent transition-all"
+            >
+              <span>OpenAPI 3.0 Spec</span>
+              <span className="text-[10px] uppercase tracking-wider">↓ YAML</span>
+            </a>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-2">Import into Postman, Insomnia, or Bruno for interactive testing.</p>
+          </div>
+        </div>
+      </div>
+
       {/* All Categories Overview */}
       <div>
         <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Endpoint Categories</h2>
