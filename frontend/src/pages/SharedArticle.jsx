@@ -25,6 +25,37 @@ const SharedArticle = () => {
     fetchArticle();
   }, [id]);
 
+  // Feature 16 — inject OG meta tags so social previews use the generated image
+  useEffect(() => {
+    if (!article) return;
+    const apiBase = (import.meta.env.VITE_API_BASE || '/api/v1').replace(/\/$/, '');
+    const ogImageUrl = `${apiBase}/share/${id}/og`;
+    const pageUrl = window.location.href;
+    const description = `${article.sentiment || 'Neutral'} sentiment · ${article.source || 'Source'} · MY News Sentiment`;
+
+    const setMeta = (selector, attr, value) => {
+      let el = document.head.querySelector(selector);
+      if (!el) {
+        el = document.createElement('meta');
+        const [, key] = selector.match(/\[(.+?)=/) || [];
+        if (key) el.setAttribute(key, attr);
+        document.head.appendChild(el);
+      }
+      el.setAttribute('content', value);
+    };
+
+    document.title = `${article.title} · MY News Sentiment`;
+    setMeta('meta[property="og:title"]', 'og:title', article.title);
+    setMeta('meta[property="og:description"]', 'og:description', description);
+    setMeta('meta[property="og:image"]', 'og:image', ogImageUrl);
+    setMeta('meta[property="og:url"]', 'og:url', pageUrl);
+    setMeta('meta[property="og:type"]', 'og:type', 'article');
+    setMeta('meta[name="twitter:card"]', 'twitter:card', 'summary_large_image');
+    setMeta('meta[name="twitter:title"]', 'twitter:title', article.title);
+    setMeta('meta[name="twitter:description"]', 'twitter:description', description);
+    setMeta('meta[name="twitter:image"]', 'twitter:image', ogImageUrl);
+  }, [article, id]);
+
   const sentimentColor = article?.sentiment === 'Positive' ? '#22c55e' : article?.sentiment === 'Negative' ? '#ef4444' : '#f59e0b';
   const sentimentBg = article?.sentiment === 'Positive' ? 'bg-green-50 dark:bg-green-500/10' : article?.sentiment === 'Negative' ? 'bg-red-50 dark:bg-red-500/10' : 'bg-amber-50 dark:bg-amber-500/10';
 

@@ -1,5 +1,38 @@
 const Article = require('../models/Article');
 
+// XML/HTML-safe text encoder for SVG output
+const xmlEscape = (str = '') =>
+  String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+
+// Wrap text into lines for SVG (no auto-wrap in SVG)
+const wrapTextLines = (text, maxChars, maxLines) => {
+  const words = String(text || '').split(/\s+/).filter(Boolean);
+  const lines = [];
+  let line = '';
+
+  for (const word of words) {
+    if ((line + ' ' + word).trim().length > maxChars) {
+      if (line) lines.push(line);
+      line = word;
+      if (lines.length === maxLines - 1) {
+        const remaining = words.slice(words.indexOf(word) + 1).join(' ');
+        if (remaining) line += '…';
+        lines.push(line);
+        return lines;
+      }
+    } else {
+      line = (line + ' ' + word).trim();
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+};
+
 /**
  * GET /api/share/:articleId
  * Returns shareable data for an article (public, no auth)
@@ -78,4 +111,59 @@ const getEmbedCode = async (req, res) => {
   }
 };
 
-module.exports = { getShareData, getEmbedCode };
+/**
+ * GET /api/share/:articleId/og
+ * Lightweight OG image generator as SVG (works without native canvas deps)
+ */
+const getOgImage = async (req, res) => {
+  try {
+    const { articleId } = req.params;
+    const article = await Article.findById(articleId).select('title sentiment source topic confidence publishedAt');
+
+    if (!article) {
+      return res.status(404).json({ error: 'Article not found' });
+    }
+
+    const sentimentColor = article.sentiment === 'Positive' ? '#22c55e' : article.sentiment === 'Negative' ? '#ef4444' : '#f59e0b';
+    const titleLines = wrapTextLines(article.title, 34, 3).map((line, i) => (
+      `<tspan x="72" dy="${i === 0 ? 0 : 52}">${xmlEscape(line)}</tspan>`
+    )).join('');
+
+    const source = xmlEscape(article.source || 'MY News Sentiment');
+    const topic = xmlEscape(article.topic || 'Malaysia');
+    const confidence = Math.round((article.confidence || 0) * 100);
+
+    const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#FAF8F3"/>
+  <rect x="40" y="40" width="1120" height="550" fill="#FFFFFF" stroke="#1A1A1A" stroke-opacity="0.12"/>
+  <rect x="40" y="40" width="1120" height="12" fill="#c00000"/>
+  <text x="72" y="105" fill="#c00000" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" letter-spacing="4">MY NEWS SENTIMENT</text>
+  <text x="72" y="190" fill="#111111" font-family="Playfair Display, Georgia, serif" font-size="46" font-weight="700">${titleLines}</text>
+
+  <rect x="72" y="404" width="178" height="44" fill="${sentimentColor}" fill-opacity="0.14" stroke="${sentimentColor}"/>
+  <text x="96" y="432" fill="${sentimentColor}" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700">${xmlEscape(article.sentiment || 'Neutral')}</text>
+
+  <text x="72" y="500" fill="#6B6A65" font-family="Inter, Arial, sans-serif" font-size="18" letter-spacing="2">SOURCE</text>
+  <text x="72" y="530" fill="#111111" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="600">${source}</text>
+
+  <text x="420" y="500" fill="#6B6A65" font-family="Inter, Arial, sans-serif" font-size="18" letter-spacing="2">TOPIC</text>
+  <text x="420" y="530" fill="#111111" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="600">${topic}</text>
+
+  <text x="760" y="500" fill="#6B6A65" font-family="Inter, Arial, sans-serif" font-size="18" letter-spacing="2">CONFIDENCE</text>
+  <text x="760" y="530" fill="#111111" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="600">${confidence}%</text>
+
+  <line x1="72" y1="565" x2="1128" y2="565" stroke="#1A1A1A" stroke-opacity="0.12"/>
+  <text x="72" y="600" fill="#6B6A65" font-family="Inter, Arial, sans-serif" font-size="16" letter-spacing="2">REAL-TIME MALAYSIAN NEWS SENTIMENT ANALYSIS</text>
+</svg>`;
+
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(svg);
+  } catch (err) {
+    console.error('[OG] Error:', err.message);
+    res.status(500).json({ error: 'Failed to generate OG image' });
+  }
+};
+
+module.exports = { getShareData, getEmbedCode, getOgImage };
