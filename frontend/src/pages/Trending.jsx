@@ -180,7 +180,7 @@ const Trending = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <ExportMenu articles={trendingTopics.flatMap((topic) => topic.topArticles || [])} filenameBase="trending-news" label="Export" />
+          <ExportMenu articles={articles} filenameBase="trending-news" label="Export" />
           <button
             onClick={() => { setCompareMode(!compareMode); setSelectedTopics([]); }}
             className={`flex items-center gap-1.5 text-xs uppercase tracking-wider font-sans px-3 py-1.5 border transition-colors ${
