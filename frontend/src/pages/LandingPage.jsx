@@ -11,6 +11,7 @@ import {
   ChevronRight, Star, Globe, Clock, X, Plus, Check,
   GraduationCap, Building2, Target, BookOpen
 } from 'lucide-react';
+import HeroIllustration from '../components/HeroIllustration';
 
 // ── Animation Variants ──
 const fadeInUp = {
@@ -892,6 +893,11 @@ const LandingPage = () => {
           <motion.p variants={staggerItem} className="text-lg text-ink-muted dark:text-ink-faint max-w-2xl mx-auto mb-10 font-serif italic">
             Real-time AI sentiment analysis tracking Malaysia's media landscape. From breaking news to trending narratives—understand public sentiment as it unfolds.
           </motion.p>
+
+          {/* Editorial Hero Illustration */}
+          <motion.div variants={staggerItem}>
+            <HeroIllustration />
+          </motion.div>
 
           {/* CTA */}
           <motion.div variants={staggerItem} className="flex flex-col sm:flex-row items-center justify-center gap-4">
