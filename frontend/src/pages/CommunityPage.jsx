@@ -5,6 +5,11 @@ import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { MessageSquare, X, Eye, Bookmark, MessageCircle, Calendar, Shield, Users, BarChart3, Send, Globe, UserCircle, Plus, Vote, PenLine } from 'lucide-react';
 
+/* Community Page Animations */
+const PAGE_ANIMS = `@keyframes fadeInUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}@keyframes pollFill{from{width:0}to{width:var(--target-w)}}@keyframes slideDown{from{opacity:0;transform:translateY(-100%)}to{opacity:1;transform:translateY(0)}}@keyframes bounceDown{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}@keyframes crossfadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`;
+const PageAnimCSS = () => <style dangerouslySetInnerHTML={{__html: PAGE_ANIMS}}/>;
+
+
 const CARD = 'bg-white dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222]';
 
 /* ── User Profile Modal ── */
@@ -384,6 +389,8 @@ const CommunityPage = () => {
   const [postAnonymous, setPostAnonymous] = useState(false);
   const [posting, setPosting] = useState(false);
   const [polls, setPolls] = useState([]);
+  const [newCommentBanner, setNewCommentBanner] = useState(null);
+  const [tabTransition, setTabTransition] = useState(false);
   const [showCreatePoll, setShowCreatePoll] = useState(false);
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState(['', '']);
@@ -515,6 +522,9 @@ const CommunityPage = () => {
       }
     };
     socket.on('comment:new', handleNewComment);
+    const origHandler = handleNewComment;
+    // Banner on new comment
+    socket.on('comment:new', (data) => { if (data.comment?.authorName) { setNewCommentBanner(data.comment.authorName); setTimeout(() => setNewCommentBanner(null), 5000); } });
     socket.on('comment:like', handleCommentLike);
     return () => {
       socket.off('comment:new', handleNewComment);
@@ -541,6 +551,14 @@ const CommunityPage = () => {
   }
 
   return (
+    <>
+    <PageAnimCSS />
+    {newCommentBanner && (
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-white dark:bg-[#1a1a1a] border border-black/10 dark:border-white/10 px-4 py-2.5 text-sm font-medium shadow-lg flex items-center gap-2" style={{animation:"slideDown 0.3s ease-out"}}>
+        💬 {newCommentBanner} posted a new comment
+        <button onClick={() => setNewCommentBanner(null)} className="ml-2 text-xs text-gray-400 hover:text-black dark:hover:text-white">✕</button>
+      </div>
+    )}
     <div className="max-w-5xl mx-auto">
       {/* Header */}
       <div className="mb-6">
@@ -559,13 +577,13 @@ const CommunityPage = () => {
           {/* Tab Switcher */}
           <div className="flex border-b border-[#e5e5e5] dark:border-[#222]">
             <button
-              onClick={() => setActiveTab('discussions')}
+              onClick={() => { setTabTransition(true); setTimeout(() => { setActiveTab('discussions'); setTabTransition(false); }, 150); }}
               className={`px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.15em] border-b-2 transition-colors ${activeTab === 'discussions' ? 'border-ink dark:border-paper text-ink dark:text-paper' : 'border-transparent text-ink-faint hover:text-ink-muted'}`}
             >
               Article Discussions
             </button>
             <button
-              onClick={() => setActiveTab('posts')}
+              onClick={() => { setTabTransition(true); setTimeout(() => { setActiveTab('posts'); setTabTransition(false); }, 150); }}
               className={`px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.15em] border-b-2 transition-colors ${activeTab === 'posts' ? 'border-ink dark:border-paper text-ink dark:text-paper' : 'border-transparent text-ink-faint hover:text-ink-muted'}`}
             >
               Community Posts
@@ -574,7 +592,7 @@ const CommunityPage = () => {
 
           {/* ── Article Discussions Tab ── */}
           {activeTab === 'discussions' && (
-            <div className="space-y-4">
+            <div className="space-y-4" style={{animation: tabTransition ? 'none' : 'crossfadeIn 0.25s ease-out'}}>
               {/* Discussion of the Day */}
               {dotd && dotd.articleId && (
                 <div className={`${CARD} overflow-hidden border-l-2`} style={{ borderLeftColor: '#f59e0b' }}>
@@ -645,7 +663,7 @@ const CommunityPage = () => {
                     {discussions.map(d => (
                       <div key={d.articleId} className={`${CARD} overflow-hidden`}>
                         <button onClick={() => loadComments(d.articleId)}
-                          className="w-full text-left p-4 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
+                          className="w-full text-left p-4 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-all duration-200 hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] hover:-translate-y-[2px]">
                           <div className="flex-shrink-0 pt-0.5"><SentimentMarkInline sentiment={d.articleSentiment} /></div>
                           <div className="flex-1 min-w-0">
                             <h4 className="text-sm font-semibold text-ink dark:text-paper leading-snug line-clamp-1 mb-1">
@@ -708,7 +726,7 @@ const CommunityPage = () => {
 
           {/* ── Community Posts Tab ── */}
           {activeTab === 'posts' && (
-            <div className="space-y-3">
+            <div className="space-y-3" style={{animation: tabTransition ? 'none' : 'crossfadeIn 0.25s ease-out'}}>
               {/* Share Your Take compose box */}
               <div className={`${CARD} p-4`}>
                 <h3 className="text-[10px] font-bold uppercase tracking-widest text-ink-muted dark:text-ink-faint mb-3 flex items-center gap-1.5">
@@ -935,7 +953,7 @@ const CommunityPage = () => {
                               userVoted ? 'border-accent bg-accent/10 text-accent font-semibold' : 'border-[#e5e5e5] dark:border-[#222] text-ink-muted dark:text-ink-faint hover:border-ink/30 dark:hover:border-paper/30'
                             }`}>
                             <div className="absolute inset-0 bg-gray-100 dark:bg-white/5 transition-all duration-500"
-                              style={{ width: `${pct}%` }} />
+                              style={{ width: `${pct}%`, animation: `pollFill 1.2s ease-out ${(idx || 0) * 80}ms both` }} />
                             <span className="relative flex items-center justify-between">
                               <span>{opt.text}</span>
                               <span className="text-[9px] opacity-70">{pct}%</span>
@@ -994,6 +1012,7 @@ const CommunityPage = () => {
         <UserProfileModal userId={viewingUserId} onClose={() => setViewingUserId(null)} />
       )}
     </div>
+    </>
   );
 };
 

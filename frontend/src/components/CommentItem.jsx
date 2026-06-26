@@ -3,6 +3,10 @@ import HoverProfileTooltip from './HoverProfileTooltip';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE } from '../config';
+/* Comment Animations */
+const COMMENT_ANIMS = `@keyframes likePop{0%{transform:scale(1)}30%{transform:scale(1.6)}50%{transform:scale(0.85)}80%{transform:scale(1.1)}100%{transform:scale(1)}}@keyframes likeGlow{0%{filter:drop-shadow(0 0 0 transparent)}30%{filter:drop-shadow(0 0 8px rgba(220,38,38,0.6))}100%{filter:drop-shadow(0 0 0 transparent)}}@keyframes commentSlideIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}@keyframes draftToastIn{0%{opacity:0;transform:translateX(24px)}100%{opacity:1;transform:translateX(0)}}`;
+const CommentAnimCSS = () => <style dangerouslySetInnerHTML={{__html: COMMENT_ANIMS}}/>;
+
 
 const MAX_DEPTH = 3;
 const MAX_REPLY_LENGTH = 500;
@@ -46,6 +50,7 @@ const CommentItem = ({
   articleSentiment,
   depth = 0,
   onReply,
+  index = 0,
 }) => {
   const { t } = useLanguage();
   const { user, token } = useAuth();
@@ -61,6 +66,7 @@ const CommentItem = ({
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(comment.likes || 0);
   const [reported, setReported] = useState(false);
+  const [likeAnimKey, setLikeAnimKey] = useState(0);
 
   const draftTimer = useRef(null);
   const textareaRef = useRef(null);
@@ -150,6 +156,7 @@ const CommentItem = ({
     if (liked) return;
     setLiked(true);
     setLikeCount((c) => c + 1);
+    setLikeAnimKey(k => k + 1);
     if (onLike) onLike(commentId);
   };
 
@@ -179,7 +186,9 @@ const CommentItem = ({
   const isOwnComment = currentUserId && comment.author === currentUserId;
 
   return (
-    <div className={`${indentClass} ${depth > 0 ? 'mt-2' : ''}`}>
+    <>
+    <CommentAnimCSS />
+    <div className={`${indentClass} ${depth > 0 ? 'mt-2' : ''}`} style={{animation:`commentSlideIn 0.4s ease-out ${index * 50}ms both`}}>
       <div className="border border-black/10 dark:border-white/10 bg-white dark:bg-gray-950 p-3">
         {/* Header: avatar + name + badges + role + time */}
         <div className="flex items-center gap-2 mb-1.5 flex-wrap">
@@ -261,7 +270,7 @@ const CommentItem = ({
             disabled={liked || isOwnComment}
             aria-label={t('like') || 'Like'}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" style={liked ? {animation:"likePop 0.45s cubic-bezier(0.175,0.885,0.32,1.275), likeGlow 0.5s ease-out"} : {}} key={likeAnimKey}>
               <path d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 01-1.162-.682 22.045 22.045 0 01-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 018-2.828A4.5 4.5 0 0118 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 01-3.744 2.582l-.019.01-.005.003h-.002a.723.723 0 01-.692 0h-.002z" />
             </svg>
             {likeCount}
@@ -294,7 +303,7 @@ const CommentItem = ({
 
           {/* Draft saved indicator */}
           {showDraftSaved && (
-            <span className="text-[10px] text-amber-700 font-sans ml-auto italic">
+            <span className="text-[10px] text-amber-700 font-sans ml-auto italic" style={{animation:"draftToastIn 0.3s ease-out"}}>
               {t('draftSaved') || 'Draft saved'}
             </span>
           )}
