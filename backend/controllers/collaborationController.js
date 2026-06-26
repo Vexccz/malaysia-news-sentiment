@@ -238,6 +238,25 @@ exports.replyToComment = async (req, res) => {
     newReply.user = newReply.userId;
     newReply.userId = newReply.user?._id;
 
+    // Feature 17 — notify parent comment author of the reply (if not self)
+    try {
+      const Notification = require('../models/Notification');
+      const parentAuthorId = comment.userId?.toString();
+      if (parentAuthorId && parentAuthorId !== req.userId.toString()) {
+        const replierName = newReply.isAnonymous ? 'Someone' : (newReply.user?.name || 'A reader');
+        await Notification.create({
+          user: parentAuthorId,
+          type: 'reply',
+          title: `${replierName} replied to your comment`,
+          body: content.trim().slice(0, 140),
+          link: `/community?article=${comment.articleId}`,
+          metadata: { articleId: comment.articleId, commentId: comment._id },
+        });
+      }
+    } catch (notifErr) {
+      console.warn('[Collab] reply notification failed:', notifErr.message);
+    }
+
     const io = req.app.get('io');
     if (io) {
       io.emit('comment:reply', {

@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import ThemeToggle from './ThemeToggle';
 import QuickStatsBar from './QuickStatsBar';
+import NotificationsBell from './NotificationsBell';
 
 const navItems = [
   { path: '/dashboard', labelKey: 'dashboard', tourId: 'dashboard', icon: (
@@ -239,8 +240,9 @@ const Layout = ({ children }) => {
 
         {/* Bottom section */}
         <div className="border-t border-paper-line dark:border-paper-dark-line p-3 space-y-2">
-          <div className="flex items-center justify-between px-2">
+          <div className="flex items-center justify-between px-2 gap-2">
             <ThemeToggle />
+            {user && <NotificationsBell />}
           </div>
           {user && (
             <div
