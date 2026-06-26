@@ -36,7 +36,7 @@ const ForecastCard = ({ forecast, loading, topic }) => {
           <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
         </svg>
         <span className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">
-          {t('forecastTitle') || 'AI Sentiment Forecast'}
+          {t('forecastTitle', 'AI Sentiment Forecast')}
         </span>
       </div>
 
@@ -57,7 +57,7 @@ const ForecastCard = ({ forecast, loading, topic }) => {
               /100
             </div>
             <div className="text-[9px] uppercase tracking-[0.15em] text-ink/30 dark:text-paper/30 font-sans mt-1">
-              {t('projectedSentiment') || 'Projected'}
+              {t('projectedSentiment', 'Projected')}
             </div>
           </div>
 
@@ -80,7 +80,7 @@ const ForecastCard = ({ forecast, loading, topic }) => {
             {risks && risks.length > 0 && (
               <div>
                 <h4 className="text-[10px] uppercase tracking-[0.15em] text-ink/40 dark:text-paper/40 font-sans mb-2">
-                  {t('risksTrends') || 'Rising Trends / Risks'}
+                  {t('risksTrends', 'Rising Trends / Risks')}
                 </h4>
                 <ul className="space-y-1">
                   {risks.map((risk, idx) => (
@@ -99,7 +99,7 @@ const ForecastCard = ({ forecast, loading, topic }) => {
       {/* Footer */}
       <div className="border-t border-ink/10 dark:border-paper/10 px-5 py-2">
         <span className="text-[9px] uppercase tracking-[0.15em] text-ink/30 dark:text-paper/30 font-sans">
-          {t('forecastDisclaimer') || 'AI-generated forecast based on latest news sentiment patterns.'}
+          {t('forecastDisclaimer', 'AI-generated forecast based on latest news sentiment patterns.')}
         </span>
       </div>
     </div>

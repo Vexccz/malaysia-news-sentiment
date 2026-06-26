@@ -537,7 +537,7 @@ const CommunityPage = () => {
       <div className="max-w-5xl mx-auto">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-black dark:text-white tracking-tight" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
-            {t('community') || 'Community'}
+            {t('community', 'Community')}
           </h1>
           <div className="mt-3 border-b border-[#e5e5e5] dark:border-[#222]" />
         </div>
@@ -563,7 +563,7 @@ const CommunityPage = () => {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-black dark:text-white tracking-tight" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
-          {t('community') || 'Community'}
+          {t('community', 'Community')}
         </h1>
         <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500 dark:text-[#999] mt-1">
           Discussion threads, hot takes, and community sentiment across Malaysian news

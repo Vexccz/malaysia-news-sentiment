@@ -34,11 +34,11 @@ const AiDigestCard = ({ digest, loading, topic }) => {
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
         </svg>
-        {t('aiDigestTitle') || 'AI INTELLIGENCE DIGEST'}
+        {t('aiDigestTitle', 'AI INTELLIGENCE DIGEST')}
       </div>
 
       <div className="forecast-meta-row">
-        <span className="forecast-topic-label">{t('topic') || 'Analysis Topic:'}</span>
+        <span className="forecast-topic-label">{t('topic', 'Analysis Topic:')}</span>
         <span className="forecast-topic-value">{topic || t('generalNews')}</span>
       </div>
 
@@ -46,7 +46,7 @@ const AiDigestCard = ({ digest, loading, topic }) => {
         {/* Left column: Avatar Box */}
         <div className="forecast-score-box digest-avatar-box">
           <div className="digest-bot-icon">🤖</div>
-          <div className="score-desc">{t('aiAgentActive') || 'AI AGENT ACTIVE'}</div>
+          <div className="score-desc">{t('aiAgentActive', 'AI AGENT ACTIVE')}</div>
         </div>
         
         {/* Right column: The Digest Text */}
@@ -58,7 +58,7 @@ const AiDigestCard = ({ digest, loading, topic }) => {
       </div>
 
       <div className="forecast-disclaimer-bar">
-        {t('digestDisclaimer') || 'Summarized by AI Agent based on top trending Malaysia media narratives.'}
+        {t('digestDisclaimer', 'Summarized by AI Agent based on top trending Malaysia media narratives.')}
       </div>
     </div>
   );

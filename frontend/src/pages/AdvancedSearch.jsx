@@ -353,7 +353,7 @@ const AdvancedSearch = () => {
           {lang === 'ms' ? 'Carian Lanjutan' : 'Advanced Search'}
         </h1>
         <div className="editorial-rule my-2" />
-        <p className="text-[10px] text-ink-muted dark:text-ink-faint uppercase tracking-[0.25em] font-sans">{t('advancedSearchDesc') || 'Search articles with powerful filters and facets'}</p>
+        <p className="text-[10px] text-ink-muted dark:text-ink-faint uppercase tracking-[0.25em] font-sans">{t('advancedSearchDesc', 'Search articles with powerful filters and facets')}</p>
       </div>
 
       {/* Search Bar with Suggestions */}

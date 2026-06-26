@@ -109,7 +109,7 @@ const HoverProfileTooltip = ({ userId, userName, userRole, children }) => {
         >
           {loading ? (
             <div className="text-sm text-gray-500 dark:text-gray-400 font-sans">
-              {t('loading') || 'Loading...'}
+              {t('loading', 'Loading...')}
             </div>
           ) : (
             <>
@@ -119,7 +119,7 @@ const HoverProfileTooltip = ({ userId, userName, userRole, children }) => {
                 </div>
                 <div>
                   <div className="font-serif font-bold text-sm text-black dark:text-white">
-                    {profile?.name || userName || t('anonymous') || 'Anonymous'}
+                    {profile?.name || userName || t('anonymous', 'Anonymous')}
                   </div>
                   <span className={`inline-block px-1.5 py-0.5 text-[10px] font-sans uppercase tracking-wider ${roleBadgeColor(profile?.role || userRole)}`}>
                     {profile?.role || userRole || 'user'}
@@ -129,15 +129,15 @@ const HoverProfileTooltip = ({ userId, userName, userRole, children }) => {
 
               <div className="border-t border-black/10 dark:border-white/10 pt-2 mb-2 space-y-0.5">
                 <div className="flex justify-between text-xs font-sans">
-                  <span className="text-gray-600 dark:text-gray-400">{t('memberSince') || 'Member since'}</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('memberSince', 'Member since')}</span>
                   <span className="text-black dark:text-white">{memberSince}</span>
                 </div>
                 <div className="flex justify-between text-xs font-sans">
-                  <span className="text-gray-600 dark:text-gray-400">{t('comments') || 'Comments'}</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('comments', 'Comments')}</span>
                   <span className="text-black dark:text-white">{profile?.commentCount ?? '\u2014'}</span>
                 </div>
                 <div className="flex justify-between text-xs font-sans">
-                  <span className="text-gray-600 dark:text-gray-400">{t('totalLikes') || 'Total likes'}</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('totalLikes', 'Total likes')}</span>
                   <span className="text-black dark:text-white">{profile?.totalLikes ?? '\u2014'}</span>
                 </div>
               </div>
@@ -145,7 +145,7 @@ const HoverProfileTooltip = ({ userId, userName, userRole, children }) => {
               {topBadges.length > 0 && (
                 <div className="border-t border-black/10 dark:border-white/10 pt-2 mb-2">
                   <div className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-sans mb-1">
-                    {t('badges') || 'Badges'}
+                    {t('badges', 'Badges')}
                   </div>
                   <div className="flex gap-1">
                     {topBadges.map((badge, i) => {
@@ -173,7 +173,7 @@ const HoverProfileTooltip = ({ userId, userName, userRole, children }) => {
                   href={`/profile/${userId}`}
                   className="text-xs text-red-700 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 font-sans underline"
                 >
-                  {t('viewFullProfile') || 'View full profile \u2192'}
+                  {t('viewFullProfile', 'View full profile \u2192')}
                 </a>
               </div>
             </>

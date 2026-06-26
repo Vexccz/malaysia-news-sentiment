@@ -204,7 +204,7 @@ const CommentItem = ({
             userRole={comment.authorRole}
           >
             <span className="font-serif font-bold text-sm text-black dark:text-white cursor-pointer hover:text-red-700 dark:hover:text-red-400">
-              {comment.authorName || t('anonymous') || 'Anonymous'}
+              {comment.authorName || t('anonymous', 'Anonymous')}
             </span>
           </HoverProfileTooltip>
 
@@ -268,7 +268,7 @@ const CommentItem = ({
                 : 'text-gray-500 dark:text-gray-400 hover:text-red-700 dark:hover:text-red-400'
             }`}
             disabled={liked || isOwnComment}
-            aria-label={t('like') || 'Like'}
+            aria-label={t('like', 'Like')}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" style={liked ? {animation:"likePop 0.45s cubic-bezier(0.175,0.885,0.32,1.275), likeGlow 0.5s ease-out"} : {}} key={likeAnimKey}>
               <path d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 01-1.162-.682 22.045 22.045 0 01-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 018-2.828A4.5 4.5 0 0118 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 01-3.744 2.582l-.019.01-.005.003h-.002a.723.723 0 01-.692 0h-.002z" />
@@ -282,7 +282,7 @@ const CommentItem = ({
               onClick={handleReplyToggle}
               className="text-xs font-sans text-gray-500 dark:text-gray-400 hover:text-red-700 dark:hover:text-red-400 transition-colors"
             >
-              {t('reply') || 'Reply'}
+              {t('reply', 'Reply')}
             </button>
           )}
 
@@ -297,14 +297,14 @@ const CommentItem = ({
                   : 'text-gray-500 dark:text-gray-400 hover:text-red-700 dark:hover:text-red-400'
               }`}
             >
-              {reported ? (t('reported') || 'Reported') : (t('report') || 'Report')}
+              {reported ? (t('reported', 'Reported')) : (t('report', 'Report'))}
             </button>
           )}
 
           {/* Draft saved indicator */}
           {showDraftSaved && (
             <span className="text-[10px] text-amber-700 font-sans ml-auto italic" style={{animation:"draftToastIn 0.3s ease-out"}}>
-              {t('draftSaved') || 'Draft saved'}
+              {t('draftSaved', 'Draft saved')}
             </span>
           )}
         </div>
@@ -316,7 +316,7 @@ const CommentItem = ({
               ref={textareaRef}
               value={replyInput}
               onChange={(e) => setReplyInput(e.target.value)}
-              placeholder={t('writeReply') || 'Write a reply...'}
+              placeholder={t('writeReply', 'Write a reply...')}
               rows={3}
               maxLength={MAX_REPLY_LENGTH + 50}
               className="w-full p-2 border border-black/20 dark:border-white/20 bg-white dark:bg-gray-900 text-sm text-black dark:text-white font-sans resize-none focus:outline-none focus:border-red-700"
@@ -335,14 +335,14 @@ const CommentItem = ({
                   }}
                   className="text-xs font-sans text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white px-2 py-1 border border-black/10 dark:border-white/10"
                 >
-                  {t('cancel') || 'Cancel'}
+                  {t('cancel', 'Cancel')}
                 </button>
                 <button
                   onClick={handleReplySubmit}
                   disabled={!replyInput.trim() || replyInput.length > MAX_REPLY_LENGTH || submitting}
                   className="text-xs font-sans text-white bg-red-700 hover:bg-red-800 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 border border-red-700"
                 >
-                  {submitting ? (t('submitting') || 'Submitting...') : (t('submit') || 'Submit')}
+                  {submitting ? (t('submitting', 'Submitting...')) : (t('submit', 'Submit'))}
                 </button>
               </div>
             </div>
@@ -358,8 +358,8 @@ const CommentItem = ({
               onClick={() => setRepliesVisible(true)}
               className="text-xs font-sans text-red-700 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 pl-2 underline"
             >
-              {t('viewReplies') || 'View'} {replies.length}{' '}
-              {replies.length === 1 ? (t('reply') || 'reply') : (t('replies') || 'replies')}
+              {t('viewReplies', 'View')} {replies.length}{' '}
+              {replies.length === 1 ? (t('reply', 'reply')) : (t('replies', 'replies'))}
             </button>
           ) : (
             <>
@@ -367,7 +367,7 @@ const CommentItem = ({
                 onClick={() => setRepliesVisible(false)}
                 className="text-xs font-sans text-red-700 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 pl-2 underline mb-1"
               >
-                {t('hideReplies') || 'Hide replies'}
+                {t('hideReplies', 'Hide replies')}
               </button>
               {replies.map((reply) => (
                 <CommentItem

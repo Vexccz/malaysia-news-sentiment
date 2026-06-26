@@ -137,12 +137,12 @@ const Trending = () => {
       <div className="max-w-4xl mx-auto">
         <button onClick={() => { setDrillTopic(null); setDrillArticles([]); }}
           className="flex items-center gap-2 text-xs uppercase tracking-wider text-ink-muted hover:text-ink dark:text-ink-faint dark:hover:text-paper mb-4 font-sans">
-          <ArrowLeft size={14} /> {t('back') || 'Back to Trending'}
+          <ArrowLeft size={14} /> {t('back', 'Back to Trending')}
         </button>
         <h2 className="text-2xl font-bold text-ink dark:text-paper tracking-tight font-display mb-1">{drillTopic}</h2>
         <div className="editorial-rule mb-4" />
         <p className="text-[10px] uppercase tracking-[0.25em] text-ink-muted dark:text-ink-faint mb-4 font-sans">
-          {drillArticles.length} {t('articles') || 'articles'} found
+          {drillArticles.length} {t('articles', 'articles')} found
         </p>
         {drillLoading ? (
           <div className="space-y-3">
@@ -171,12 +171,12 @@ const Trending = () => {
         <div>
           <div className="flex items-baseline gap-3 mb-1">
             <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display">
-              {t('trending') || 'Trending News'}
+              {t('trending', 'Trending News')}
             </h1>
           </div>
           <div className="editorial-rule mb-2" />
           <p className="text-[10px] text-ink-muted dark:text-ink-faint uppercase tracking-[0.25em] font-sans">
-            {t('trendingSubtitle') || 'Most-read stories across Malaysian media, ranked by reader engagement.'}
+            Most-read stories across Malaysian media, ranked by reader engagement.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -189,7 +189,7 @@ const Trending = () => {
                 : 'border-paper-line dark:border-paper-dark-line text-ink-muted hover:text-ink dark:hover:text-paper'
             }`}
           >
-            <GitCompare size={12} /> {t('compare') || 'Compare'}
+            <GitCompare size={12} /> {t('compare', 'Compare')}
           </button>
           <div className="flex items-center gap-0">
             {[{ value: 'today', label: t('today') }, { value: 'week', label: t('thisWeek') }].map((opt, i) => (
@@ -213,7 +213,7 @@ const Trending = () => {
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
             className="mb-6 border border-paper-line dark:border-paper-dark-line bg-paper-card dark:bg-paper-dark-card p-4 overflow-hidden">
             <h3 className="text-sm font-bold text-ink dark:text-paper font-display mb-3 uppercase tracking-wider">
-              {t('trendComparison') || 'Trend Comparison'}
+              {t('trendComparison', 'Trend Comparison')}
             </h3>
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={compareData}>
@@ -255,10 +255,10 @@ const Trending = () => {
             </svg>
           </div>
           <h3 className="text-base font-semibold text-ink dark:text-paper mb-1.5 font-display">
-            {t('noTrending') || 'No trending articles yet'}
+            {t('noTrending', 'No trending articles yet')}
           </h3>
           <p className="text-xs text-ink-faint max-w-sm mx-auto font-sans leading-relaxed">
-            {t('noTrendingDesc') || 'Trending stories appear once enough readers engage with the news. Check back after some activity.'}
+            {t('noTrendingDesc', 'Trending stories appear once enough readers engage with the news. Check back after some activity.')}
           </p>
         </div>
       ) : (

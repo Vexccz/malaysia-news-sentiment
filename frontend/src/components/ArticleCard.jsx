@@ -27,7 +27,7 @@ const deriveSourceLabel = (source, url, lang, t) => {
     return source;
   }
 
-  if (!url) return t('newsSource') || 'News Source';
+  if (!url) return t('newsSource', 'News Source');
 
   try {
     const host = new URL(url).hostname.replace(/^www\./, '');
@@ -37,7 +37,7 @@ const deriveSourceLabel = (source, url, lang, t) => {
       .map(part => part.charAt(0).toUpperCase() + part.slice(1))
       .join(' ');
   } catch {
-    return t('newsSource') || 'News Source';
+    return t('newsSource', 'News Source');
   }
 };
 
@@ -119,7 +119,7 @@ const ArticleCard = ({ article, onPreview, onDelete, onBookmark, isBookmarked })
     } else {
       try {
         await navigator.clipboard.writeText(url);
-        toast.success(t('linkCopied') || 'Link copied!');
+        toast.success(t('linkCopied', 'Link copied!'));
       } catch {}
     }
   };
@@ -140,7 +140,7 @@ const ArticleCard = ({ article, onPreview, onDelete, onBookmark, isBookmarked })
       const result = await translateArticle(article, targetLang);
       setTranslated({ ...result, lang: targetLang });
     } catch {
-      toast.error(t('translateError') || 'Translation failed');
+      toast.error(t('translateError', 'Translation failed'));
     } finally {
       setIsTranslating(false);
     }
@@ -208,7 +208,7 @@ const ArticleCard = ({ article, onPreview, onDelete, onBookmark, isBookmarked })
           {isAlert && <AlertBadge />}
           {translated && (
             <span style={{ fontSize: 9, color: 'var(--accent)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              {t('translated') || 'Translated'}
+              {t('translated', 'Translated')}
             </span>
           )}
         </div>
@@ -230,7 +230,7 @@ const ArticleCard = ({ article, onPreview, onDelete, onBookmark, isBookmarked })
                     style={{ width: `${Math.round(confidence * 100)}%`, background: `var(--${sentiment.toLowerCase()})` }}
                   />
                 </div>
-                <span className="art-conf-text">{Math.round(confidence * 100)}% {t('confidence') || 'confidence'}</span>
+                <span className="art-conf-text">{Math.round(confidence * 100)}% {t('confidence', 'confidence')}</span>
               </div>
             )}
           </div>
@@ -269,7 +269,7 @@ const ArticleCard = ({ article, onPreview, onDelete, onBookmark, isBookmarked })
                className="art-translate-btn"
                onClick={handleTranslate}
                disabled={isTranslating}
-               title={translated ? (t('showOriginal') || 'Show Original') : (t('translate') || 'Translate')}
+               title={translated ? (t('showOriginal', 'Show Original')) : (t('translate', 'Translate'))}
                style={{
                  background: 'none', border: 'none', padding: 4, cursor: 'pointer',
                  color: translated ? 'var(--accent)' : 'var(--text-400)',
@@ -330,7 +330,7 @@ const ArticleCard = ({ article, onPreview, onDelete, onBookmark, isBookmarked })
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
               </svg>
-              {t('details') || 'Details'}
+              {t('details', 'Details')}
             </Link>
 
             <a 

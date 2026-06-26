@@ -382,7 +382,7 @@ const ProfilePage = () => {
               className="flex items-center gap-2 px-4 py-2 border border-[#e5e5e5] dark:border-[#222] text-sm font-sans text-ink dark:text-paper hover:border-accent hover:text-accent transition-colors"
             >
               <Edit3 size={14} />
-              <span className="hidden sm:inline">{t('editProfile') || 'Edit'}</span>
+              <span className="hidden sm:inline">{t('editProfile', 'Edit')}</span>
             </button>
           </div>
         </div>
@@ -391,7 +391,7 @@ const ProfilePage = () => {
         <div className="px-5 lg:px-8 mt-4 flex flex-wrap gap-x-6 gap-y-1 text-[11px] text-ink-muted dark:text-ink-faint font-sans">
           <span className="flex items-center gap-1"><Mail size={11} /> {user?.email || 'N/A'}</span>
           <span className="flex items-center gap-1"><Shield size={11} /> {roleLabel}</span>
-          <span className="flex items-center gap-1"><Calendar size={11} /> {t('memberSince') || 'Member since'} {memberSince}</span>
+          <span className="flex items-center gap-1"><Calendar size={11} /> {t('memberSince', 'Member since')} {memberSince}</span>
           <span className="flex items-center gap-1"><Globe size={11} /> {preferredLang}</span>
         </div>
       </motion.div>
@@ -404,11 +404,11 @@ const ProfilePage = () => {
         className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] mb-6 overflow-x-auto"
       >
         <div className="flex divide-x divide-[#e5e5e5] dark:divide-[#222] min-w-max">
-          <StatPill icon={<Eye size={16} />} label={t('articlesViewed') || 'Articles'} value={loading ? 0 : stats.articlesViewed} color="text-ink-muted" />
-          <StatPill icon={<Bookmark size={16} />} label={t('bookmarks') || 'Bookmarks'} value={loading ? 0 : stats.bookmarks} color="text-accent" />
-          <StatPill icon={<Share2 size={16} />} label={t('shared') || 'Shared'} value={loading ? 0 : stats.shared} color="text-emerald-600" />
-          <StatPill icon={<MessageSquare size={16} />} label={t('comments') || 'Comments'} value={loading ? 0 : stats.comments} color="text-blue-600" />
-          <StatPill icon={<Award size={16} />} label={t('badges') || 'Badges'} value={earnedBadges.length} color="text-amber-600" />
+          <StatPill icon={<Eye size={16} />} label={t('articlesViewed', 'Articles')} value={loading ? 0 : stats.articlesViewed} color="text-ink-muted" />
+          <StatPill icon={<Bookmark size={16} />} label={t('bookmarks', 'Bookmarks')} value={loading ? 0 : stats.bookmarks} color="text-accent" />
+          <StatPill icon={<Share2 size={16} />} label={t('shared', 'Shared')} value={loading ? 0 : stats.shared} color="text-emerald-600" />
+          <StatPill icon={<MessageSquare size={16} />} label={t('comments', 'Comments')} value={loading ? 0 : stats.comments} color="text-blue-600" />
+          <StatPill icon={<Award size={16} />} label={t('badges', 'Badges')} value={earnedBadges.length} color="text-amber-600" />
         </div>
       </motion.div>
 
@@ -425,15 +425,15 @@ const ProfilePage = () => {
             <div className="px-4 py-2.5 border-b border-[#e5e5e5] dark:border-[#222] flex items-center gap-2">
               <Zap size={12} className="text-ink-muted" />
               <h2 className="text-[10px] font-semibold text-ink dark:text-paper uppercase tracking-[0.2em] font-sans">
-                {t('quickLinks') || 'Quick Actions'}
+                {t('quickLinks', 'Quick Actions')}
               </h2>
             </div>
             <div className="p-2 space-y-1">
-              <QuickAction icon={<Settings size={14} />} label={t('settings') || 'Settings'} path="/settings" />
-              <QuickAction icon={<Bookmark size={14} />} label={t('bookmarks') || 'Bookmarks'} path="/bookmarks" />
-              <QuickAction icon={<Clock size={14} />} label={t('history') || 'History'} path="/history" />
-              <QuickAction icon={<FileText size={14} />} label={t('reports') || 'Reports'} path="/reports" />
-              <QuickAction icon={<Search size={14} />} label={t('search') || 'Search'} path="/search" />
+              <QuickAction icon={<Settings size={14} />} label={t('settings', 'Settings')} path="/settings" />
+              <QuickAction icon={<Bookmark size={14} />} label={t('bookmarks', 'Bookmarks')} path="/bookmarks" />
+              <QuickAction icon={<Clock size={14} />} label={t('history', 'History')} path="/history" />
+              <QuickAction icon={<FileText size={14} />} label={t('reports', 'Reports')} path="/reports" />
+              <QuickAction icon={<Search size={14} />} label={t('search', 'Search')} path="/search" />
             </div>
           </div>
 
@@ -442,7 +442,7 @@ const ProfilePage = () => {
             <div className="px-4 py-2.5 border-b border-[#e5e5e5] dark:border-[#222] flex items-center gap-2">
               <Activity size={12} className="text-ink-muted" />
               <h2 className="text-[10px] font-semibold text-ink dark:text-paper uppercase tracking-[0.2em] font-sans">
-                {t('recentActivity') || 'Activity'}
+                {t('recentActivity', 'Activity')}
               </h2>
             </div>
             <div className="p-4">
@@ -461,7 +461,7 @@ const ProfilePage = () => {
                 <div className="text-center py-6">
                   <Activity size={20} className="mx-auto text-ink-faint mb-2" />
                   <p className="text-xs text-ink-muted font-sans">
-                    {t('noActivity') || 'No recent activity'}
+                    {t('noActivity', 'No recent activity')}
                   </p>
                 </div>
               )}
@@ -482,7 +482,7 @@ const ProfilePage = () => {
               <div className="flex items-center gap-2">
                 <Award size={12} className="text-ink-muted" />
                 <h2 className="text-[10px] font-semibold text-ink dark:text-paper uppercase tracking-[0.2em] font-sans">
-                  {t('myBadges') || 'My Badges'}
+                  {t('myBadges', 'My Badges')}
                 </h2>
                 <span className="text-[9px] text-ink-faint font-sans">
                   ({earnedBadges.length}/{badges.length})
@@ -490,16 +490,16 @@ const ProfilePage = () => {
               </div>
               {selectedBadges.length > 0 && (
                 <span className="text-[9px] text-accent font-sans">
-                  {selectedBadges.length}/3 {t('selected') || 'selected'}
+                  {selectedBadges.length}/3 {t('selected', 'selected')}
                 </span>
               )}
             </div>
             <div className="p-4">
               {badgesLoading ? (
-                <p className="text-xs text-ink-muted font-sans">{t('loading') || 'Loading...'}</p>
+                <p className="text-xs text-ink-muted font-sans">{t('loading', 'Loading...')}</p>
               ) : badges.length === 0 ? (
                 <p className="text-xs text-ink-muted font-sans text-center py-4">
-                  {t('noBadges') || 'No badges yet. Start commenting!'}
+                  {t('noBadges', 'No badges yet. Start commenting!')}
                 </p>
               ) : (
                 <div
@@ -527,7 +527,7 @@ const ProfilePage = () => {
             <div className="px-4 py-2.5 border-b border-[#e5e5e5] dark:border-[#222] flex items-center gap-2">
               <Sparkles size={12} className="text-ink-muted" />
               <h2 className="text-[10px] font-semibold text-ink dark:text-paper uppercase tracking-[0.2em] font-sans">
-                {t('community') || 'Community'}
+                {t('community', 'Community')}
               </h2>
             </div>
             <div className="p-4">
@@ -538,8 +538,8 @@ const ProfilePage = () => {
                 >
                   <MessageSquare size={18} className="text-blue-600" />
                   <div>
-                    <p className="text-sm font-semibold text-ink dark:text-paper font-sans">{t('discussions') || 'Discussions'}</p>
-                    <p className="text-[10px] text-ink-faint font-sans">{stats.comments} {t('comments') || 'comments'}</p>
+                    <p className="text-sm font-semibold text-ink dark:text-paper font-sans">{t('discussions', 'Discussions')}</p>
+                    <p className="text-[10px] text-ink-faint font-sans">{stats.comments} {t('comments', 'comments')}</p>
                   </div>
                 </Link>
                 <Link
@@ -548,8 +548,8 @@ const ProfilePage = () => {
                 >
                   <Bookmark size={18} className="text-accent" />
                   <div>
-                    <p className="text-sm font-semibold text-ink dark:text-paper font-sans">{t('bookmarks') || 'Bookmarks'}</p>
-                    <p className="text-[10px] text-ink-faint font-sans">{stats.bookmarks} {t('saved') || 'saved'}</p>
+                    <p className="text-sm font-semibold text-ink dark:text-paper font-sans">{t('bookmarks', 'Bookmarks')}</p>
+                    <p className="text-[10px] text-ink-faint font-sans">{stats.bookmarks} {t('saved', 'saved')}</p>
                   </div>
                 </Link>
               </div>

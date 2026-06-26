@@ -11,8 +11,10 @@ export const LanguageProvider = ({ children }) => {
     localStorage.setItem('lang', lang);
   }, [lang]);
 
-  const t = (key) => {
-    return translations[lang][key] || translations['en'][key] || key;
+  const t = (key, fallback) => {
+    const value = translations[lang]?.[key] || translations['en']?.[key];
+    if (value) return value;
+    return fallback !== undefined ? fallback : key;
   };
 
   const toggleLanguage = () => {
