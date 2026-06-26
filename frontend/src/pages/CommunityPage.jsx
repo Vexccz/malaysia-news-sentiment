@@ -1,582 +1,998 @@
-import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
-import { API_BASE } from '../config';
-import CommentItem from '../components/CommentItem';
+import { useSocket } from '../context/SocketContext';
+import { MessageSquare, X, Eye, Bookmark, MessageCircle, Calendar, Shield, Users, BarChart3, Send, Globe, UserCircle, Plus, Vote, PenLine } from 'lucide-react';
 
-const CHAR_LIMIT = 500;
-const DRAFT_DEBOUNCE_MS = 500;
-const DRAFT_FADE_MS = 2000;
+const CARD = 'bg-white dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222]';
+
+/* ── User Profile Modal ── */
+const UserProfileModal = ({ userId, onClose }) => {
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) return;
+    setLoading(true);
+    api.get(`/auth/profile/${userId}`)
+      .then(res => setProfile(res.data.user))
+      .catch(() => setProfile(null))
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  const timeAgo = (dateStr) => {
+    if (!dateStr) return '';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  };
+
+  const sentimentColor = (s) => s === 'Positive' ? '#4ADE80' : s === 'Negative' ? '#FB7185' : '#FBBF24';
+
+  const initials = (profile?.name || 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const memberSince = profile?.createdAt
+    ? new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    : 'N/A';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/40" />
+      <div
+        className="relative w-full max-w-md bg-white dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222] max-h-[80vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="sticky top-0 bg-white dark:bg-[#111] border-b border-[#e5e5e5] dark:border-[#222] px-5 py-3 flex items-center justify-between z-10">
+          <span className="text-xs font-semibold text-ink dark:text-paper uppercase tracking-[0.2em] font-sans">User Profile</span>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
+            <X size={16} className="text-ink-muted dark:text-ink-faint" />
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="p-6 animate-pulse space-y-4">
+            <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-700 mx-auto" />
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mx-auto" />
+            <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded w-1/3 mx-auto" />
+          </div>
+        ) : !profile ? (
+          <div className="p-6 text-center text-sm text-ink-faint">User not found</div>
+        ) : (
+          <>
+            {/* Profile Info */}
+            <div className="p-5 flex flex-col items-center text-center border-b border-[#e5e5e5] dark:border-[#222]">
+              {profile.avatar ? (
+                <img src={profile.avatar} alt={profile.name} className="w-16 h-16 rounded-full object-cover border-2 border-[#e5e5e5] dark:border-[#222]" />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-accent/10 text-accent flex items-center justify-center text-xl font-bold font-display border-2 border-accent/20">
+                  {initials}
+                </div>
+              )}
+              <h3 className="font-display text-lg font-bold text-ink dark:text-paper mt-2">{profile.name}</h3>
+              <div className="flex items-center gap-2 mt-1">
+                <span className={`inline-flex items-center px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider border ${profile.role === 'admin' ? 'border-red-500 text-red-600 dark:text-red-400' : 'border-[#e5e5e5] dark:border-[#222] text-ink-muted dark:text-ink-faint'}`}>
+                  {profile.role === 'admin' ? 'Admin' : 'Member'}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 mt-2 text-[11px] text-ink-faint">
+                <Calendar size={11} />
+                <span>Member since {memberSince}</span>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 divide-x divide-[#e5e5e5] dark:divide-[#222] border-b border-[#e5e5e5] dark:border-[#222]">
+              <div className="py-3 text-center">
+                <p className="text-lg font-bold font-display text-ink dark:text-paper">{profile.analysisCount?.toLocaleString() || '0'}</p>
+                <p className="text-[9px] text-ink-faint uppercase tracking-wider">Analyses</p>
+              </div>
+              <div className="py-3 text-center">
+                <p className="text-lg font-bold font-display text-ink dark:text-paper">{profile.commentCount || '0'}</p>
+                <p className="text-[9px] text-ink-faint uppercase tracking-wider">Comments</p>
+              </div>
+              <div className="py-3 text-center">
+                <p className="text-lg font-bold font-display text-ink dark:text-paper">{profile.bookmarksCount || '0'}</p>
+                <p className="text-[9px] text-ink-faint uppercase tracking-wider">Bookmarks</p>
+              </div>
+            </div>
+
+            {/* Recent Comments */}
+            {profile.recentComments?.length > 0 && (
+              <div>
+                <div className="px-5 py-2.5 border-b border-[#e5e5e5] dark:border-[#222]">
+                  <span className="text-[10px] font-semibold text-ink dark:text-paper uppercase tracking-[0.15em]">Recent Comments</span>
+                </div>
+                <div className="divide-y divide-[#e5e5e5] dark:divide-[#222]">
+                  {profile.recentComments.map((c, i) => (
+                    <div key={i} className="px-5 py-2.5">
+                      <p className="text-xs text-ink dark:text-paper leading-relaxed line-clamp-2">&ldquo;{c.content}&rdquo;</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {c.sentiment && (
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ background: sentimentColor(c.sentiment) }} />
+                        )}
+                        <span className="text-[10px] text-ink-faint truncate flex-1">{c.articleTitle}</span>
+                        <span className="text-[10px] text-ink-faint shrink-0">{timeAgo(c.createdAt)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const SentimentMarkInline = ({ sentiment }) => {
+  const map = {
+    Positive: { symbol: "+", color: "text-green-700 dark:text-green-400" },
+    Negative: { symbol: "\u2212", color: "text-red-700 dark:text-red-400" },
+    Neutral:  { symbol: "~", color: "text-gray-500 dark:text-gray-400" },
+  };
+  const m = map[sentiment] || map.Neutral;
+  return <span className={`inline-block text-xs font-bold ${m.color} mr-1`}>{m.symbol}</span>;
+};
+
+const ALLOWED_REACTIONS = ['😂', '😢', '😡', '🔥', '👏', '❤️', '🤔', '💯'];
+
+const CommentItem = ({ c, onLike, timeAgo, sentimentColor, onUserClick, currentUserId, onReact }) => {
+  const [showReply, setShowReply] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [replying, setReplying] = useState(false);
+  const [showReplies, setShowReplies] = useState(false);
+  const [localReplies, setLocalReplies] = useState(c.replies || []);
+  const [replyAnonymous, setReplyAnonymous] = useState(false);
+  const [liked, setLiked] = useState(c.likes?.some(id => id === currentUserId || id?.toString() === currentUserId) || false);
+  const [likeCount, setLikeCount] = useState(c.likes?.length || 0);
+  const [liking, setLiking] = useState(false);
+  const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [localReactions, setLocalReactions] = useState(() => {
+    const grouped = {};
+    (c.reactions || []).forEach(r => {
+      const emoji = r.emoji;
+      if (!grouped[emoji]) grouped[emoji] = { emoji, count: 0, userReacted: false };
+      grouped[emoji].count++;
+      if (r.userId === currentUserId || r.userId?.toString() === currentUserId) grouped[emoji].userReacted = true;
+    });
+    return Object.values(grouped);
+  });
+
+  const userInitials = (c.user?.name || 'A').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+
+  const handleLike = async () => {
+    if (liking) return;
+    setLiking(true);
+    setLiked(prev => !prev);
+    setLikeCount(prev => liked ? prev - 1 : prev + 1);
+    try {
+      const { data } = await onLike(c._id);
+      setLiked(data.liked);
+      setLikeCount(data.likes);
+    } catch {
+      setLiked(prev => !prev);
+      setLikeCount(prev => liked ? prev + 1 : prev - 1);
+    } finally {
+      setLiking(false);
+    }
+  };
+
+  const handleReact = async (emoji) => {
+    setShowReactionPicker(false);
+    try {
+      const { data } = await onReact(c._id, emoji);
+      setLocalReactions(data.reactions || []);
+    } catch {}
+  };
+
+  const submitReply = async () => {
+    if (!replyText.trim() || replying) return;
+    setReplying(true);
+    try {
+      const { data } = await api.post(`/collab/comments/${c._id}/reply`, { content: replyText.trim(), isAnonymous: replyAnonymous });
+      setLocalReplies(prev => [...prev, data.reply]);
+      setReplyText('');
+      setShowReply(false);
+      setShowReplies(true);
+    } catch {}
+    finally { setReplying(false); }
+  };
+
+  return (
+    <div className="px-4 py-3">
+      <div className="flex items-center gap-2.5 mb-1.5">
+        {c.isAnonymous ? (
+          <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] text-ink-faint flex-shrink-0">
+            ?
+          </div>
+        ) : c.user?.avatar ? (
+          <img
+            src={c.user.avatar}
+            alt={c.user.name}
+            className="w-7 h-7 rounded-full object-cover flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => c.userId && onUserClick(c.userId)}
+          />
+        ) : (
+          <div
+            className="w-7 h-7 rounded-full bg-accent/10 text-accent flex items-center justify-center text-[10px] font-bold flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => c.userId && onUserClick(c.userId)}
+          >
+            {userInitials}
+          </div>
+        )}
+        <span
+          className={`text-xs font-semibold ${c.isAnonymous ? 'text-ink-faint' : 'text-ink dark:text-paper cursor-pointer hover:underline'}`}
+          onClick={() => !c.isAnonymous && c.userId && onUserClick(c.userId)}
+        >
+          {c.isAnonymous ? 'Anonymous' : (c.user?.name || 'Anonymous')}
+        </span>
+        {c.commentSentiment && (
+          <span className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider"
+            style={{ background: sentimentColor(c.commentSentiment) + '15', color: sentimentColor(c.commentSentiment) }}>
+            {c.commentSentiment}
+          </span>
+        )}
+        {c.badges?.slice(0, 2).map((b, i) => (
+          <span key={i} title={b.label} className="text-[10px]">{b.icon}</span>
+        ))}
+        <span className="text-[10px] text-ink-faint ml-auto">{timeAgo(c.createdAt)}</span>
+      </div>
+      <p className="text-sm text-ink-secondary dark:text-ink-muted leading-relaxed ml-[38px]">{c.content}</p>
+      <div className="flex items-center gap-3 mt-1.5 ml-[38px]">
+        <button onClick={handleLike} disabled={liking}
+          className={`flex items-center gap-1 text-[10px] transition-colors ${liked ? 'text-red-500' : 'text-ink-faint hover:text-ink dark:hover:text-paper'}`}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+          {likeCount}
+        </button>
+        <button onClick={() => setShowReply(!showReply)}
+          className="flex items-center gap-1 text-[10px] text-ink-faint hover:text-ink dark:hover:text-paper transition-colors">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>
+          </svg>
+          Reply
+        </button>
+        {localReplies.length > 0 && (
+          <button onClick={() => setShowReplies(!showReplies)}
+            className="flex items-center gap-1 text-[10px] text-ink-faint hover:text-ink dark:hover:text-paper transition-colors">
+            {localReplies.length} repl{localReplies.length !== 1 ? 'ies' : 'y'}
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+              style={{ transform: showReplies ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+        )}
+        <div className="relative ml-auto">
+          <button onClick={() => setShowReactionPicker(!showReactionPicker)}
+            className="text-[10px] text-ink-faint hover:text-ink dark:hover:text-paper transition-colors px-1">
+            😊+
+          </button>
+          {showReactionPicker && (
+            <div className="absolute bottom-full right-0 mb-1 flex gap-0.5 p-1.5 bg-white dark:bg-[#1a1a1a] border border-[#e5e5e5] dark:border-[#333] shadow-lg z-20">
+              {ALLOWED_REACTIONS.map(emoji => (
+                <button key={emoji} onClick={() => handleReact(emoji)}
+                  className="w-7 h-7 flex items-center justify-center text-sm hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {localReactions.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-1.5 ml-[38px]">
+          {localReactions.map(r => (
+            <button key={r.emoji} onClick={() => handleReact(r.emoji)}
+              className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] border transition-colors ${
+                r.userReacted
+                  ? 'border-accent bg-accent/10 text-accent'
+                  : 'border-[#e5e5e5] dark:border-[#333] text-ink-muted dark:text-ink-faint hover:border-ink/30 dark:hover:border-paper/30'
+              }`}>
+              <span className="text-xs">{r.emoji}</span>
+              <span>{r.count}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {showReply && (
+        <div className="mt-2 ml-[38px] pl-3 border-l-2 border-[#e5e5e5] dark:border-[#333]">
+          <div className="flex items-center gap-2 mb-1.5">
+            <button onClick={() => setReplyAnonymous(!replyAnonymous)}
+              className={`flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-medium border transition-colors ${replyAnonymous ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/20 text-amber-600' : 'border-[#e5e5e5] dark:border-[#333] text-ink-faint'}`}>
+              {replyAnonymous ? 'Anonymous' : 'Visible'}
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <input type="text" value={replyText} onChange={(e) => setReplyText(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && submitReply()}
+              placeholder="Write a reply..."
+              className="flex-1 px-2.5 py-1.5 text-xs border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#0a0a0a] text-ink dark:text-paper placeholder:text-ink-faint focus:outline-none focus:border-ink dark:focus:border-paper transition-colors" />
+            <button onClick={submitReply} disabled={!replyText.trim() || replying}
+              className="px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider bg-ink dark:bg-paper text-paper dark:text-ink hover:opacity-80 disabled:opacity-30 transition-all">
+              Reply
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showReplies && localReplies.length > 0 && (
+        <div className="mt-2 ml-[38px] pl-3 border-l-2 border-[#e5e5e5] dark:border-[#333] space-y-2">
+          {localReplies.map(r => {
+            const replyInitials = (r.user?.name || 'A').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+            return (
+              <div key={r._id} className="py-1.5">
+                <div className="flex items-center gap-2 mb-0.5">
+                  {r.isAnonymous ? (
+                    <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[8px] text-ink-faint">?</div>
+                  ) : r.user?.avatar ? (
+                    <img src={r.user.avatar} alt={r.user.name}
+                      className="w-5 h-5 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => r.userId && onUserClick(r.userId)} />
+                  ) : (
+                    <div className="w-5 h-5 rounded-full bg-accent/10 text-accent flex items-center justify-center text-[8px] font-bold cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => r.userId && onUserClick(r.userId)}>
+                      {replyInitials}
+                    </div>
+                  )}
+                  <span
+                    className={`text-[11px] font-semibold ${r.isAnonymous ? 'text-ink-faint' : 'text-ink dark:text-paper cursor-pointer hover:underline'}`}
+                    onClick={() => !r.isAnonymous && r.userId && onUserClick(r.userId)}
+                  >
+                    {r.isAnonymous ? 'Anonymous' : (r.user?.name || 'Anonymous')}
+                  </span>
+                  <span className="text-[9px] text-ink-faint">{timeAgo(r.createdAt)}</span>
+                </div>
+                <p className="text-xs text-ink-secondary dark:text-ink-muted leading-relaxed ml-7">{r.content}</p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const CommunityPage = () => {
   const { t } = useLanguage();
-  const { user, token } = useAuth();
-
-  // ── State: Discussions ──
+  const { user } = useAuth();
+  const socket = useSocket();
+  const [activeTab, setActiveTab] = useState('discussions');
   const [discussions, setDiscussions] = useState([]);
-  const [selectedDiscussion, setSelectedDiscussion] = useState(null);
-  const [discussionsLoading, setDiscussionsLoading] = useState(true);
-  const [discussionsError, setDiscussionsError] = useState(null);
-
-  // ── State: Comments ──
+  const [hotTakes, setHotTakes] = useState([]);
+  const [dotd, setDotd] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState(null);
   const [comments, setComments] = useState([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
-  const [commentsError, setCommentsError] = useState(null);
-
-  // ── State: Sorting & Filtering ──
-  const [sortBy, setSortBy] = useState('newest');
-  const [sentimentFilter, setSentimentFilter] = useState('all');
-
-  // ── State: Comment Form ──
-  const [commentText, setCommentText] = useState('');
-  const [commentSentiment, setCommentSentiment] = useState('neutral');
-  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState(null);
+  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [viewingUserId, setViewingUserId] = useState(null);
+  const [trendingKeywords, setTrendingKeywords] = useState([]);
+  const [sentimentPulse, setSentimentPulse] = useState(null);
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [communityPosts, setCommunityPosts] = useState([]);
+  const [postContent, setPostContent] = useState('');
+  const [postAnonymous, setPostAnonymous] = useState(false);
+  const [posting, setPosting] = useState(false);
+  const [polls, setPolls] = useState([]);
+  const [showCreatePoll, setShowCreatePoll] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState(['', '']);
 
-  // ── State: Draft ──
-  const [showDraftSaved, setShowDraftSaved] = useState(false);
-  const draftTimerRef = useRef(null);
-  const draftFadeTimerRef = useRef(null);
-
-  // ── Refs ──
-  const textareaRef = useRef(null);
-
-  // ── Derived: draft key ──
-  const draftKey = selectedDiscussion
-    ? `draft_comment_${selectedDiscussion.articleId}`
-    : 'draft_comment_standalone';
-
-  // ── Character count ──
-  const charCount = commentText.length;
-  const charPercent = Math.min((charCount / CHAR_LIMIT) * 100, 100);
-  const isOverLimit = charCount > CHAR_LIMIT;
-  const isNearLimit = charCount > 400 && charCount <= CHAR_LIMIT;
-
-  // ── Fetch Discussions ──
   useEffect(() => {
-    const fetchDiscussions = async () => {
-      setDiscussionsLoading(true);
-      setDiscussionsError(null);
+    let cancelled = false;
+    (async () => {
       try {
-        const res = await fetch(`${API_BASE}/collab/discussions`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        const list = data.discussions || [];
-        setDiscussions(list);
-        if (list.length > 0 && !selectedDiscussion) {
-          setSelectedDiscussion(list[0]);
+        const [discRes, hotRes, dotdRes, kwRes, spRes, lbRes, postsRes, pollsRes] = await Promise.all([
+          api.get('/collab/discussions'),
+          api.get('/collab/hot-takes?limit=5'),
+          api.get('/collab/discussion-of-day'),
+          api.get('/collab/trending-keywords?days=7&limit=15'),
+          api.get('/collab/sentiment-pulse?days=7'),
+          api.get('/collab/leaderboard?days=7&limit=5'),
+          api.get('/collab/posts?limit=10'),
+          api.get('/collab/polls?limit=3'),
+        ]);
+        if (!cancelled) {
+          setDiscussions(discRes.data.discussions || []);
+          setHotTakes(hotRes.data.hotTakes || []);
+          setDotd(dotdRes.data.discussion || null);
+          setTrendingKeywords(kwRes.data.keywords || []);
+          setSentimentPulse(spRes.data || null);
+          setLeaderboard(lbRes.data.leaderboard || []);
+          setCommunityPosts(postsRes.data.posts || []);
+          setPolls(pollsRes.data.polls || []);
         }
       } catch (err) {
-        setDiscussionsError(err.message);
+        console.error('Community fetch failed:', err);
       } finally {
-        setDiscussionsLoading(false);
+        if (!cancelled) setLoading(false);
       }
-    };
-    fetchDiscussions();
+    })();
+    return () => { cancelled = true; };
   }, []);
 
-  // ── Fetch Comments when discussion changes ──
-  useEffect(() => {
-    if (!selectedDiscussion) return;
-
-    const fetchComments = async () => {
-      setCommentsLoading(true);
-      setCommentsError(null);
-      try {
-        const res = await fetch(
-          `${API_BASE}/collab/comments/${selectedDiscussion.articleId}`
-        );
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        setComments(data.comments || []);
-      } catch (err) {
-        setCommentsError(err.message);
-      } finally {
-        setCommentsLoading(false);
-      }
-    };
-    fetchComments();
-  }, [selectedDiscussion]);
-
-  // ── Restore Draft on mount / discussion change ──
-  useEffect(() => {
+  const loadComments = async (articleId) => {
+    if (expandedId === articleId) { setExpandedId(null); return; }
+    setExpandedId(articleId);
+    setCommentsLoading(true);
     try {
-      const saved = localStorage.getItem(draftKey);
-      if (saved) {
-        const draft = JSON.parse(saved);
-        setCommentText(draft.text || '');
-        setCommentSentiment(draft.sentiment || 'neutral');
-        setIsAnonymous(draft.anonymous || false);
-        // Briefly show restored indicator
-        setShowDraftSaved(true);
-        if (draftFadeTimerRef.current) clearTimeout(draftFadeTimerRef.current);
-        draftFadeTimerRef.current = setTimeout(() => setShowDraftSaved(false), DRAFT_FADE_MS);
-      } else {
-        setCommentText('');
-        setCommentSentiment('neutral');
-        setIsAnonymous(false);
-      }
-    } catch {
-      // ignore parse errors
-    }
+      const { data } = await api.get(`/collab/comments/${articleId}`);
+      setComments(data.comments || []);
+    } catch { setComments([]); }
+    finally { setCommentsLoading(false); }
+  };
 
-    return () => {
-      if (draftFadeTimerRef.current) clearTimeout(draftFadeTimerRef.current);
-    };
-  }, [draftKey]);
+  const submitComment = async (articleId) => {
+    if (!newComment.trim() || submitting) return;
+    setSubmitting(true);
+    try {
+      const { data } = await api.post('/collab/comments', { articleId, content: newComment.trim(), isAnonymous });
+      setComments(prev => [data.comment, ...prev]);
+      setNewComment('');
+      setDiscussions(prev => prev.map(d => 
+        d.articleId === articleId ? { ...d, commentCount: d.commentCount + 1, lastComment: newComment.trim(), lastCommentAt: new Date().toISOString(), userName: isAnonymous ? 'Anonymous' : d.userName } : d
+      ));
+    } catch {}
+    finally { setSubmitting(false); }
+  };
 
-  // ── Auto-save Draft (debounced) ──
+  const likeComment = async (commentId) => {
+    const { data } = await api.post(`/collab/comments/${commentId}/like`);
+    return { data };
+  };
+
+  const reactToComment = async (commentId, emoji) => {
+    const { data } = await api.post(`/collab/comments/${commentId}/react`, { emoji });
+    return { data };
+  };
+
+  const submitPost = async () => {
+    if (!postContent.trim() || posting) return;
+    setPosting(true);
+    try {
+      const { data } = await api.post('/collab/posts', { content: postContent.trim(), isAnonymous: postAnonymous });
+      setCommunityPosts(prev => [data.post, ...prev]);
+      setPostContent('');
+    } catch {}
+    finally { setPosting(false); }
+  };
+
+  const votePoll = async (pollId, optionIndex) => {
+    try {
+      const { data } = await api.post(`/collab/polls/${pollId}/vote`, { optionIndex });
+      setPolls(prev => prev.map(p => p._id === pollId ? data.poll : p));
+    } catch {}
+  };
+
+  const createPoll = async () => {
+    if (!pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2) return;
+    try {
+      const { data } = await api.post('/collab/polls', { question: pollQuestion.trim(), options: pollOptions.filter(o => o.trim()) });
+      setPolls(prev => [data.poll, ...prev]);
+      setPollQuestion('');
+      setPollOptions(['', '']);
+      setShowCreatePoll(false);
+    } catch {}
+  };
+
+  const timeAgo = (dateStr) => {
+    if (!dateStr) return '';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + 'm ago';
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return hrs + 'h ago';
+    return Math.floor(hrs / 24) + 'd ago';
+  };
+
+  const sentimentColor = (s) => s === 'Positive' ? '#4ADE80' : s === 'Negative' ? '#FB7185' : '#FBBF24';
+
+  /* ── Socket.IO real-time listeners ── */
   useEffect(() => {
-    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
-
-    if (commentText.trim() === '' && !isAnonymous && commentSentiment === 'neutral') {
-      // Clear draft if form is essentially empty
-      localStorage.removeItem(draftKey);
-      return;
-    }
-
-    draftTimerRef.current = setTimeout(() => {
-      try {
-        localStorage.setItem(
-          draftKey,
-          JSON.stringify({
-            text: commentText,
-            sentiment: commentSentiment,
-            anonymous: isAnonymous,
-          })
-        );
-        setShowDraftSaved(true);
-        if (draftFadeTimerRef.current) clearTimeout(draftFadeTimerRef.current);
-        draftFadeTimerRef.current = setTimeout(() => setShowDraftSaved(false), DRAFT_FADE_MS);
-      } catch {
-        // localStorage full or unavailable
-      }
-    }, DRAFT_DEBOUNCE_MS);
-
-    return () => {
-      if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
-    };
-  }, [commentText, commentSentiment, isAnonymous, draftKey]);
-
-  // ── Sorted & Filtered Comments (memoised) ──
-  const filteredComments = useMemo(() => {
-    let result = [...comments];
-
-    // Filter by sentiment
-    if (sentimentFilter !== 'all') {
-      result = result.filter(
-        (c) => (c.sentiment || '').toLowerCase() === sentimentFilter
-      );
-    }
-
-    // Sort
-    switch (sortBy) {
-      case 'newest':
-        result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        break;
-      case 'oldest':
-        result.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-        break;
-      case 'mostLiked':
-        result.sort((a, b) => (b.likes || 0) - (a.likes || 0));
-        break;
-      default:
-        break;
-    }
-
-    return result;
-  }, [comments, sortBy, sentimentFilter]);
-
-  // ── Handlers ──
-  const handleTextChange = useCallback((e) => {
-    setCommentText(e.target.value);
-  }, []);
-
-  const handleSentimentChange = useCallback((sentiment) => {
-    setCommentSentiment(sentiment);
-  }, []);
-
-  const handleAnonymousToggle = useCallback(() => {
-    setIsAnonymous((prev) => !prev);
-  }, []);
-
-  const clearDraft = useCallback(() => {
-    localStorage.removeItem(draftKey);
-    setCommentText('');
-    setCommentSentiment('neutral');
-    setIsAnonymous(false);
-  }, [draftKey]);
-
-  const handleSubmit = useCallback(
-    async (e) => {
-      e.preventDefault();
-      if (!commentText.trim() || isOverLimit) return;
-
-      setSubmitting(true);
-      setSubmitError(null);
-
-      try {
-        const payload = {
-          articleId: selectedDiscussion?.articleId,
-          content: commentText.trim(),
-          sentiment: commentSentiment,
-          isAnonymous: isAnonymous,
-        };
-
-        const url = `${API_BASE}/collab/comments`;
-
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify(payload),
+    if (!socket) return;
+    const handleNewComment = (data) => {
+      if (data.articleId && data.comment) {
+        setComments(prev => {
+          if (prev.some(c => c._id === data.comment._id)) return prev;
+          return [data.comment, ...prev];
         });
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-        // Clear draft & form
-        localStorage.removeItem(draftKey);
-        setCommentText('');
-        setCommentSentiment('neutral');
-        setIsAnonymous(false);
-
-        // Refresh comments
-        if (selectedDiscussion) {
-          const refreshRes = await fetch(
-            `${API_BASE}/collab/comments/${selectedDiscussion.articleId}`
-          );
-          if (refreshRes.ok) {
-            const data = await refreshRes.json();
-            setComments(data.comments || []);
-          }
-        }
-      } catch (err) {
-        setSubmitError(err.message);
-      } finally {
-        setSubmitting(false);
       }
-    },
-    [commentText, commentSentiment, isAnonymous, isOverLimit, selectedDiscussion, draftKey]
-  );
-
-  const handleReply = useCallback(async () => {
-    // Refresh comments after a reply is posted
-    if (!selectedDiscussion) return;
-    try {
-      const res = await fetch(
-        `${API_BASE}/collab/comments/${selectedDiscussion.articleId}`
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setComments(data.comments || []);
+    };
+    const handleCommentLike = (data) => {
+      if (data.commentId) {
+        setComments(prev => prev.map(c => c._id === data.commentId ? { ...c, likes: data.likes, likeCount: data.likeCount } : c));
       }
-    } catch {
-      // silently fail refresh
-    }
-  }, [selectedDiscussion]);
+    };
+    socket.on('comment:new', handleNewComment);
+    socket.on('comment:like', handleCommentLike);
+    return () => {
+      socket.off('comment:new', handleNewComment);
+      socket.off('comment:like', handleCommentLike);
+    };
+  }, [socket]);
 
-  const handleDiscussionSelect = useCallback((discussion) => {
-    setSelectedDiscussion(discussion);
-  }, []);
-
-  // ── Sentiment chip helper ──
-  const sentimentChips = [
-    { key: 'all', label: t('all') },
-    { key: 'positive', label: t('positive') },
-    { key: 'negative', label: t('negative') },
-    { key: 'neutral', label: t('neutral') },
-  ];
+  if (loading) {
+    return (
+      <div className="max-w-5xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-black dark:text-white tracking-tight" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+            {t('community') || 'Community'}
+          </h1>
+          <div className="mt-3 border-b border-[#e5e5e5] dark:border-[#222]" />
+        </div>
+        <div className="space-y-3 animate-pulse">
+          <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded" />
+          <div className="h-16 bg-gray-100 dark:bg-gray-800 rounded" />
+          <div className="h-16 bg-gray-100 dark:bg-gray-800 rounded" />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950 text-black dark:text-white font-sans">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
-        {/* ── Header ── */}
-        <header className="mb-8 border-b border-black/10 dark:border-white/10 pb-4">
-          <h1 className="font-serif text-3xl font-bold tracking-tight">
-            {t('communityTitle')}
-          </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {t('discussions')} &middot; {t('comments')}
-          </p>
-        </header>
+    <div className="max-w-5xl mx-auto">
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-black dark:text-white tracking-tight" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+          {t('community') || 'Community'}
+        </h1>
+        <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500 dark:text-[#999] mt-1">
+          Discussion threads, hot takes, and community sentiment across Malaysian news
+        </p>
+        <div className="mt-3 border-b border-[#e5e5e5] dark:border-[#222]" />
+      </div>
 
-        {/* ── Discussion Selector / Tabs ── */}
-        <section className="mb-8">
-          <h2 className="font-serif text-xl font-semibold mb-3 text-red-700">
-            {t('discussions')}
-          </h2>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left: Main content */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Tab Switcher */}
+          <div className="flex border-b border-[#e5e5e5] dark:border-[#222]">
+            <button
+              onClick={() => setActiveTab('discussions')}
+              className={`px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.15em] border-b-2 transition-colors ${activeTab === 'discussions' ? 'border-ink dark:border-paper text-ink dark:text-paper' : 'border-transparent text-ink-faint hover:text-ink-muted'}`}
+            >
+              Article Discussions
+            </button>
+            <button
+              onClick={() => setActiveTab('posts')}
+              className={`px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.15em] border-b-2 transition-colors ${activeTab === 'posts' ? 'border-ink dark:border-paper text-ink dark:text-paper' : 'border-transparent text-ink-faint hover:text-ink-muted'}`}
+            >
+              Community Posts
+            </button>
+          </div>
 
-          {discussionsLoading && (
-            <p className="text-sm text-gray-500 dark:text-gray-400">{t('loading')}</p>
-          )}
-
-          {discussionsError && (
-            <p className="text-sm text-red-700">{discussionsError}</p>
-          )}
-
-          {!discussionsLoading && !discussionsError && discussions.length === 0 && (
-            <p className="text-sm text-gray-500 dark:text-gray-400">{t('noComments')}</p>
-          )}
-
-          {discussions.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {discussions.map((d) => {
-                const isActive = selectedDiscussion?.articleId === d.articleId;
-                return (
-                  <button
-                    key={d.articleId}
-                    onClick={() => handleDiscussionSelect(d)}
-                    className={`
-                      px-4 py-2 text-sm font-medium border transition-colors
-                      ${
-                        isActive
-                          ? 'bg-red-700 text-white border-red-700'
-                          : 'bg-white dark:bg-gray-950 text-black dark:text-white border-black/10 dark:border-white/10 hover:border-red-700 hover:text-red-700'
-                      }
-                    `}
-                  >
-                    {d.articleTitle || `${t('discussions')} #${d.articleId}`}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </section>
-
-        {/* ── Sort & Filter Controls ── */}
-        {selectedDiscussion && (
-          <section className="mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
-            {/* Sort Dropdown */}
-            <div className="flex items-center gap-2">
-              <label
-                htmlFor="sort-select"
-                className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 font-medium"
-              >
-                {t('sortBy')}
-              </label>
-              <select
-                id="sort-select"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="border border-black/10 dark:border-white/10 bg-white dark:bg-gray-950 text-black dark:text-white text-sm px-3 py-1.5 focus:outline-none focus:border-red-700"
-              >
-                <option value="newest">{t('newest')}</option>
-                <option value="oldest">{t('oldest')}</option>
-                <option value="mostLiked">{t('mostLiked')}</option>
-              </select>
-            </div>
-
-            {/* Sentiment Filter Chips */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 font-medium">
-                {t('filterBySentiment')}
-              </span>
-              <div className="flex gap-1">
-                {sentimentChips.map((chip) => {
-                  const isActive = sentimentFilter === chip.key;
-                  const chipColors = {
-                    all: isActive
-                      ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 border-gray-800 dark:border-gray-200'
-                      : 'border-gray-400 dark:border-gray-500 text-gray-600 dark:text-gray-300',
-                    positive: isActive
-                      ? 'bg-green-700 text-white border-green-700'
-                      : 'border-green-600/40 text-green-700 dark:text-green-400',
-                    negative: isActive
-                      ? 'bg-red-700 text-white border-red-700'
-                      : 'border-red-600/40 text-red-700 dark:text-red-400',
-                    neutral: isActive
-                      ? 'bg-amber-600 text-white border-amber-600'
-                      : 'border-amber-500/40 text-amber-700 dark:text-amber-400',
-                  };
-                  return (
-                    <button
-                      key={chip.key}
-                      onClick={() => setSentimentFilter(chip.key)}
-                      className={`
-                        inline-block px-3 py-1 text-xs font-medium border transition-colors
-                        ${chipColors[chip.key]}
-                      `}
-                    >
-                      {chip.label}
+          {/* ── Article Discussions Tab ── */}
+          {activeTab === 'discussions' && (
+            <div className="space-y-4">
+              {/* Discussion of the Day */}
+              {dotd && dotd.articleId && (
+                <div className={`${CARD} overflow-hidden border-l-2`} style={{ borderLeftColor: '#f59e0b' }}>
+                  <div className="px-4 py-3 bg-amber-50/50 dark:bg-amber-950/10">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">Discussion of the Day</span>
+                      <span className="text-[10px] text-ink-faint">{'\uD83D\uDD25'}</span>
+                    </div>
+                    <button onClick={() => loadComments(dotd.articleId._id)} className="w-full text-left">
+                      <h4 className="text-sm font-semibold text-ink dark:text-paper leading-snug mb-1">
+                        {dotd.articleId.title}
+                      </h4>
+                      <div className="flex items-center gap-3 text-[10px] text-ink-faint">
+                        <span className="font-semibold uppercase tracking-wider">{dotd.articleId.source}</span>
+                        <span>\u00b7</span>
+                        <span>{dotd.commentCount} comment{dotd.commentCount !== 1 ? 's' : ''}</span>
+                        {dotd.reason && <><span>\u00b7</span><span className="italic">{dotd.reason}</span></>}
+                      </div>
                     </button>
+                  </div>
+
+                  {expandedId === dotd.articleId._id && (
+                    <div className="border-t border-[#e5e5e5] dark:border-[#222]">
+                      <div className="p-3 border-b border-[#e5e5e5] dark:border-[#222] bg-gray-50/50 dark:bg-white/[0.01]">
+                        <div className="flex items-center gap-2 mb-2">
+                          <button onClick={() => setIsAnonymous(!isAnonymous)}
+                            className={`flex items-center gap-1 px-2 py-1 text-[10px] font-medium border transition-colors ${isAnonymous ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/20 text-amber-600' : 'border-[#e5e5e5] dark:border-[#333] text-ink-faint'}`}>
+                            {isAnonymous ? '\uD83D\uDC64' : '\uD83E\uDDD1'} {isAnonymous ? 'Anonymous' : 'Visible'}
+                          </button>
+                        </div>
+                        <div className="flex gap-2">
+                          <input type="text" value={newComment} onChange={(e) => setNewComment(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && submitComment(dotd.articleId._id)}
+                            placeholder="Add a comment..."
+                            className="flex-1 px-3 py-2 text-sm border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#0a0a0a] text-ink dark:text-paper placeholder:text-ink-faint focus:outline-none focus:border-ink dark:focus:border-paper transition-colors" />
+                          <button onClick={() => submitComment(dotd.articleId._id)} disabled={!newComment.trim() || submitting}
+                            className="px-3 py-2 text-xs font-semibold uppercase tracking-wider bg-ink dark:bg-paper text-paper dark:text-ink hover:opacity-80 disabled:opacity-30 transition-all">
+                            Post
+                          </button>
+                        </div>
+                      </div>
+                      {commentsLoading ? (
+                        <div className="p-4 animate-pulse space-y-2"><div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4" /></div>
+                      ) : (
+                        <div className="max-h-60 overflow-y-auto divide-y divide-[#e5e5e5] dark:divide-[#222]">
+                          {comments.map(c => <CommentItem key={c._id} c={c} onLike={likeComment} timeAgo={timeAgo} sentimentColor={sentimentColor} onUserClick={setViewingUserId} currentUserId={user?._id || user?.id} onReact={reactToComment} />)}
+                          {comments.length === 0 && <div className="p-4 text-center text-xs text-ink-faint">No comments yet.</div>}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Recent Discussions */}
+              <div>
+                <h3 className="text-[10px] font-bold uppercase tracking-widest text-ink-muted dark:text-ink-faint mb-2 px-1">
+                  Recent Discussions
+                </h3>
+                {!discussions.length ? (
+                  <div className={`${CARD} p-8 text-center`}>
+                    <MessageSquare size={24} className="mx-auto mb-2 text-ink-faint" />
+                    <p className="text-sm text-ink-faint">No discussions yet.</p>
+                    <p className="text-xs text-ink-faint mt-1">Open an article and leave a comment to start.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {discussions.map(d => (
+                      <div key={d.articleId} className={`${CARD} overflow-hidden`}>
+                        <button onClick={() => loadComments(d.articleId)}
+                          className="w-full text-left p-4 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
+                          <div className="flex-shrink-0 pt-0.5"><SentimentMarkInline sentiment={d.articleSentiment} /></div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-semibold text-ink dark:text-paper leading-snug line-clamp-1 mb-1">
+                              {d.articleTitle || 'Untitled'}
+                            </h4>
+                            <p className="text-xs text-ink-muted dark:text-ink-faint line-clamp-1 mb-1.5">
+                              {d.lastIsAnonymous ? '\uD83D\uDC64 ' : ''}{d.userName}: &ldquo;{d.lastComment}&rdquo;
+                            </p>
+                            <div className="flex items-center gap-3 text-[10px] text-ink-faint">
+                              <span className="font-semibold uppercase tracking-wider">{d.articleSource || 'Unknown'}</span>
+                              <span>\u00b7</span>
+                              <span>{d.commentCount} comment{d.commentCount !== 1 ? 's' : ''}</span>
+                              <span>\u00b7</span>
+                              <span>{timeAgo(d.lastCommentAt)}</span>
+                            </div>
+                          </div>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                            className={`flex-shrink-0 text-ink-faint transition-transform ${expandedId === d.articleId ? 'rotate-180' : ''}`}>
+                            <polyline points="6 9 12 15 18 9"/>
+                          </svg>
+                        </button>
+
+                        {expandedId === d.articleId && (
+                          <div className="border-t border-[#e5e5e5] dark:border-[#222]">
+                            <div className="p-3 border-b border-[#e5e5e5] dark:border-[#222] bg-gray-50/50 dark:bg-white/[0.01]">
+                              <div className="flex items-center gap-2 mb-2">
+                                <button onClick={() => setIsAnonymous(!isAnonymous)}
+                                  className={`flex items-center gap-1 px-2 py-1 text-[10px] font-medium border transition-colors ${isAnonymous ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/20 text-amber-600' : 'border-[#e5e5e5] dark:border-[#333] text-ink-faint'}`}>
+                                  {isAnonymous ? '\uD83D\uDC64' : '\uD83E\uDDD1'} {isAnonymous ? 'Anonymous' : 'Visible'}
+                                </button>
+                              </div>
+                              <div className="flex gap-2">
+                                <input type="text" value={newComment} onChange={(e) => setNewComment(e.target.value)}
+                                  onKeyDown={(e) => e.key === 'Enter' && submitComment(d.articleId)}
+                                  placeholder="Add a comment..."
+                                  className="flex-1 px-3 py-2 text-sm border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#0a0a0a] text-ink dark:text-paper placeholder:text-ink-faint focus:outline-none focus:border-ink dark:focus:border-paper transition-colors" />
+                                <button onClick={() => submitComment(d.articleId)} disabled={!newComment.trim() || submitting}
+                                  className="px-3 py-2 text-xs font-semibold uppercase tracking-wider bg-ink dark:bg-paper text-paper dark:text-ink hover:opacity-80 disabled:opacity-30 transition-all">
+                                  Post
+                                </button>
+                              </div>
+                            </div>
+                            {commentsLoading ? (
+                              <div className="p-4 animate-pulse space-y-2"><div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4" /></div>
+                            ) : (
+                              <div className="max-h-60 overflow-y-auto divide-y divide-[#e5e5e5] dark:divide-[#222]">
+                                {comments.map(c => <CommentItem key={c._id} c={c} onLike={likeComment} timeAgo={timeAgo} sentimentColor={sentimentColor} onUserClick={setViewingUserId} currentUserId={user?._id || user?.id} onReact={reactToComment} />)}
+                                {comments.length === 0 && <div className="p-4 text-center text-xs text-ink-faint">No comments yet.</div>}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Community Posts Tab ── */}
+          {activeTab === 'posts' && (
+            <div className="space-y-3">
+              {/* Share Your Take compose box */}
+              <div className={`${CARD} p-4`}>
+                <h3 className="text-[10px] font-bold uppercase tracking-widest text-ink-muted dark:text-ink-faint mb-3 flex items-center gap-1.5">
+                  <PenLine size={12} /> Share Your Take
+                </h3>
+                <textarea
+                  value={postContent}
+                  onChange={(e) => setPostContent(e.target.value)}
+                  placeholder="What's on your mind? Share your thoughts on Malaysian news..."
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#0a0a0a] text-ink dark:text-paper placeholder:text-ink-faint focus:outline-none focus:border-ink dark:focus:border-paper transition-colors resize-none"
+                />
+                <div className="flex items-center justify-between mt-2">
+                  <button onClick={() => setPostAnonymous(!postAnonymous)}
+                    className={`flex items-center gap-1 px-2 py-1 text-[10px] font-medium border transition-colors ${postAnonymous ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/20 text-amber-600' : 'border-[#e5e5e5] dark:border-[#333] text-ink-faint'}`}>
+                    {postAnonymous ? '\uD83D\uDC64' : '\uD83E\uDDD1'} {postAnonymous ? 'Anonymous' : 'Visible'}
+                  </button>
+                  <button onClick={submitPost} disabled={!postContent.trim() || posting}
+                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold uppercase tracking-wider bg-ink dark:bg-paper text-paper dark:text-ink hover:opacity-80 disabled:opacity-30 transition-all">
+                    <Send size={12} />
+                    {posting ? 'Posting...' : 'Post'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Community Posts feed */}
+              {communityPosts.length === 0 ? (
+                <div className={`${CARD} p-8 text-center`}>
+                  <Users size={24} className="mx-auto mb-2 text-ink-faint" />
+                  <p className="text-sm text-ink-faint">No community posts yet.</p>
+                  <p className="text-xs text-ink-faint mt-1">Be the first to share your take!</p>
+                </div>
+              ) : (
+                communityPosts.map(post => (
+                  <div key={post._id} className={`${CARD} p-4`}>
+                    <div className="flex items-center gap-2.5 mb-2">
+                      {post.isAnonymous ? (
+                        <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] text-ink-faint">?</div>
+                      ) : post.user?.avatar ? (
+                        <img src={post.user.avatar} alt={post.user.name} className="w-7 h-7 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-7 h-7 rounded-full bg-accent/10 text-accent flex items-center justify-center text-[10px] font-bold">
+                          {(post.user?.name || 'A').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                      <span className={`text-xs font-semibold ${post.isAnonymous ? 'text-ink-faint' : 'text-ink dark:text-paper'}`}>
+                        {post.isAnonymous ? 'Anonymous' : (post.user?.name || 'Anonymous')}
+                      </span>
+                      <span className="text-[10px] text-ink-faint ml-auto">{timeAgo(post.createdAt)}</span>
+                    </div>
+                    <p className="text-sm text-ink-secondary dark:text-ink-muted leading-relaxed">{post.content}</p>
+                    <div className="flex items-center gap-3 mt-2 pt-2 border-t border-[#e5e5e5] dark:border-[#222]">
+                      <span className="flex items-center gap-1 text-[10px] text-ink-faint">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                        </svg>
+                        {post.likes?.length || 0}
+                      </span>
+                      <span className="flex items-center gap-1 text-[10px] text-ink-faint">
+                        <MessageCircle size={11} />
+                        {post.commentCount || 0}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Right: Sidebar */}
+        <div className="space-y-4">
+          {/* Sentiment Pulse */}
+          {sentimentPulse && sentimentPulse.sentiments?.length > 0 && (
+            <div className={`${CARD} p-4`}>
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-ink-muted dark:text-ink-faint mb-3 flex items-center gap-1.5">
+                {'\uD83D\uDCA4'} Sentiment Pulse <span className="text-ink-faint font-normal">7d</span>
+              </h3>
+              <div className="space-y-2">
+                {sentimentPulse.sentiments.map(s => {
+                  const color = s.sentiment === 'Positive' ? '#4ADE80' : s.sentiment === 'Negative' ? '#FB7185' : '#FBBF24';
+                  return (
+                    <div key={s.sentiment}>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-[11px] font-medium text-ink dark:text-paper">{s.sentiment}</span>
+                        <span className="text-[10px] text-ink-faint">{s.count} ({s.percentage}%)</span>
+                      </div>
+                      <div className="w-full h-2 bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                        <div
+                          className="h-full transition-all duration-700"
+                          style={{ width: `${s.percentage}%`, background: color }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-[9px] text-ink-faint mt-2 text-center">
+                {sentimentPulse.total} comments this week
+              </p>
+            </div>
+          )}
+
+          {/* Trending Keywords */}
+          {trendingKeywords.length > 0 && (
+            <div className={`${CARD} p-4`}>
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-ink-muted dark:text-ink-faint mb-3 flex items-center gap-1.5">
+                {'\uD83D\uDD2D'} Trending Keywords
+              </h3>
+              <div className="flex flex-wrap gap-1.5">
+                {trendingKeywords.map((kw, i) => {
+                  const isTop = i < 3;
+                  return (
+                    <span
+                      key={kw.word}
+                      className={`inline-block px-2 py-0.5 border transition-colors cursor-default ${
+                        isTop
+                          ? 'text-[11px] font-semibold border-ink/30 dark:border-paper/30 text-ink dark:text-paper'
+                          : 'text-[10px] border-[#e5e5e5] dark:border-[#333] text-ink-muted dark:text-ink-faint'
+                      }`}
+                    >
+                      {kw.word}
+                      <span className="ml-1 text-[8px] opacity-50">{kw.count}</span>
+                    </span>
                   );
                 })}
               </div>
             </div>
-          </section>
-        )}
+          )}
 
-        {/* ── Comment Form ── */}
-        {selectedDiscussion && (
-          <section className="mb-8">
-            <form onSubmit={handleSubmit}>
-              <div className="border border-black/10 dark:border-white/10">
-                {/* Textarea */}
-                <textarea
-                  ref={textareaRef}
-                  value={commentText}
-                  onChange={handleTextChange}
-                  placeholder={t('writeComment')}
-                  rows={4}
-                  className="w-full p-4 bg-white dark:bg-gray-950 text-black dark:text-white text-sm resize-none focus:outline-none placeholder-gray-400 dark:placeholder-gray-500"
-                />
-
-                {/* Character Counter Bar */}
-                <div className="h-1 w-full bg-gray-200 dark:bg-gray-700">
-                  <div
-                    className={`h-full transition-all duration-200 ${
-                      isOverLimit
-                        ? 'bg-red-700'
-                        : isNearLimit
-                          ? 'bg-amber-500'
-                          : 'bg-red-700'
-                    }`}
-                    style={{ width: `${charPercent}%` }}
-                  />
-                </div>
-
-                {/* Controls Row */}
-                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-black/10 dark:border-white/10">
-                  {/* Left: sentiment selector, anonymous toggle */}
-                  <div className="flex flex-wrap items-center gap-4">
-                    {/* Sentiment radio buttons */}
-                    <div className="flex items-center gap-3">
-                      {['positive', 'negative', 'neutral'].map((s) => (
-                        <label
-                          key={s}
-                          className="flex items-center gap-1.5 cursor-pointer text-xs"
-                        >
-                          <input
-                            type="radio"
-                            name="commentSentiment"
-                            value={s}
-                            checked={commentSentiment === s}
-                            onChange={() => handleSentimentChange(s)}
-                            className="accent-red-700"
-                          />
-                          <span className="capitalize">{t(s)}</span>
-                        </label>
-                      ))}
+          {/* Leaderboard */}
+          {leaderboard.length > 0 && (
+            <div className={`${CARD} p-4`}>
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-ink-muted dark:text-ink-faint mb-3 flex items-center gap-1.5">
+                {'\uD83C\uDFC6'} Top Contributors <span className="text-ink-faint font-normal">7d</span>
+              </h3>
+              <div className="space-y-2">
+                {leaderboard.map((u, i) => {
+                  const lbInitials = (u.name || 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+                  const medals = ['\uD83E\uDD47', '\uD83E\uDD48', '\uD83E\uDD49'];
+                  return (
+                    <div key={u.userId} className="flex items-center gap-2.5 py-1">
+                      <span className="text-sm w-5 text-center">{i < 3 ? medals[i] : <span className="text-[10px] text-ink-faint">{i + 1}</span>}</span>
+                      {u.avatar ? (
+                        <img src={u.avatar} alt={u.name} className="w-6 h-6 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-accent/10 text-accent flex items-center justify-center text-[8px] font-bold">{lbInitials}</div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[11px] font-semibold text-ink dark:text-paper truncate block">{u.name}</span>
+                        <span className="text-[9px] text-ink-faint">{u.commentCount} comments \u00b7 {u.totalLikes} likes</span>
+                      </div>
                     </div>
-
-                    {/* Anonymous toggle */}
-                    <label className="flex items-center gap-1.5 cursor-pointer text-xs">
-                      <input
-                        type="checkbox"
-                        checked={isAnonymous}
-                        onChange={handleAnonymousToggle}
-                        className="accent-red-700"
-                      />
-                      <span>{t('postAsAnonymous')}</span>
-                    </label>
-                  </div>
-
-                  {/* Right: char count, draft indicator, submit */}
-                  <div className="flex items-center gap-3">
-                    {/* Draft saved indicator */}
-                    {showDraftSaved && (
-                      <span className="text-xs text-green-700 animate-pulse">
-                        {t('draftSaved')}
-                      </span>
-                    )}
-
-                    {/* Clear draft */}
-                    {commentText.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={clearDraft}
-                        className="text-xs text-gray-500 dark:text-gray-400 hover:text-red-700 transition-colors underline"
-                      >
-                        {t('clearDraft')}
-                      </button>
-                    )}
-
-                    {/* Character count */}
-                    <span
-                      className={`text-xs font-mono ${
-                        isOverLimit
-                          ? 'text-red-700 font-bold'
-                          : isNearLimit
-                            ? 'text-amber-600'
-                            : 'text-gray-500 dark:text-gray-400'
-                      }`}
-                    >
-                      {charCount}/{CHAR_LIMIT}
-                      {isOverLimit && ` — ${t('tooLong')}`}
-                    </span>
-
-                    {/* Submit button */}
-                    <button
-                      type="submit"
-                      disabled={submitting || !commentText.trim() || isOverLimit}
-                      className="px-5 py-2 text-sm font-semibold bg-red-700 text-white hover:bg-red-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    >
-                      {submitting ? t('loading') : t('postComment')}
-                    </button>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
+            </div>
+          )}
 
-              {/* Submit error */}
-              {submitError && (
-                <p className="mt-2 text-xs text-red-700">{submitError}</p>
-              )}
-            </form>
-          </section>
-        )}
+          {/* Community Polls */}
+          <div className={`${CARD} p-4`}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-ink-muted dark:text-ink-faint flex items-center gap-1.5">
+                <BarChart3 size={12} /> Community Polls
+              </h3>
+              <button onClick={() => setShowCreatePoll(!showCreatePoll)}
+                className="text-[10px] text-ink-faint hover:text-ink dark:hover:text-paper transition-colors">
+                <Plus size={14} />
+              </button>
+            </div>
 
-        {/* ── Comments List ── */}
-        {selectedDiscussion && (
-          <section>
-            <h2 className="font-serif text-lg font-semibold mb-4">
-              {t('comments')}{' '}
-              <span className="text-sm font-sans font-normal text-gray-500 dark:text-gray-400">
-                ({filteredComments.length})
-              </span>
-            </h2>
-
-            {commentsLoading && (
-              <p className="text-sm text-gray-500 dark:text-gray-400">{t('loading')}</p>
-            )}
-
-            {commentsError && (
-              <p className="text-sm text-red-700">{commentsError}</p>
-            )}
-
-            {!commentsLoading && !commentsError && filteredComments.length === 0 && (
-              <div className="border border-black/10 dark:border-white/10 p-8 text-center">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {t('noComments')}
-                </p>
-              </div>
-            )}
-
-            {!commentsLoading && filteredComments.length > 0 && (
-              <div className="space-y-0">
-                {filteredComments.map((comment) => (
-                  <CommentItem
-                    key={comment.id}
-                    comment={comment}
-                    onReply={handleReply}
+            {showCreatePoll && (
+              <div className="mb-3 pb-3 border-b border-[#e5e5e5] dark:border-[#222] space-y-2">
+                <input
+                  type="text"
+                  value={pollQuestion}
+                  onChange={(e) => setPollQuestion(e.target.value)}
+                  placeholder="Poll question..."
+                  className="w-full px-2.5 py-1.5 text-xs border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#0a0a0a] text-ink dark:text-paper placeholder:text-ink-faint focus:outline-none focus:border-ink dark:focus:border-paper transition-colors"
+                />
+                {pollOptions.map((opt, i) => (
+                  <input
+                    key={i}
+                    type="text"
+                    value={opt}
+                    onChange={(e) => {
+                      const updated = [...pollOptions];
+                      updated[i] = e.target.value;
+                      setPollOptions(updated);
+                    }}
+                    placeholder={`Option ${i + 1}`}
+                    className="w-full px-2.5 py-1.5 text-xs border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#0a0a0a] text-ink dark:text-paper placeholder:text-ink-faint focus:outline-none focus:border-ink dark:focus:border-paper transition-colors"
                   />
                 ))}
+                {pollOptions.length < 6 && (
+                  <button onClick={() => setPollOptions([...pollOptions, ''])}
+                    className="text-[10px] text-ink-faint hover:text-ink dark:hover:text-paper transition-colors">
+                    + Add option
+                  </button>
+                )}
+                <button onClick={createPoll}
+                  disabled={!pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2}
+                  className="w-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider bg-ink dark:bg-paper text-paper dark:text-ink hover:opacity-80 disabled:opacity-30 transition-all">
+                  Create Poll
+                </button>
               </div>
             )}
-          </section>
-        )}
 
-        {/* ── No discussion selected ── */}
-        {!selectedDiscussion && !discussionsLoading && (
-          <div className="border border-black/10 dark:border-white/10 p-12 text-center">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {t('discussions')} — {t('loading')}
-            </p>
+            {polls.length === 0 ? (
+              <p className="text-xs text-ink-faint text-center py-2">No active polls.</p>
+            ) : (
+              <div className="space-y-3">
+                {polls.map(poll => {
+                  const totalVotes = poll.options?.reduce((sum, o) => sum + (o.votes || 0), 0) || 0;
+                  return (
+                    <div key={poll._id} className="space-y-1.5">
+                      <p className="text-xs font-semibold text-ink dark:text-paper leading-snug">{poll.question}</p>
+                      {poll.options?.map((opt, i) => {
+                        const pct = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
+                        const userVoted = poll.userVote === i;
+                        return (
+                          <button key={i} onClick={() => votePoll(poll._id, i)}
+                            className={`relative w-full text-left px-2.5 py-1.5 text-[11px] border overflow-hidden transition-colors ${
+                              userVoted ? 'border-accent bg-accent/10 text-accent font-semibold' : 'border-[#e5e5e5] dark:border-[#222] text-ink-muted dark:text-ink-faint hover:border-ink/30 dark:hover:border-paper/30'
+                            }`}>
+                            <div className="absolute inset-0 bg-gray-100 dark:bg-white/5 transition-all duration-500"
+                              style={{ width: `${pct}%` }} />
+                            <span className="relative flex items-center justify-between">
+                              <span>{opt.text}</span>
+                              <span className="text-[9px] opacity-70">{pct}%</span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                      <p className="text-[9px] text-ink-faint">{totalVotes} vote{totalVotes !== 1 ? 's' : ''}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Hot Takes */}
+          {hotTakes.length > 0 && (
+            <div className={`${CARD} p-4`}>
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-ink-muted dark:text-ink-faint mb-3 flex items-center gap-1.5">
+                {'\uD83D\uDD25'} Hot Takes <span className="text-ink-faint font-normal">this week</span>
+              </h3>
+              <div className="space-y-2">
+                {hotTakes.map((ht, i) => (
+                  <button key={ht.articleId} onClick={() => loadComments(ht.articleId)}
+                    className="w-full text-left flex items-start gap-3 p-2 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
+                    <span className="text-lg font-bold text-ink-faint w-6 text-right" style={{ fontFamily: 'monospace' }}>{i + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-xs font-semibold text-ink dark:text-paper leading-snug line-clamp-2 mb-0.5">
+                        {ht.articleTitle || 'Untitled'}
+                      </h4>
+                      <div className="flex flex-wrap items-center gap-2 text-[10px] text-ink-faint">
+                        <span className="font-semibold uppercase tracking-wider">{ht.articleSource || '?'}</span>
+                        <span>\u00b7</span>
+                        <span>{ht.commentCount} comment{ht.commentCount !== 1 ? 's' : ''}</span>
+                        {ht.controversy > 30 && (
+                          <>
+                            <span>\u00b7</span>
+                            <span className="text-amber-500 font-semibold">{'\u26A1'} {ht.controversy}%</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    {ht.articleSentiment && (
+                      <span className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5" style={{ background: sentimentColor(ht.articleSentiment) }} />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* User Profile Modal */}
+      {viewingUserId && (
+        <UserProfileModal userId={viewingUserId} onClose={() => setViewingUserId(null)} />
+      )}
     </div>
   );
 };
