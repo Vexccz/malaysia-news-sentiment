@@ -614,19 +614,41 @@ const Heatmap = () => {
         </motion.div>
       )}
 
-      {/* ── Legend ── */}
-      <div className="flex items-center justify-center gap-4 py-3 border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#111] flex-wrap">
-        {[
-          { color: '#4ADE80', label: 'Positive' },
-          { color: '#FBBF24', label: 'Neutral' },
-          { color: '#FB7185', label: 'Negative' },
-          { color: '#6b7280', label: 'No data' },
-        ].map(item => (
-          <div key={item.label} className="flex items-center gap-1.5">
-            <div className="w-3 h-3" style={{ backgroundColor: item.color }} />
-            <span className="text-[10px] text-gray-500 dark:text-[#999] uppercase tracking-[0.18em]">{item.label}</span>
-          </div>
-        ))}
+      {/* ── Legend (upgraded with gradient color scale + intensity) ── */}
+      <div className="border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#111] px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-3 justify-between">
+        {/* Sentiment swatches */}
+        <div className="flex items-center gap-4 flex-wrap">
+          <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-gray-500 dark:text-[#888]">Sentiment</span>
+          {[
+            { color: '#4ADE80', label: 'Positive' },
+            { color: '#FBBF24', label: 'Neutral' },
+            { color: '#FB7185', label: 'Negative' },
+            { color: '#6b7280', label: 'No data' },
+          ].map(item => (
+            <div key={item.label} className="flex items-center gap-1.5">
+              <div className="w-3 h-3" style={{ backgroundColor: item.color }} />
+              <span className="text-[10px] text-gray-500 dark:text-[#999] uppercase tracking-[0.18em]">{item.label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Gradient intensity scale */}
+        <div className="flex items-center gap-3">
+          <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-gray-500 dark:text-[#888]">Intensity</span>
+          <span className="text-[10px] text-gray-500 dark:text-[#999] uppercase tracking-[0.12em]">Low</span>
+          <div
+            className="h-3 w-32"
+            style={{
+              background:
+                'linear-gradient(90deg, rgba(107,114,128,0.25), rgba(251,191,36,0.85), rgba(74,222,128,0.95))',
+            }}
+          />
+          <span className="text-[10px] text-gray-500 dark:text-[#999] uppercase tracking-[0.12em]">High</span>
+        </div>
+
+        <p className="text-[10px] italic text-gray-400 dark:text-[#666] font-serif">
+          Hover any state for article preview. Click to open drill-down.
+        </p>
       </div>
 
       {/* ── State Drill-Down Side Panel ── */}
