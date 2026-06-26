@@ -3,6 +3,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion';
 import { ExternalLink, Bookmark, BookmarkCheck, Share2, Copy, X } from 'lucide-react';
 import SentimentBadge from './SentimentBadge';
+import ContextMenu from './ContextMenu';
 import { useArticleAnalysis } from '../context/ArticleAnalysisContext';
 
 // ─── Sentiment border color map ─────────────────────────────────────────────
@@ -217,6 +218,7 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
   const [actionSheetOpen, setActionSheetOpen] = useState(false);
   const [swipeHintDir, setSwipeHintDir] = useState(null);
   const [copiedToast, setCopiedToast] = useState(false);
+  const [contextMenu, setContextMenu] = useState(null); // { x, y } or null
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const { openArticlePanel } = useArticleAnalysis();
 
@@ -359,6 +361,10 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
           dragElastic={0.3}
           onDragEnd={isMobile ? handleSwipeEnd : undefined}
           onClick={handleCardClick}
+          onContextMenu={isMobile ? undefined : (e) => {
+            e.preventDefault();
+            setContextMenu({ x: e.clientX, y: e.clientY });
+          }}
           {...(isMobile ? longPress : {})}
           style={isMobile ? { x, touchAction: 'pan-y' } : {}}
           className={`relative z-20 bg-white dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222] border-l-[3px] ${borderColor} py-4 px-5 hover:bg-[#fafafa] dark:hover:bg-[#161616] transition-[background-color] cursor-pointer select-none`}
@@ -503,6 +509,45 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
           onShare={handleShare}
           onCopyLink={handleCopyLink}
           isBookmarked={isBookmarked}
+        />
+      )}
+
+      {/* Desktop right-click context menu (Feature 9) */}
+      {!isMobile && contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          items={[
+            {
+              label: isBookmarked ? 'Remove Bookmark' : 'Bookmark Article',
+              icon: isBookmarked ? <BookmarkCheck className="w-3.5 h-3.5" /> : <Bookmark className="w-3.5 h-3.5" />,
+              onClick: handleBookmark,
+              accent: isBookmarked,
+            },
+            { label: 'Share Article', icon: <Share2 className="w-3.5 h-3.5" />, onClick: handleShare, shortcut: 'S' },
+            { label: 'Copy Link', icon: <Copy className="w-3.5 h-3.5" />, onClick: handleCopyLink, shortcut: 'C' },
+            'divider',
+            { label: 'Open Original', icon: <ExternalLink className="w-3.5 h-3.5" />, onClick: handleOpenExternal, shortcut: 'O' },
+            { label: 'View Source Page', onClick: () => {
+              try {
+                const u = new URL(article.url);
+                window.open(`${u.protocol}//${u.hostname}`, '_blank', 'noopener,noreferrer');
+              } catch { /* invalid url */ }
+            }},
+            'divider',
+            { label: 'Add to Digest', onClick: () => {
+              try {
+                const key = 'digest-queue';
+                const prev = JSON.parse(localStorage.getItem(key) || '[]');
+                const id = article._id || article.id;
+                if (id && !prev.includes(id)) {
+                  prev.push(id);
+                  localStorage.setItem(key, JSON.stringify(prev));
+                }
+              } catch { /* localStorage blocked */ }
+            }},
+          ]}
         />
       )}
     </>
