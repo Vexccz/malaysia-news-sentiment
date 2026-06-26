@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import ThemeToggle from './ThemeToggle';
+import QuickStatsBar from './QuickStatsBar';
 
 const navItems = [
   { path: '/dashboard', labelKey: 'dashboard', tourId: 'dashboard', icon: (
@@ -289,6 +290,7 @@ const Layout = ({ children }) => {
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-8">
+          <QuickStatsBar />
           {children}
         </main>
       </div>
