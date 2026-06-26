@@ -35,6 +35,22 @@ import {
   Hash,
 } from 'lucide-react';
 
+/* Page Interactive Animations */
+const PAGE_ANIMS = `
+@keyframes fadeInUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+@keyframes slideOutLeft { to{opacity:0;transform:translateX(-100%)} }
+@keyframes slideInTop { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes sentimentFlash { 0%{filter:brightness(1)} 50%{filter:brightness(1.6)} 100%{filter:brightness(1)} }
+@keyframes barFill { from{width:0} to{width:var(--bar-w)} }
+@keyframes starPop { 0%{transform:scale(1)} 30%{transform:scale(1.5)} 60%{transform:scale(0.9)} 100%{transform:scale(1)} }
+@keyframes ripple { to{transform:scale(4);opacity:0} }
+@keyframes checkDraw { from{stroke-dashoffset:50} to{stroke-dashoffset:0} }
+@keyframes progressPulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+`;
+const AnimCSS = () => <style dangerouslySetInnerHTML={{__html: PAGE_ANIMS}}/>;
+
+
+
 // ─── Tag persistence (localStorage) ────────────────────────────────────────────
 const TAGS_STORAGE_KEY = 'bookmark_tags';
 
@@ -793,6 +809,7 @@ const Bookmarks = () => {
                           {folders.map((f) => {
                             const fId = f._id || f.id;
                             return (
+    <><AnimCSS />
                               <button
                                 key={fId}
                                 onClick={() => handleMoveToFolder(artId, fId)}
@@ -801,6 +818,7 @@ const Bookmarks = () => {
                                 <Folder size={11} className="text-gray-400 dark:text-[#666]" />
                                 {f.name}
                               </button>
+    </>
                             );
                           })}
                           {folders.length === 0 && (

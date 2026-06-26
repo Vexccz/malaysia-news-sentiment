@@ -11,6 +11,22 @@ import { Trash2, Clock, Eye, TrendingUp, Download, Filter, BarChart3, ChevronLef
 import { formatRelativeTime } from '../utils/dateFormat';
 import { Link } from 'react-router-dom';
 
+/* Page Interactive Animations */
+const PAGE_ANIMS = `
+@keyframes fadeInUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+@keyframes slideOutLeft { to{opacity:0;transform:translateX(-100%)} }
+@keyframes slideInTop { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes sentimentFlash { 0%{filter:brightness(1)} 50%{filter:brightness(1.6)} 100%{filter:brightness(1)} }
+@keyframes barFill { from{width:0} to{width:var(--bar-w)} }
+@keyframes starPop { 0%{transform:scale(1)} 30%{transform:scale(1.5)} 60%{transform:scale(0.9)} 100%{transform:scale(1)} }
+@keyframes ripple { to{transform:scale(4);opacity:0} }
+@keyframes checkDraw { from{stroke-dashoffset:50} to{stroke-dashoffset:0} }
+@keyframes progressPulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+`;
+const AnimCSS = () => <style dangerouslySetInnerHTML={{__html: PAGE_ANIMS}}/>;
+
+
+
 const SENTIMENT_COLORS = { Positive: '#10B981', Negative: '#EF4444', Neutral: '#F59E0B' };
 const SENTIMENT_DOT = { Positive: '#4ADE80', Negative: '#FB7185', Neutral: '#FBBF24' };
 
@@ -24,6 +40,7 @@ const History = () => {
   const [searchInput, setSearchInput] = useState('');
   const debounceRef = useRef(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
+  const [deletingIds, setDeletingIds] = useState(new Set());
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [visitLog, setVisitLog] = useState(() => {
@@ -403,6 +420,7 @@ const History = () => {
                 const relativeTime = formatRelativeTime(article.publishedAt, lang, true);
 
                 return (
+    <><AnimCSS />
                   <motion.div
                     key={articleId}
                     initial={{ opacity: 0, y: 8 }}
@@ -535,6 +553,7 @@ const History = () => {
                       </div>
                     </div>
                   </motion.div>
+    </>
                 );
               })}
             </div>

@@ -4,6 +4,15 @@ import { useSocket } from '../context/SocketContext';
 import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 
+/* Page Interactive Animations */
+const PAGE_ANIMS = `
+@keyframes slideInTop { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes sentimentFlash { 0%{filter:brightness(1)} 50%{filter:brightness(1.6)} 100%{filter:brightness(1)} }
+`;
+const AnimCSS = () => <style dangerouslySetInnerHTML={{__html: PAGE_ANIMS}}/>;
+
+
+
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5001/api/v1';
 
 /* ── Constants ──────────────────────────────────────────────── */
@@ -482,6 +491,7 @@ const LiveFeed = () => {
   }
 
   return (
+    <><AnimCSS />
     <div className="max-w-4xl mx-auto">
       {/* ── Header ────────────────────────────────────────── */}
       <div className="mb-5">
@@ -622,6 +632,7 @@ const LiveFeed = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

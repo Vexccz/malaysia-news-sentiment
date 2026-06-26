@@ -6,6 +6,22 @@ import toast from 'react-hot-toast';
 import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 
+/* Page Interactive Animations */
+const PAGE_ANIMS = `
+@keyframes fadeInUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+@keyframes slideOutLeft { to{opacity:0;transform:translateX(-100%)} }
+@keyframes slideInTop { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes sentimentFlash { 0%{filter:brightness(1)} 50%{filter:brightness(1.6)} 100%{filter:brightness(1)} }
+@keyframes barFill { from{width:0} to{width:var(--bar-w)} }
+@keyframes starPop { 0%{transform:scale(1)} 30%{transform:scale(1.5)} 60%{transform:scale(0.9)} 100%{transform:scale(1)} }
+@keyframes ripple { to{transform:scale(4);opacity:0} }
+@keyframes checkDraw { from{stroke-dashoffset:50} to{stroke-dashoffset:0} }
+@keyframes progressPulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+`;
+const AnimCSS = () => <style dangerouslySetInnerHTML={{__html: PAGE_ANIMS}}/>;
+
+
+
 const biasColors = {
   left: 'text-blue-600 dark:text-blue-400',
   center: 'text-[#4ADE80] dark:text-[#4ADE80]',
@@ -583,6 +599,7 @@ const SourceCredibility = () => {
             {reliability.slice(0, 8).map((sr, i) => {
               const conf = sr.confidence ?? 0;
               return (
+    <><AnimCSS />
                 <motion.div
                   key={sr.source || sr._id}
                   initial={{ opacity: 0 }}
@@ -611,6 +628,7 @@ const SourceCredibility = () => {
                     </span>
                   </div>
                 </motion.div>
+    </>
               );
             })}
           </div>

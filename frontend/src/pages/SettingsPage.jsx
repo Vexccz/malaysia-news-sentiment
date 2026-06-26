@@ -9,6 +9,22 @@ import {
   Download, Clock, Key, Copy, Trash2, Eye, EyeOff, Plus, Shield, X,
 } from 'lucide-react';
 
+/* Page Interactive Animations */
+const PAGE_ANIMS = `
+@keyframes fadeInUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+@keyframes slideOutLeft { to{opacity:0;transform:translateX(-100%)} }
+@keyframes slideInTop { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes sentimentFlash { 0%{filter:brightness(1)} 50%{filter:brightness(1.6)} 100%{filter:brightness(1)} }
+@keyframes barFill { from{width:0} to{width:var(--bar-w)} }
+@keyframes starPop { 0%{transform:scale(1)} 30%{transform:scale(1.5)} 60%{transform:scale(0.9)} 100%{transform:scale(1)} }
+@keyframes ripple { to{transform:scale(4);opacity:0} }
+@keyframes checkDraw { from{stroke-dashoffset:50} to{stroke-dashoffset:0} }
+@keyframes progressPulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+`;
+const AnimCSS = () => <style dangerouslySetInnerHTML={{__html: PAGE_ANIMS}}/>;
+
+
+
 const Section = ({ title, children }) => (
   <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] mb-6">
     <div className="px-5 py-3 border-b border-[#e5e5e5] dark:border-[#222]">
@@ -582,6 +598,7 @@ const SettingsPage = () => {
   };
 
   return (
+    <><AnimCSS />
     <div className="max-w-2xl mx-auto">
       {/* Header */}
       <div className="mb-6">
@@ -1154,6 +1171,7 @@ const SettingsPage = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

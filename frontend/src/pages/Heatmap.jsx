@@ -8,6 +8,22 @@ import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { Play, Pause, SkipForward, SkipBack, X, ChevronLeft, ChevronRight, Columns, Clock, ExternalLink, Loader2 } from 'lucide-react';
 
+/* Page Interactive Animations */
+const PAGE_ANIMS = `
+@keyframes fadeInUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+@keyframes slideOutLeft { to{opacity:0;transform:translateX(-100%)} }
+@keyframes slideInTop { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes sentimentFlash { 0%{filter:brightness(1)} 50%{filter:brightness(1.6)} 100%{filter:brightness(1)} }
+@keyframes barFill { from{width:0} to{width:var(--bar-w)} }
+@keyframes starPop { 0%{transform:scale(1)} 30%{transform:scale(1.5)} 60%{transform:scale(0.9)} 100%{transform:scale(1)} }
+@keyframes ripple { to{transform:scale(4);opacity:0} }
+@keyframes checkDraw { from{stroke-dashoffset:50} to{stroke-dashoffset:0} }
+@keyframes progressPulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+`;
+const AnimCSS = () => <style dangerouslySetInnerHTML={{__html: PAGE_ANIMS}}/>;
+
+
+
 const GEOJSON_URL = 'https://raw.githubusercontent.com/dosm-malaysia/data-open/main/datasets/geodata/administrative_1_state.geojson';
 
 const STATE_NAME_MAP = {
@@ -645,6 +661,7 @@ const Heatmap = () => {
             {(() => {
               const sd = getStateData(selectedState);
               return (
+    <><AnimCSS />
                 <div className="grid grid-cols-3 gap-0 divide-x divide-[#e5e5e5] dark:divide-[#222] border-b border-[#e5e5e5] dark:border-[#222]">
                   <div className="text-center p-4 bg-[#fafafa] dark:bg-[#0a0a0a]">
                     <p className="text-xl font-bold text-black dark:text-white" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>{sd.articleCount}</p>
@@ -661,6 +678,7 @@ const Heatmap = () => {
                     <p className="text-[10px] text-gray-500 dark:text-[#999] uppercase tracking-[0.18em]">{lang === 'ms' ? 'Topik Utama' : 'Top Topic'}</p>
                   </div>
                 </div>
+    </>
               );
             })()}
 
