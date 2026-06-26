@@ -1,6 +1,7 @@
 const AiChat = require('../models/AiChat');
 const Article = require('../models/Article');
 const { performAiRequest } = require('../services/openaiService');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
@@ -94,14 +95,40 @@ exports.askQuestion = async (req, res) => {
     const context = buildContext(articles);
     const prompt = `You are MY News Sentiment analyst assistant. Answer ONLY from provided article context.\n\nRules:\n- Be concise, useful, and evidence-based.\n- If context is insufficient, say what is missing.\n- Reference articles like [1], [2].\n- Focus on Malaysian news sentiment and trends.\n\nUser question:\n${q}\n\nArticle context:\n${context || 'No article context available.'}\n\nReturn plain text answer only.`;
 
-    const raw = await performAiRequest(
-      prompt,
-      process.env.GEMINI_MODEL || 'gemini-2.0-flash',
-      0.3,
-      700,
-    );
+    let assistantReply = '';
+    let providerUsed = 'none';
 
-    const assistantReply = (raw || '').trim() || 'No answer generated.';
+    // Try Gemini first (independent of OPENAI_BASE_URL configuration)
+    if (process.env.GEMINI_API_KEY) {
+      try {
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-2.0-flash' });
+        const result = await model.generateContent(prompt);
+        assistantReply = result.response.text().trim();
+        providerUsed = 'gemini';
+      } catch (gemErr) {
+        console.warn('[Assistant] Gemini failed, fallback to performAiRequest:', gemErr.message);
+      }
+    }
+
+    // Fallback to whatever OpenAI/Ollama-compatible provider is configured
+    if (!assistantReply) {
+      try {
+        const raw = await performAiRequest(
+          prompt,
+          process.env.ASSISTANT_MODEL || process.env.QWEN_MODEL || 'gpt-oss:120b',
+          0.3,
+          700,
+        );
+        assistantReply = (raw || '').trim();
+        providerUsed = 'fallback';
+      } catch (fbErr) {
+        console.error('[Assistant] All providers failed:', fbErr.message);
+        return res.status(503).json({ error: 'AI service unavailable. Please try again later.' });
+      }
+    }
+
+    if (!assistantReply) assistantReply = 'No answer generated.';
 
     let chat = null;
     if (chatId) {
