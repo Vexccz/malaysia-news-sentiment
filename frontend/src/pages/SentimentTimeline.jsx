@@ -1,9 +1,9 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Brush } from 'recharts';
+import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceDot, Brush } from 'recharts';
 import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
-import { Download, Layers, ZoomIn } from 'lucide-react';
+import { Download, Layers, ZoomIn, Play, Pause, RotateCcw } from 'lucide-react';
 
 const RANGE_OPTIONS = [
   { label: '7D', value: 7 },
@@ -58,6 +58,38 @@ const SentimentTimeline = () => {
   const [showOverlay, setShowOverlay] = useState(false);
   const [showAnnotations, setShowAnnotations] = useState(true);
   const chartRef = useRef(null);
+
+  // Feature 14: Animated playback through time
+  const [playbackIdx, setPlaybackIdx] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1); // 0.5x, 1x, 2x, 4x
+
+  // Reset playback when timeline data changes
+  useEffect(() => {
+    setPlaybackIdx(0);
+    setIsPlaying(false);
+  }, [timeline]);
+
+  // Auto-advance playback
+  useEffect(() => {
+    if (!isPlaying || timeline.length === 0) return;
+    const interval = setInterval(() => {
+      setPlaybackIdx((prev) => {
+        const next = prev + 1;
+        if (next >= timeline.length) {
+          setIsPlaying(false);
+          return prev;
+        }
+        return next;
+      });
+    }, 600 / playbackSpeed);
+    return () => clearInterval(interval);
+  }, [isPlaying, timeline.length, playbackSpeed]);
+
+  const playbackPoint = useMemo(() => {
+    if (!timeline.length || playbackIdx >= timeline.length) return null;
+    return timeline[playbackIdx];
+  }, [timeline, playbackIdx]);
 
   const fetchTimeline = useCallback(async () => {
     try {
@@ -277,14 +309,69 @@ const SentimentTimeline = () => {
           {/* Sentiment line chart with brush zoom */}
           <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111]">
             <div className="px-5 py-4 border-b border-[#e5e5e5] dark:border-[#222]">
-              <h3 className="text-xs font-bold text-ink dark:text-paper uppercase tracking-wider font-sans">
-                {t('sentimentScore')}
-              </h3>
-              <p className="text-[10px] text-ink-faint mt-0.5 font-sans">
-                Drag below chart to zoom into a time range
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-xs font-bold text-ink dark:text-paper uppercase tracking-wider font-sans">
+                    {t('sentimentScore')}
+                  </h3>
+                  <p className="text-[10px] text-ink-faint mt-0.5 font-sans">
+                    Drag below chart to zoom into a time range
+                  </p>
+                </div>
+
+                {/* Feature 14 playback controls */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => setPlaybackIdx(0)}
+                    disabled={!timeline.length}
+                    className="px-2.5 py-1.5 border border-[#e5e5e5] dark:border-[#333] text-[10px] uppercase tracking-[0.18em] text-ink-muted dark:text-ink-faint hover:text-black dark:hover:text-white disabled:opacity-40"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 inline mr-1" /> Reset
+                  </button>
+                  <button
+                    onClick={() => setIsPlaying((p) => !p)}
+                    disabled={!timeline.length}
+                    className="px-2.5 py-1.5 border border-[#e5e5e5] dark:border-[#333] text-[10px] uppercase tracking-[0.18em] text-ink-muted dark:text-ink-faint hover:text-black dark:hover:text-white disabled:opacity-40"
+                  >
+                    {isPlaying ? <Pause className="w-3.5 h-3.5 inline mr-1" /> : <Play className="w-3.5 h-3.5 inline mr-1" />}
+                    {isPlaying ? 'Pause' : 'Play'}
+                  </button>
+                  <select
+                    value={playbackSpeed}
+                    onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
+                    className="px-2 py-1.5 border border-[#e5e5e5] dark:border-[#333] bg-white dark:bg-[#111] text-[10px] uppercase tracking-[0.18em] text-ink-muted dark:text-ink-faint"
+                  >
+                    {[0.5, 1, 2, 4].map((speed) => (
+                      <option key={speed} value={speed}>{speed}x</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
             <div className="p-4" ref={chartRef}>
+              {/* Feature 14 — Playback summary strip */}
+              {playbackPoint && (
+                <div className="mb-3 border border-[#c00000]/30 bg-[#c00000]/5 dark:bg-[#c00000]/10 px-4 py-2.5 flex flex-wrap items-center gap-x-6 gap-y-1">
+                  <span className="text-[9px] uppercase tracking-[0.25em] font-bold text-[#c00000]">Now Playing</span>
+                  <span className="font-['Playfair_Display'] text-base font-bold text-ink dark:text-paper">{playbackPoint.date}</span>
+                  <span className="text-[10px] uppercase tracking-[0.15em] text-ink-muted dark:text-ink-faint">
+                    Score: <span className="font-mono font-bold text-ink dark:text-paper">
+                      {(playbackPoint.avgSentiment || 0).toFixed(3)}
+                    </span>
+                  </span>
+                  <span className="text-[10px] uppercase tracking-[0.15em] text-ink-muted dark:text-ink-faint">
+                    Articles: <span className="font-bold text-ink dark:text-paper">{playbackPoint.totalArticles}</span>
+                  </span>
+                  {playbackPoint.event && (
+                    <span className="text-[10px] uppercase tracking-[0.15em] font-bold text-amber-600 dark:text-amber-400">
+                      📌 {playbackPoint.event}
+                    </span>
+                  )}
+                  <span className="ml-auto text-[10px] text-ink-faint">
+                    {playbackIdx + 1} / {timeline.length}
+                  </span>
+                </div>
+              )}
               <ResponsiveContainer width="100%" height={260}>
                 <LineChart data={timeline} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border, #eee)" opacity={0.4} />
@@ -300,6 +387,32 @@ const SentimentTimeline = () => {
                   />
                   <Tooltip content={<CustomTooltip t={t} />} />
                   <ReferenceLine y={0} stroke="#ccc" strokeDasharray="3 3" />
+                  {/* Feature 14 — Playback scrubber line */}
+                  {playbackPoint && (
+                    <>
+                      <ReferenceLine
+                        x={playbackPoint.date}
+                        stroke="#c00000"
+                        strokeWidth={2}
+                        ifOverflow="visible"
+                        label={{
+                          value: `▶ ${playbackPoint.date}`,
+                          position: 'top',
+                          fontSize: 10,
+                          fontWeight: 700,
+                          fill: '#c00000',
+                        }}
+                      />
+                      <ReferenceDot
+                        x={playbackPoint.date}
+                        y={playbackPoint.avgSentiment}
+                        r={6}
+                        fill="#c00000"
+                        stroke="#fff"
+                        strokeWidth={2}
+                      />
+                    </>
+                  )}
                   {/* Event reference lines */}
                   {showAnnotations && eventsInRange.map(ev => (
                     <ReferenceLine key={ev.date} x={ev.date} stroke="#F59E0B" strokeDasharray="4 4" strokeWidth={1}
