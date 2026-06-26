@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import ExportMenu from '../components/ExportMenu';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { getTopViewed, getTrends } from '../services/api';
@@ -179,6 +180,7 @@ const Trending = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <ExportMenu articles={trendingTopics.flatMap((topic) => topic.topArticles || [])} filenameBase="trending-news" label="Export" />
           <button
             onClick={() => { setCompareMode(!compareMode); setSelectedTopics([]); }}
             className={`flex items-center gap-1.5 text-xs uppercase tracking-wider font-sans px-3 py-1.5 border transition-colors ${

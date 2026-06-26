@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import ExportMenu from '../components/ExportMenu';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import maplibregl from 'maplibre-gl';
@@ -471,6 +472,18 @@ const Heatmap = () => {
           <div className="mt-3 border-b-2 border-black dark:border-white" />
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <ExportMenu
+            rows={(data || []).map((d) => ({
+              state: d.state,
+              avgSentiment: d.avgSentiment,
+              articleCount: d.articleCount,
+              topTopic: d.topTopic,
+              posPct: d.posPct,
+              negPct: d.negPct,
+            }))}
+            filenameBase="heatmap-states"
+            label="Export"
+          />
           {/* Compare toggle */}
           <button
             onClick={() => setCompareMode(!compareMode)}

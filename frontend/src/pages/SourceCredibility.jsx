@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import ExportMenu from '../components/ExportMenu';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 import { Scale, TrendingUp, BookOpen, ArrowUpDown } from 'lucide-react';
@@ -298,15 +299,28 @@ const SourceCredibility = () => {
       className="max-w-5xl mx-auto space-y-6"
     >
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-black dark:text-white tracking-tight" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
-          {t('sourceCredibility')}
-        </h1>
-        <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500 dark:text-[#999] mt-1">
-          {t('sourceCredDesc')}
-        </p>
-        <div className="mt-3 border-b-2 border-black dark:border-white" />
+      <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-3xl font-bold text-black dark:text-white tracking-tight" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+            {t('sourceCredibility')}
+          </h1>
+          <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500 dark:text-[#999] mt-1">
+            {t('sourceCredDesc')}
+          </p>
+        </div>
+        <ExportMenu
+          rows={(sources || []).map((s) => ({
+            source: s.name || s.source,
+            score: s.score ?? s.credibilityScore,
+            bias: s.bias,
+            articleCount: s.articleCount,
+            avgConfidence: s.avgConfidence ?? s.confidence,
+          }))}
+          filenameBase="source-credibility"
+          label="Export"
+        />
       </div>
+      <div className="border-b-2 border-black dark:border-white" />
 
       {/* ═══════════════════════════════════════════════════
           FEATURE 3: Source Recommendation

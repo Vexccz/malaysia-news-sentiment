@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import ExportMenu from '../components/ExportMenu';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSocket } from '../context/SocketContext';
 import api from '../services/api';
@@ -502,9 +503,12 @@ const LiveFeed = () => {
             </h1>
             <ConnectionBadge status={connectionStatus} />
           </div>
-          <span className="text-[10px] text-ink-faint font-sans">
-            {lastUpdate ? `${t('updatedAgo')} ${timeAgo(lastUpdate)}` : `${t('connecting')}`} · {t('autoRefresh60s')}
-          </span>
+          <div className="flex items-center gap-3">
+            <ExportMenu articles={articles} filenameBase="live-feed" label="Export" />
+            <span className="text-[10px] text-ink-faint font-sans">
+              {lastUpdate ? `${t('updatedAgo')} ${timeAgo(lastUpdate)}` : `${t('connecting')}`} · {t('autoRefresh60s')}
+            </span>
+          </div>
         </div>
         <div className="editorial-rule mb-3" />
         <p className="text-[10px] text-ink-muted dark:text-ink-faint uppercase tracking-[0.25em] max-w-xl font-sans">

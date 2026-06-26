@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import ArticlePreviewModal from '../components/ArticlePreviewModal';
 import { getHistory, deleteArticle, bulkDeleteArticles, getStats } from '../services/api';
 import { exportToCSV } from '../services/exportUtils';
+import ExportMenu from '../components/ExportMenu';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../context/LanguageContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -355,10 +356,7 @@ const History = () => {
             <input type="date" value={params.to} onChange={(e) => handleParamChange('to', e.target.value)}
               className="px-2.5 py-2 text-xs border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#0a0a0a] text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white transition-colors" />
           </div>
-          <button onClick={handleExport}
-            className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-black dark:text-white border border-black dark:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors">
-            <Download size={13} /> Export
-          </button>
+          <ExportMenu articles={articles} filenameBase="history-all" label="Export" />
         </div>
       </div>
 
@@ -370,10 +368,11 @@ const History = () => {
             className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#FB7185] border border-[#FB7185] hover:bg-[#FB7185] hover:text-white transition-colors disabled:opacity-50">
             <Trash2 size={13} /> Delete Selected
           </button>
-          <button onClick={handleBulkExport}
-            className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-black dark:text-white border border-black dark:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors">
-            <Download size={13} /> Export Selected
-          </button>
+          <ExportMenu
+            articles={articles.filter((a) => selectedIds.has(a._id || a.id))}
+            filenameBase="history-selected"
+            label="Export Selected"
+          />
           <button onClick={() => setSelectedIds(new Set())}
             className="text-[10px] font-medium text-gray-400 dark:text-[#666] hover:text-black dark:hover:text-white transition-colors uppercase tracking-[0.18em] ml-auto">
             Clear selection
