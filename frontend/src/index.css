@@ -260,7 +260,49 @@ h3 { font-weight: 600; }
   border-left: 3px solid #F7A501;
 }
 
+/* Feature 21 — Dark mode sentiment border polish (muted variants) */
+.dark [data-sentiment-border="Positive"] { border-left-color: #4ADE80; }
+.dark [data-sentiment-border="Negative"] { border-left-color: #FB7185; }
+.dark [data-sentiment-border="Neutral"]  { border-left-color: #FBBF24; }
+
 /* Default fallback for unknown sentiment */
 [data-sentiment-border]:not([data-sentiment-border="Positive"]):not([data-sentiment-border="Negative"]):not([data-sentiment-border="Neutral"]) {
   border-left: 3px solid transparent;
 }
+
+/* Feature 21 — Dark mode card hierarchy (3 layered surfaces) */
+.dark .card-elev-1 { background-color: #0a0a0a; border-color: rgba(245,243,238,0.06); }
+.dark .card-elev-2 { background-color: #111111; border-color: rgba(245,243,238,0.08); }
+.dark .card-elev-3 { background-color: #1a1a1a; border-color: rgba(245,243,238,0.1); }
+
+/* Feature 21 — Dark mode scrollbar polish */
+.dark ::-webkit-scrollbar { width: 10px; height: 10px; }
+.dark ::-webkit-scrollbar-track { background: #0a0a0a; }
+.dark ::-webkit-scrollbar-thumb {
+  background: #2a2a2a;
+  border: 2px solid #0a0a0a;
+}
+.dark ::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
+
+/* Feature 21 — Dark mode link underline accent */
+.dark a:hover:not([class*="border"]) {
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+/* Feature 21 — Smoother dark mode transitions (no harsh flash) */
+html.dark, html.dark body, html.dark * {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: 180ms;
+  transition-timing-function: ease-out;
+}
+/* But skip transition during initial load to prevent flash */
+html.dark.no-transitions * { transition: none !important; }
+
+/* Feature 21 — Dark mode muted sentiment text utilities */
+.dark .text-pos-muted { color: #4ADE80; }
+.dark .text-neg-muted { color: #FB7185; }
+.dark .text-neu-muted { color: #FBBF24; }
+.dark .bg-pos-muted { background-color: rgba(74,222,128,0.08); border-color: rgba(74,222,128,0.15); }
+.dark .bg-neg-muted { background-color: rgba(251,113,133,0.08); border-color: rgba(251,113,133,0.15); }
+.dark .bg-neu-muted { background-color: rgba(251,191,36,0.08); border-color: rgba(251,191,36,0.15); }
