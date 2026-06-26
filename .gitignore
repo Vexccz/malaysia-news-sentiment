@@ -15,3 +15,5 @@ nlp-service/venv*/
 # Debug logs
 backend/ai-prompt-debug.log
 *.log
+before.json
+after.json
