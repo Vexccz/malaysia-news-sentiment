@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Offline · MY News Sentiment</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #FAF8F3;
+      color: #1A1A1A;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #12110F; color: #F5F3EE; }
+    }
+    .card {
+      max-width: 480px;
+      width: 100%;
+      border: 1px solid rgba(26,26,26,0.12);
+      background: #fff;
+      padding: 48px 32px;
+      text-align: center;
+    }
+    @media (prefers-color-scheme: dark) {
+      .card { background: #1A1917; border-color: rgba(245,243,238,0.1); }
+    }
+    .kicker {
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: #c00000;
+      font-weight: 700;
+      margin-bottom: 24px;
+    }
+    .rule { height: 2px; background: currentColor; opacity: 0.15; margin: 0 auto 24px; width: 80px; }
+    h1 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-weight: 700;
+      font-size: 32px;
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+    p {
+      font-style: italic;
+      font-family: 'Playfair Display', Georgia, serif;
+      opacity: 0.7;
+      font-size: 15px;
+      line-height: 1.55;
+      margin-bottom: 28px;
+    }
+    .actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    button {
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      padding: 12px 20px;
+      border: 0;
+      cursor: pointer;
+      background: #1A1A1A;
+      color: #fff;
+      transition: background 120ms;
+    }
+    button:hover { background: #c00000; }
+    button.ghost {
+      background: transparent;
+      border: 2px solid #1A1A1A;
+      color: #1A1A1A;
+    }
+    @media (prefers-color-scheme: dark) {
+      button { background: #F5F3EE; color: #12110F; }
+      button.ghost { border-color: #F5F3EE; color: #F5F3EE; }
+    }
+    .hint {
+      margin-top: 28px;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      opacity: 0.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <p class="kicker">Editorial Desk · Offline</p>
+    <div class="rule"></div>
+    <h1>The presses paused.</h1>
+    <p>"News doesn't stop. Your connection just did."<br>Last cached headlines remain available.</p>
+    <div class="actions">
+      <button onclick="location.reload()">Try Again</button>
+      <button class="ghost" onclick="location.href='/'">Cached Home</button>
+    </div>
+    <p class="hint">Reconnects automatically when network returns.</p>
+  </div>
+  <script>
+    window.addEventListener('online', () => location.reload());
+  </script>
+</body>
+</html>
