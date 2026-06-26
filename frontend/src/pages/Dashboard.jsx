@@ -1339,7 +1339,7 @@ const Dashboard = () => {
                               <div className="text-[9px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans mb-2 font-semibold">
                                 Total Analyzed
                               </div>
-                              <div className="font-['Playfair_Display'] text-5xl font-black text-ink dark:text-paper leading-none">
+                              <div className="font-['Playfair_Display'] text-5xl font-black text-flag leading-none">
                                 {counts.total.toLocaleString()}
                               </div>
                               <div className="mt-1">
@@ -1655,7 +1655,7 @@ const Dashboard = () => {
                               <div className="text-[9px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans mb-2 font-semibold">
                                 Total Analyzed
                               </div>
-                              <div className="font-['Playfair_Display'] text-5xl font-black text-ink dark:text-paper leading-none">
+                              <div className="font-['Playfair_Display'] text-5xl font-black text-flag leading-none">
                                 {counts.total.toLocaleString()}
                               </div>
                               <div className="mt-1">
