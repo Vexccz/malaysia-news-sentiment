@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, TrendingUp, TrendingDown, Minus, GitBranch, Network, List, ChevronDown, BarChart3 } from 'lucide-react';
 import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
+import { ArticleListSkeleton } from '../components/Skeletons';
 
 // --- Helper: build a tree from flat category list ---
 function buildTree(categories) {
@@ -695,9 +696,7 @@ const Categories = () => {
             </div>
 
             {articlesLoading ? (
-              <div className="py-8 text-center">
-                <div className="w-4 h-4 border-2 border-black dark:border-white border-t-transparent animate-spin mx-auto" />
-              </div>
+              <ArticleListSkeleton count={4} />
             ) : articles.length === 0 ? (
               <p className="text-sm text-gray-400 dark:text-[#666] text-center py-6">{t('noArticlesInCategory')}</p>
             ) : (

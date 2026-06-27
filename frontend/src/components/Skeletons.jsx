@@ -116,6 +116,55 @@ export const DetailSkeleton = () => (
   </div>
 );
 
+// Article row skeleton — matches editorial article card layout
+// (3px sentiment-coloured left border, thumbnail left, title + meta right).
+export const ArticleListSkeleton = ({ count = 6 }) => (
+  <div className="space-y-3">
+    {Array.from({ length: count }).map((_, i) => (
+      <div
+        key={i}
+        className="flex gap-4 p-4 border border-ink/10 dark:border-paper/10 border-l-[3px] border-l-ink/15 dark:border-l-paper/15"
+      >
+        <div className={`flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 bg-ink/5 dark:bg-paper/5 ${shimmer}`} />
+        <div className="flex-1 space-y-2 min-w-0">
+          <div className={`h-3 w-20 bg-ink/5 dark:bg-paper/5 ${shimmer}`} />
+          <div className={`h-5 w-full bg-ink/5 dark:bg-paper/5 ${shimmer}`} />
+          <div className={`h-5 w-2/3 bg-ink/5 dark:bg-paper/5 ${shimmer}`} />
+          <div className="flex gap-2 mt-3">
+            <div className={`h-4 w-16 bg-ink/5 dark:bg-paper/5 ${shimmer}`} />
+            <div className={`h-4 w-12 bg-ink/5 dark:bg-paper/5 ${shimmer}`} />
+            <div className={`h-4 w-20 bg-ink/5 dark:bg-paper/5 ${shimmer}`} />
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+// Horizontal stat strip skeleton — matches the divided KPI bar on
+// History/Bookmarks/AdminDashboard pages.
+export const StatStripSkeleton = ({ count = 5 }) => (
+  <div className="border border-ink/10 dark:border-paper/10 bg-[#fafafa] dark:bg-[#111] overflow-hidden">
+    <div className="flex divide-x divide-ink/10 dark:divide-paper/10">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="flex-1 px-4 py-3 space-y-2">
+          <div className={`h-3 w-16 bg-ink/5 dark:bg-paper/5 ${shimmer}`} />
+          <div className={`h-6 w-12 bg-ink/5 dark:bg-paper/5 ${shimmer}`} />
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+// Editorial page-header skeleton — Playfair display title + subtitle + rule.
+export const PageHeaderSkeleton = () => (
+  <div className="mb-6 space-y-3">
+    <div className={`h-8 w-64 bg-ink/5 dark:bg-paper/5 ${shimmer}`} />
+    <div className={`h-3 w-48 bg-ink/5 dark:bg-paper/5 ${shimmer}`} />
+    <div className="border-b border-ink/10 dark:border-paper/10 mt-2" />
+  </div>
+);
+
 export default {
   TableSkeleton,
   CardSkeleton,
@@ -123,4 +172,7 @@ export default {
   ChartSkeleton,
   FormSkeleton,
   DetailSkeleton,
+  ArticleListSkeleton,
+  StatStripSkeleton,
+  PageHeaderSkeleton,
 };

@@ -27,13 +27,15 @@ const {
   getUserBadges,
   getUserProfile,
 } = require('../controllers/collaborationController');
+const { validate } = require('../middleware/validate');
+const { collabSchemas } = require('../middleware/schemas');
 
 // ── Comments ────────────────────────────────────────────────
-router.post('/comments', protect, addComment);
+router.post('/comments', protect, validate(collabSchemas.postComment), addComment);
 router.get('/comments/:articleId', getComments);
 router.post('/comments/:id/like', protect, likeComment);
-router.post('/comments/:id/reply', protect, replyToComment);
-router.post('/comments/:id/react', protect, toggleReaction);
+router.post('/comments/:id/reply', protect, validate(collabSchemas.postReply), replyToComment);
+router.post('/comments/:id/react', protect, validate(collabSchemas.reactToComment), toggleReaction);
 
 // ── Discussions ─────────────────────────────────────────────
 router.get('/discussions', getRecentDiscussions);
@@ -42,7 +44,7 @@ router.get('/discussion-of-day', getDiscussionOfDay);
 router.post('/discussion-of-day', protect, setDiscussionOfDay);
 
 // ── Sharing ─────────────────────────────────────────────────
-router.post('/share', protect, trackShare);
+router.post('/share', protect, validate(collabSchemas.shareArticle), trackShare);
 
 // ── Community Features ───────────────────────────────────────
 router.get('/trending-keywords', getTrendingKeywords);

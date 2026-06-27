@@ -8,16 +8,18 @@ const {
   setup2FA, verify2FA, disable2FA,
 } = require('../controllers/authController');
 const { signGuestToken } = require('../middleware/auth');
+const { validate } = require('../middleware/validate');
+const { authSchemas, profileSchemas } = require('../middleware/schemas');
 
 // Public
-router.post('/register',            register);
-router.post('/login',               login);
+router.post('/register',            validate(authSchemas.register), register);
+router.post('/login',               validate(authSchemas.login), login);
 router.post('/google',              googleLogin);
 router.post('/google-firebase',     googleFirebaseLogin);
 router.get('/verify-email/:token',  verifyEmail);
-router.post('/forgot-password',     forgotPassword);
+router.post('/forgot-password',     validate(authSchemas.forgotPassword), forgotPassword);
 router.post('/reset-password/:token', resetPassword);
-router.post('/resend-verification', resendVerification);
+router.post('/resend-verification', validate(authSchemas.resendVerification), resendVerification);
 
 // Guest mode - limited access without registration
 router.post('/guest', (req, res) => {
@@ -106,8 +108,8 @@ router.get('/profile/:userId', async (req, res) => {
 
 // Protected
 router.get('/me',                   protect, getMe);
-router.patch('/preferences',        protect, updatePreferences);
-router.patch('/profile',            protect, updateProfile);
+router.patch('/preferences',        protect, validate(profileSchemas.updatePreferences), updatePreferences);
+router.patch('/profile',            protect, validate(profileSchemas.updateProfile), updateProfile);
 
 // Badge selection
 router.get('/badges', protect, async (req, res) => {

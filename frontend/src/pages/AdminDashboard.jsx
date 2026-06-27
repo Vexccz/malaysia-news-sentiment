@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import ScrollToTop from '../components/ScrollToTop';
 import { useSocket } from '../context/SocketContext';
 import { useLanguage } from '../context/LanguageContext';
+import { StatStripSkeleton, PageHeaderSkeleton, CardSkeleton } from '../components/Skeletons';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
@@ -206,9 +207,12 @@ const AdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <div className="w-6 h-6 border-2 border-ink border-t-transparent rounded-full animate-spin" />
-        <p className="mt-4 text-xs text-ink-faint font-sans uppercase tracking-wider">Loading</p>
+      <div>
+        <PageHeaderSkeleton />
+        <div className="mb-6">
+          <StatStripSkeleton count={5} />
+        </div>
+        <CardSkeleton count={6} />
       </div>
     );
   }

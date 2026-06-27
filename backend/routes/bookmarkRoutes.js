@@ -3,6 +3,8 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const { protect, blockGuest } = require('../middleware/auth');
 const User = require('../models/User');
+const { validate } = require('../middleware/validate');
+const { bookmarkSchemas } = require('../middleware/schemas');
 
 // ── All bookmark folder routes require authentication ──
 router.use(protect, blockGuest);
@@ -18,7 +20,7 @@ router.get('/folders', async (req, res) => {
 });
 
 // POST /bookmarks/folders
-router.post('/folders', async (req, res) => {
+router.post('/folders', validate(bookmarkSchemas.createFolder), async (req, res) => {
   try {
     const { name } = req.body;
     if (!name || !name.trim()) {
@@ -42,7 +44,7 @@ router.post('/folders', async (req, res) => {
 });
 
 // PUT /bookmarks/folders/:id
-router.put('/folders/:id', async (req, res) => {
+router.put('/folders/:id', validate(bookmarkSchemas.renameFolder), async (req, res) => {
   try {
     const { id } = req.params;
     const { name } = req.body;
@@ -88,7 +90,7 @@ router.delete('/folders/:id', async (req, res) => {
 });
 
 // PUT /bookmarks/:id/folder — assign article bookmark to folder
-router.put('/:id/folder', async (req, res) => {
+router.put('/:id/folder', validate(bookmarkSchemas.moveBookmark), async (req, res) => {
   try {
     const { id } = req.params; // article id
     const { folderId } = req.body;

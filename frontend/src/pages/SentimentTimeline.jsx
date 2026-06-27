@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceDot, Brush } from 'recharts';
 import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
+import { ChartSkeleton } from '../components/Skeletons';
 import { Download, Layers, ZoomIn, Play, Pause, RotateCcw } from 'lucide-react';
 
 const RANGE_OPTIONS = [
@@ -234,8 +235,8 @@ const SentimentTimeline = () => {
 
       {/* Loading */}
       {loading && (
-        <div className="py-12 text-center">
-          <div className="w-5 h-5 border-2 border-[#e5e5e5] dark:border-[#222] border-t-ink dark:border-t-paper rounded-full animate-spin mx-auto" />
+        <div className="py-6">
+          <ChartSkeleton height="h-72" />
         </div>
       )}
 

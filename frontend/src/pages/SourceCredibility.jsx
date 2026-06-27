@@ -6,6 +6,7 @@ import { Scale, TrendingUp, BookOpen, ArrowUpDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
+import { TableSkeleton, PageHeaderSkeleton } from '../components/Skeletons';
 
 /* Page Interactive Animations */
 const PAGE_ANIMS = `
@@ -285,8 +286,9 @@ const SourceCredibility = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-2 border-black dark:border-white border-t-transparent" />
+      <div>
+        <PageHeaderSkeleton />
+        <TableSkeleton rows={7} cols={6} />
       </div>
     );
   }
