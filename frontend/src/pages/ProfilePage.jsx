@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
@@ -206,9 +207,15 @@ const ProfilePage = () => {
         avatar: editForm.avatar,
       });
       setEditOpen(false);
+      toast.success('Profile updated', {
+        icon: '✓',
+        style: { borderLeft: '3px solid #8B1A1A' },
+      });
       return data;
     } catch (err) {
-      setEditError(err?.response?.data?.error || 'Failed to save profile.');
+      const msg = err?.response?.data?.error || 'Failed to save profile.';
+      setEditError(msg);
+      toast.error(msg);
     } finally {
       setEditSaving(false);
     }
@@ -443,7 +450,19 @@ const ProfilePage = () => {
           <span className="flex items-center gap-1"><Shield size={11} /> {roleLabel}</span>
           <span className="flex items-center gap-1"><Calendar size={11} /> {t('memberSince', 'Member since')} {memberSince}</span>
           <span className="flex items-center gap-1"><Globe size={11} /> {preferredLang}</span>
+          {user?.phone && (
+            <span className="flex items-center gap-1"><Phone size={11} /> {user.phone}</span>
+          )}
         </div>
+
+        {/* Bio preview — italic editorial style */}
+        {user?.bio && (
+          <div className="px-5 lg:px-8 mt-3 max-w-3xl">
+            <p className="font-['Playfair_Display'] italic text-sm text-ink-muted dark:text-ink-faint leading-relaxed border-l-2 border-accent pl-3">
+              "{user.bio}"
+            </p>
+          </div>
+        )}
       </motion.div>
 
       {/* ── Stats Horizontal Strip ── */}

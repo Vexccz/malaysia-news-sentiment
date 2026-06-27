@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
@@ -376,7 +377,7 @@ const Reports = () => {
           errMsg = err.response.data.error;
         }
       } catch (e) { /* ignore */ }
-      alert(errMsg);
+      toast.error(errMsg);
     } finally {
       setLoading(false);
     }

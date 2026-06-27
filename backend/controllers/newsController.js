@@ -179,7 +179,37 @@ const getAndAnalyzeNews = async (req, res) => {
     const q        = sanitize(req.query.q || 'Malaysia');
     const latest   = req.query.latest === 'true';
     const refresh  = req.query.refresh === 'true'; // #Fix: Bypass cache for debugging/new source verification
+    const fast     = req.query.fast === 'true';    // #Perf: serve from DB, skip RSS fetch + AI analysis
     const pageSize = Math.min(parseInt(req.query.pageSize) || 12, 60);
+
+    // ── FAST PATH: serve from DB cache instantly ──────────────────
+    // Returns articles already analysed and stored. Bypasses RSS fetch
+    // (slow network) and sentiment analysis (slow AI). Typical: <500ms.
+    // Frontend can call this for instant render, then fire a background
+    // refresh request without fast=true to update the cache.
+    if (fast && isDbConnected()) {
+      const dbQuery = {};
+      // Topic filter (skip for generic Malaysia query)
+      if (q && !isGenericMalaysiaQuery(q, latest)) {
+        dbQuery.topic = { $regex: escapeRegex(q), $options: 'i' };
+      }
+      const articles = await Article.find(dbQuery)
+        .sort({ publishedAt: -1 })
+        .limit(pageSize)
+        .lean();
+
+      const sentimentCounts = { Positive: 0, Negative: 0, Neutral: 0 };
+      articles.forEach(a => {
+        const key = a.sentiment || 'Neutral';
+        if (sentimentCounts[key] !== undefined) sentimentCounts[key]++;
+      });
+      return res.json({
+        total: articles.length,
+        sentimentDistribution: sentimentCounts,
+        articles,
+        cached: true,
+      });
+    }
 
     const cacheKey = latest ? `news_raw_latest_${pageSize}` : `news_raw_${q}_${pageSize}`;
     let rawArticles = refresh ? null : cache.get(cacheKey);

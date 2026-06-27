@@ -488,7 +488,7 @@ const CommentItem = ({ c, onLike, timeAgo, sentimentColor }) => {
   );
 };
 import { 
-  fetchAndAnalyzeNews, getDashboardInit, getTopSources,
+  fetchAndAnalyzeNews, fetchNewsFast, getDashboardInit, getTopSources,
   generateDigest, generateForecast, getRegionalData, getHistory
 } from '../services/api';
 import { exportToCSV } from '../services/exportUtils';
@@ -797,22 +797,38 @@ const Dashboard = () => {
     if (socket) socket.on('analysis_progress', progressHandler);
 
     try {
+      // FAST PATH: get cached articles from DB instantly (<500ms)
+      let fastData = null;
+      try {
+        fastData = await fetchNewsFast(query, pageSize, latest);
+        if (fastData?.articles?.length > 0) {
+          setSearchArticles(fastData.articles);
+          setSearchDistribution(fastData.sentimentDistribution || calcDistribution(fastData.articles));
+          setNoResultsQuery(null);
+          toast.loading(`Showing ${fastData.articles.length} cached articles. Fetching fresh...`, { id: searchToast });
+        }
+      } catch (fastErr) {
+        // Fast path failed (e.g. DB not connected) — continue with full pipeline
+        console.warn('Fast path unavailable:', fastErr.message);
+      }
+
+      // FULL PIPELINE: RSS fetch + AI analysis + DB upsert (slow but fresh)
       const data = await fetchAndAnalyzeNews(query, pageSize, latest);
       const fetched = data.articles || [];
-      
-      if (fetched.length === 0) {
+
+      if (fetched.length === 0 && !fastData?.articles?.length) {
         toast.error('No articles found.', { id: searchToast });
         setNoResultsQuery(latest ? null : query);
         setIsHistoryView(true);
         return;
       }
       setNoResultsQuery(null);
-      setSearchArticles(fetched);
+      setSearchArticles(fetched.length > 0 ? fetched : fastData.articles);
       setSearchDistribution(data.sentimentDistribution || calcDistribution(fetched));
-      toast.success(`Analyzed ${fetched.length} articles!`, { id: searchToast });
+      toast.success(`Analyzed ${fetched.length || fastData.articles.length} articles!`, { id: searchToast });
 
       queryClient.invalidateQueries(['dashboardInit']);
-      loadForecastAndDigest(fetched, query);
+      loadForecastAndDigest(fetched.length > 0 ? fetched : fastData.articles, query);
     } catch (err) {
       const msg = err.friendlyMessage || err.response?.data?.error || err.message || 'Failed to fetch news.';
       setManualError(msg);

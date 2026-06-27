@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import ArticlePreviewModal from '../components/ArticlePreviewModal';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { getHistory, deleteArticle, bulkDeleteArticles, getStats } from '../services/api';
 import { exportToCSV } from '../services/exportUtils';
 import ExportMenu from '../components/ExportMenu';
@@ -44,6 +45,7 @@ const History = () => {
   const [deletingIds, setDeletingIds] = useState(new Set());
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, ids: [], single: false });
   const [visitLog, setVisitLog] = useState(() => {
     try { return JSON.parse(localStorage.getItem('history_visits') || '{}'); } catch { return {}; }
   });
@@ -126,9 +128,23 @@ const History = () => {
     setParams(prev => ({ ...prev, [name]: value, page: name === 'page' ? value : 1 }));
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Permanently remove this analysis from history?')) return;
-    deleteMutation.mutate(id);
+  const handleDelete = (id) => {
+    setDeleteDialog({ open: true, ids: [id], single: true });
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.size === 0) return;
+    setDeleteDialog({ open: true, ids: Array.from(selectedIds), single: false });
+  };
+
+  const confirmDelete = () => {
+    const { ids, single } = deleteDialog;
+    if (single) {
+      deleteMutation.mutate(ids[0]);
+    } else {
+      bulkDeleteMutation.mutate(ids);
+    }
+    setDeleteDialog({ open: false, ids: [], single: false });
   };
 
   const handleShare = async (e, article) => {
@@ -169,11 +185,6 @@ const History = () => {
   };
   const toggleSelectAll = () => {
     setSelectedIds(prev => prev.size === articles.length ? new Set() : new Set(articles.map(a => a._id || a.id)));
-  };
-  const handleBulkDelete = () => {
-    if (selectedIds.size === 0) return;
-    if (!window.confirm(`Permanently delete ${selectedIds.size} selected article${selectedIds.size > 1 ? 's' : ''}?`)) return;
-    bulkDeleteMutation.mutate(Array.from(selectedIds));
   };
   const handleBulkExport = () => {
     if (selectedIds.size === 0) return;
@@ -579,6 +590,18 @@ const History = () => {
       </div>
 
       <ArticlePreviewModal key={selectedArticle?._id || 'history-preview'} article={selectedArticle} isOpen={showPreview} onClose={() => setShowPreview(false)} />
+
+      <ConfirmDialog
+        open={deleteDialog.open}
+        onClose={() => setDeleteDialog({ open: false, ids: [], single: false })}
+        onConfirm={confirmDelete}
+        variant="danger"
+        title={deleteDialog.single ? 'Delete this article?' : `Delete ${deleteDialog.ids.length} articles?`}
+        message={deleteDialog.single
+          ? 'This will permanently remove the analysis from your history. This action cannot be undone.'
+          : `This will permanently remove ${deleteDialog.ids.length} selected article${deleteDialog.ids.length > 1 ? 's' : ''} from your history. This action cannot be undone.`}
+        confirmText="Delete"
+      />
     </div>
   );
 };

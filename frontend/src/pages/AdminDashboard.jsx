@@ -173,12 +173,16 @@ const AdminDashboard = () => {
   };
 
   const triggerImpactRecompute = async () => {
+    const t = toast.loading('Recomputing impact scores...');
     try {
       const res = await api.post('/admin/recompute-impact');
-      alert(`Impact recompute done. ${res.data?.updated || 0} articles updated in ${res.data?.durationMs || 0}ms.`);
+      toast.success(
+        `Impact recompute done. ${res.data?.updated || 0} articles in ${res.data?.durationMs || 0}ms.`,
+        { id: t }
+      );
       loadHealth();
     } catch (err) {
-      alert('Recompute failed: ' + err.message);
+      toast.error('Recompute failed: ' + err.message, { id: t });
     }
   };
 

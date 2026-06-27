@@ -97,13 +97,31 @@ api.interceptors.response.use(
 );
 
 /**
- * Fetch and analyze news for a given search query
+ * Fetch and analyze news for a given search query.
+ *
+ * @param {string} query - Search query (topic)
+ * @param {number} pageSize - Number of articles
+ * @param {boolean} latest - Latest mode
+ * @param {object} opts - { fast?: boolean }
+ *   fast=true → serves pre-analysed articles from DB cache (typically <500ms).
+ *               Skips RSS fetch + AI analysis. Best for initial render.
+ *   fast=false (default) → full pipeline: RSS fetch + sentiment analysis + DB upsert.
+ *                          Slow (~5-30s) but produces fresh analysis.
  */
-export const fetchAndAnalyzeNews = async (query, pageSize = 12, latest = false) => {
+export const fetchAndAnalyzeNews = async (query, pageSize = 12, latest = false, opts = {}) => {
   const response = await api.get('/news', {
-    params: { q: query, pageSize, latest },
+    params: { q: query, pageSize, latest, ...(opts.fast ? { fast: 'true' } : {}) },
   });
   return response.data;
+};
+
+/**
+ * Fast-path: fetch pre-analysed articles from DB cache.
+ * Returns instantly. Use for initial render, then call `fetchAndAnalyzeNews`
+ * in the background to refresh the cache with new articles.
+ */
+export const fetchNewsFast = async (query, pageSize = 12, latest = false) => {
+  return fetchAndAnalyzeNews(query, pageSize, latest, { fast: true });
 };
 
 /**
