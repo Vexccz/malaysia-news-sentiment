@@ -28,7 +28,7 @@ const Forecast = () => {
       // Save to forecast history for accuracy tracking
       const entry = {
         topic: topic.trim(), days, date: new Date().toISOString(),
-        trend: res.data.trend, confidence: res.data.predicted[0]?.confidence,
+        trend: res.data.trend, residualStd: res.data.residualStd,
         predictedValues: res.data.predicted.map(p => p.predictedSentiment)
       };
       setForecastHistory(prev => {
@@ -51,13 +51,13 @@ const Forecast = () => {
     const historical = data.historical.map(h => ({
       date: h.date, sentiment: h.sentiment, type: 'historical',
     }));
-    const predicted = data.predicted.map(p => {
+    const predicted = data.predicted.map((p, i) => {
       const shifted = whatIfShift !== 0 ? p.predictedSentiment + whatIfShift : p.predictedSentiment;
+      const ci = data.confidenceIntervals?.[i];
       return {
         date: p.date, predicted: shifted,
-        confidenceUpper: Math.min(1, shifted + (1 - p.confidence) * 0.5),
-        confidenceLower: Math.max(-1, shifted - (1 - p.confidence) * 0.5),
-        confidence: p.confidence,
+        confidenceUpper: ci ? ci.upper : shifted,
+        confidenceLower: ci ? ci.lower : shifted,
         type: 'predicted',
         ...(showWhatIf && { whatIf: shifted }),
       };
@@ -68,19 +68,36 @@ const Forecast = () => {
   const trendColor = data?.trend === 'Improving' ? '#16a34a' : data?.trend === 'Declining' ? '#dc2626' : '#ca8a04';
   const trendLabel = data?.trend === 'Improving' ? 'Upward' : data?.trend === 'Declining' ? 'Downward' : 'Stable';
 
-  // Average confidence
-  const avgConfidence = data?.predicted?.length
-    ? Math.round(data.predicted.reduce((s, p) => s + p.confidence, 0) / data.predicted.length * 100)
+  // Average confidence derived from CI widths: 1 - (avgWidth / 2)
+  const avgConfidence = data?.confidenceIntervals?.length
+    ? Math.round((1 - data.confidenceIntervals.reduce((s, c) => s + (c.width || (c.upper - c.lower)), 0) / (data.confidenceIntervals.length * 2)) * 100)
     : 0;
+
+  // Best method RMSE from backtest
+  const bestMethodRmse = data?.backtest?.[data.method]?.rmse;
+
+  // Model comparison table data
+  const modelComparison = useMemo(() => {
+    if (!data?.backtest) return [];
+    return Object.entries(data.backtest).map(([name, stats]) => ({
+      name,
+      rmse: stats.rmse,
+      mape: stats.mape,
+      weight: data.weights?.[name] || 0,
+    })).sort((a, b) => (a.rmse || 999) - (b.rmse || 999));
+  }, [data]);
 
   // Export forecast as CSV
   const handleExport = () => {
     if (!data) return;
-    const rows = [['Date', 'Type', 'Sentiment', 'Confidence Upper', 'Confidence Lower']];
+    const rows = [['Date', 'Type', 'Sentiment', 'CI Upper', 'CI Lower']];
     data.historical.forEach(h => rows.push([h.date, 'historical', h.sentiment, '', '']));
-    data.predicted.forEach(p => rows.push([p.date, 'predicted', p.predictedSentiment,
-      Math.min(1, p.predictedSentiment + (1 - p.confidence) * 0.5),
-      Math.max(-1, p.predictedSentiment - (1 - p.confidence) * 0.5)]));
+    data.predicted.forEach((p, i) => {
+      const ci = data.confidenceIntervals?.[i];
+      rows.push([p.date, 'predicted', p.predictedSentiment,
+        ci ? ci.upper : '',
+        ci ? ci.lower : '']);
+    });
     const csv = rows.map(r => r.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -98,7 +115,14 @@ const Forecast = () => {
             <h1 className="font-['Playfair_Display'] text-2xl font-black text-ink dark:text-paper tracking-tight uppercase">
               Sentiment Forecast
             </h1>
-            <p className="text-[10px] text-ink-muted dark:text-ink-faint mt-1 uppercase tracking-[0.2em]">AI-Powered Predictions</p>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-[10px] text-ink-muted dark:text-ink-faint uppercase tracking-[0.2em]">Ensemble Time-Series Forecast</p>
+              {data?.seasonality === 'weekly' && (
+                <span className="inline-flex items-center px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider border border-amber-500/50 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 font-sans">
+                  Weekly Pattern Detected
+                </span>
+              )}
+            </div>
           </div>
           {data && (
             <button onClick={handleExport}
@@ -176,20 +200,20 @@ const Forecast = () => {
               <div className="px-5 py-4">
                 <div className="text-[10px] font-semibold uppercase tracking-widest text-ink-muted dark:text-ink-faint mb-1 font-sans">Articles Analyzed</div>
                 <div className="text-lg font-bold text-ink dark:text-paper font-display">{data.totalArticles}</div>
-                <div className="text-[10px] text-ink-faint font-sans mt-0.5">from past {data.daysAnalyzed} days</div>
+                <div className="text-[10px] text-ink-faint font-sans mt-0.5">{data.dataPoints} data points from {data.daysAnalyzed} days</div>
               </div>
               <div className="px-5 py-4">
-                <div className="text-[10px] font-semibold uppercase tracking-widest text-ink-muted dark:text-ink-faint mb-1 font-sans">Confidence</div>
-                <div className="text-lg font-bold text-ink dark:text-paper font-display">{avgConfidence}%</div>
+                <div className="text-[10px] font-semibold uppercase tracking-widest text-ink-muted dark:text-ink-faint mb-1 font-sans">Best Method</div>
+                <div className="text-lg font-bold text-ink dark:text-paper font-display">{data.method || 'N/A'}</div>
                 <div className="text-[10px] text-ink-faint font-sans mt-0.5">
-                  {avgConfidence >= 70 ? 'High certainty' : avgConfidence >= 40 ? 'Moderate' : 'Low certainty'}
+                  {bestMethodRmse !== undefined ? `RMSE: ${bestMethodRmse.toFixed(3)}` : 'No backtest data'}
                 </div>
               </div>
               <div className="px-5 py-4">
-                <div className="text-[10px] font-semibold uppercase tracking-widest text-ink-muted dark:text-ink-faint mb-1 font-sans">Forecast Range</div>
-                <div className="text-lg font-bold text-ink dark:text-paper font-display">{data.predicted.length} days</div>
+                <div className="text-[10px] font-semibold uppercase tracking-widest text-ink-muted dark:text-ink-faint mb-1 font-sans">Residual Std</div>
+                <div className="text-lg font-bold text-ink dark:text-paper font-display">{data.residualStd != null ? data.residualStd.toFixed(3) : '\u2014'}</div>
                 <div className="text-[10px] text-ink-faint font-sans mt-0.5">
-                  ±{data.predicted.length > 0 ? Math.round((1 - data.predicted[0].confidence) * 50) : 0}% uncertainty
+                  {data.residualStd != null ? (data.residualStd < 0.15 ? 'Low noise' : data.residualStd < 0.35 ? 'Moderate noise' : 'High noise') : 'N/A'}
                 </div>
               </div>
             </div>
@@ -222,8 +246,8 @@ const Forecast = () => {
               {showWhatIf && (
                 <p className="text-[10px] text-ink-faint font-sans">
                   Simulate external events: drag the slider to shift the predicted sentiment by a fixed amount.
-                  {whatIfShift > 0.1 && ' Positive shift — e.g. good economic news, policy announcement.'}
-                  {whatIfShift < -0.1 && ' Negative shift — e.g. scandal, natural disaster, market crash.'}
+                  {whatIfShift > 0.1 && ' Positive shift \u2014 e.g. good economic news, policy announcement.'}
+                  {whatIfShift < -0.1 && ' Negative shift \u2014 e.g. scandal, natural disaster, market crash.'}
                 </p>
               )}
             </div>
@@ -234,7 +258,7 @@ const Forecast = () => {
                 <div className="px-5 py-4 border-b border-paper-line dark:border-paper-dark-line">
                   <h3 className="text-sm font-semibold text-ink dark:text-paper uppercase tracking-wider font-sans">Forecast Projection</h3>
                   <p className="text-xs text-ink-faint mt-0.5 font-sans">
-                    Solid line = actual sentiment &nbsp;&middot;&nbsp; Dashed line = AI prediction
+                    Solid line = actual sentiment &nbsp;&middot;&nbsp; Dashed line = forecast projection
                     {showWhatIf && whatIfShift !== 0 && <span className="text-amber-600 dark:text-amber-400"> &nbsp;&middot;&nbsp; Orange = what-if scenario</span>}
                   </p>
                 </div>
@@ -258,7 +282,7 @@ const Forecast = () => {
                           axisLine={{ stroke: '#E8E4DB' }} tickLine={false} />
                         <YAxis domain={[-1, 1]} ticks={[-1, -0.5, 0, 0.5, 1]}
                           tick={{ fontSize: 10, fill: '#A8A59E', fontFamily: 'Inter' }}
-                          tickFormatter={(val) => { if (val === 1) return 'Positive'; if (val === 0.5) return '+'; if (val === 0) return 'Neutral'; if (val === -0.5) return '−'; if (val === -1) return 'Negative'; return ''; }}
+                          tickFormatter={(val) => { if (val === 1) return 'Positive'; if (val === 0.5) return '+'; if (val === 0) return 'Neutral'; if (val === -0.5) return '\u2212'; if (val === -1) return 'Negative'; return ''; }}
                           axisLine={false} tickLine={false} />
                         <Tooltip contentStyle={{ background: '#FFFFFF', border: '1px solid #E8E4DB', borderRadius: '0', fontSize: '11px', fontFamily: 'Inter', boxShadow: 'none' }}
                           formatter={(value, name) => {
@@ -271,7 +295,7 @@ const Forecast = () => {
                         <Area type="monotone" dataKey="confidenceUpper" stroke="none" fill="#dc2626" fillOpacity={0.06} name="Confidence Band" isAnimationActive animationDuration={1500} />
                         <Area type="monotone" dataKey="confidenceLower" stroke="none" fill="#ffffff" fillOpacity={1} name=" " legendType="none" isAnimationActive animationDuration={1500} />
                         <Line type="monotone" dataKey="sentiment" stroke="#1A1A1A" strokeWidth={2} dot={{ r: 2, fill: '#1A1A1A' }} name="Actual Sentiment" connectNulls={false} isAnimationActive animationDuration={1500} />
-                        <Line type="monotone" dataKey="predicted" stroke="#dc2626" strokeWidth={2} strokeDasharray="6 3" dot={{ r: 2.5, fill: '#dc2626' }} name="AI Prediction" connectNulls={false} isAnimationActive animationDuration={1500} />
+                        <Line type="monotone" dataKey="predicted" stroke="#dc2626" strokeWidth={2} strokeDasharray="6 3" dot={{ r: 2.5, fill: '#dc2626' }} name="Forecast" connectNulls={false} isAnimationActive animationDuration={1500} />
                         {showWhatIf && whatIfShift !== 0 && (
                           <Line type="monotone" dataKey="whatIf" stroke="#F59E0B" strokeWidth={2} strokeDasharray="4 4" dot={{ r: 2, fill: '#F59E0B' }} name="What-If Scenario" connectNulls={false} isAnimationActive animationDuration={800} />
                         )}
@@ -282,12 +306,46 @@ const Forecast = () => {
               </div>
             )}
 
-            {/* AI Insight */}
-            {data.aiInsight && (
+            {/* Method Comparison Table */}
+            {modelComparison.length > 0 && (
+              <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111]">
+                <div className="px-5 py-3 border-b border-paper-line dark:border-paper-dark-line">
+                  <h3 className="text-[10px] font-semibold uppercase tracking-widest text-ink-muted dark:text-ink-faint font-sans">Model Comparison</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs font-sans">
+                    <thead>
+                      <tr className="border-b border-paper-line dark:border-paper-dark-line">
+                        <th className="text-left px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-ink-muted dark:text-ink-faint">Method</th>
+                        <th className="text-right px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-ink-muted dark:text-ink-faint">RMSE</th>
+                        <th className="text-right px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-ink-muted dark:text-ink-faint">MAPE</th>
+                        <th className="text-right px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-ink-muted dark:text-ink-faint">Weight</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {modelComparison.map((m, i) => (
+                        <tr key={m.name} className={`border-b border-paper-line/50 dark:border-paper-dark-line/50 ${m.name === data.method ? 'bg-ink/5 dark:bg-paper/5' : ''}`}>
+                          <td className="px-5 py-2 text-ink dark:text-paper font-medium">
+                            {m.name}
+                            {m.name === data.method && <span className="ml-1.5 text-[9px] uppercase tracking-wider text-accent font-semibold">(Best)</span>}
+                          </td>
+                          <td className="px-5 py-2 text-right font-mono text-ink dark:text-paper">{m.rmse != null ? m.rmse.toFixed(3) : '\u2014'}</td>
+                          <td className="px-5 py-2 text-right font-mono text-ink dark:text-paper">{m.mape != null ? `${m.mape.toFixed(1)}%` : '\u2014'}</td>
+                          <td className="px-5 py-2 text-right font-mono text-ink dark:text-paper">{m.weight ? `${(m.weight * 100).toFixed(0)}%` : '\u2014'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Insight */}
+            {data.insight && (
               <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111]">
                 <div className="border-l-3 border-accent px-5 py-4">
                   <div className="text-[10px] font-semibold uppercase tracking-widest text-accent mb-2 font-sans">Analysis</div>
-                  <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed font-sans">{data.aiInsight}</p>
+                  <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed font-sans">{data.insight}</p>
                 </div>
               </div>
             )}
@@ -308,7 +366,7 @@ const Forecast = () => {
                       <span className="font-mono" style={{ color: entry.trend === 'Improving' ? '#16a34a' : entry.trend === 'Declining' ? '#dc2626' : '#ca8a04' }}>
                         {entry.trend}
                       </span>
-                      <span className="text-ink-faint ml-auto">{Math.round(entry.confidence * 100)}%</span>
+                      <span className="text-ink-faint ml-auto">{entry.residualStd != null ? `\u03C3=${entry.residualStd.toFixed(3)}` : ''}</span>
                     </div>
                   ))}
                 </div>

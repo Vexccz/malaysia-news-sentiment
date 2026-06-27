@@ -188,8 +188,8 @@ function generateInsight(topic, historical, forecast, totalArticles, historyDays
   }
 
   const current = historical[historical.length - 1].sentiment;
-  const predicted7 = forecast.predicted[Math.min(6, forecast.predicted.length - 1)];
-  const predicted14 = forecast.predicted[forecast.predicted.length - 1];
+  const predicted7 = Math.max(-1, Math.min(1, forecast.predicted[Math.min(6, forecast.predicted.length - 1)]));
+  const predicted14 = Math.max(-1, Math.min(1, forecast.predicted[forecast.predicted.length - 1]));
   const ci7 = forecast.confidenceIntervals[Math.min(6, forecast.confidenceIntervals.length - 1)];
 
   const sentimentLabel = current > 0.2 ? 'positive' : current < -0.2 ? 'negative' : 'neutral';
