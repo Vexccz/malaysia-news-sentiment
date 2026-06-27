@@ -200,6 +200,7 @@ app.use('/api/v1/digest', require('./routes/digestRoutes'));
 app.use('/api/v1/public', require('./routes/publicApiRoutes'));
 app.use('/api/v1/reports', analysisLimiter, require('./routes/reportRoutes'));
 app.use('/api/v1/forecast', require('./routes/forecastRoutes'));
+app.use('/api/v1/agent', require('./routes/agentRoutes'));
 app.use('/api/v1', require('./routes/shareRoutes'));
 app.use('/api/v1/notifications', require('./routes/notificationRoutes'));
 app.use('/api/v1/assistant', require('./routes/aiAssistantRoutes'));
