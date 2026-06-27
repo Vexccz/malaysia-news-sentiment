@@ -31,6 +31,9 @@ router.get('/', async (req, res) => {
     if (etag) res.setHeader('ETag', etag);
     if (lastModified) res.setHeader('Last-Modified', lastModified);
     res.setHeader('X-Proxy-Cache', cached ? 'HIT' : 'MISS');
+    // Override helmet CORP — image must be embeddable cross-origin (Vercel → Render)
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.send(buffer);
   } catch (err) {
     const status = err.response?.status || 502;
