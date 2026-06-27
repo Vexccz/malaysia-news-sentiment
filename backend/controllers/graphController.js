@@ -1,7 +1,9 @@
 const graphService = require('../services/graphService');
+const { neo4j } = graphService;
 
 const intVal = (value) => Number(value?.low ?? value?.high ? value.toString?.() ?? value : value ?? 0);
 const floatVal = (value) => Number(value ?? 0);
+const toCypherInt = (n) => neo4j.int(Math.max(0, Math.floor(Number(n) || 0)));
 
 const getGraphOverview = async (req, res) => {
   try {
@@ -27,7 +29,7 @@ const getGraphOverview = async (req, res) => {
              negative,
              neutral
       `,
-      { limit }
+      { limit: toCypherInt(limit) }
     );
 
     const nodes = (nodesResult?.records || []).map((r) => {
@@ -70,7 +72,7 @@ const getGraphOverview = async (req, res) => {
       ORDER BY weight DESC
       LIMIT 200
       `,
-      { names: nodeNames, minWeight }
+      { names: nodeNames, minWeight: toCypherInt(minWeight) }
     );
 
     const edges = (edgesResult?.records || []).map((r) => {
