@@ -18,3 +18,4 @@ backend/ai-prompt-debug.log
 before.json
 after.json
 stats.json
+health.json

@@ -291,9 +291,10 @@ const ArticleCard = ({ article, onPreview, onDelete, onBookmark, isBookmarked })
              </button>
 
              {onBookmark && (
-               <button 
-                className={`art-bookmark-btn ${isBookmarked ? 'active' : ''}`}
-                onClick={handleBookmark}
+               <button
+                                aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+                                className={`art-bookmark-btn ${isBookmarked ? 'active' : ''}`}
+                                onClick={handleBookmark}
                 title={isBookmarked ? t('removeBookmark') : t('addToBookmarks')}
                 style={{
                   background: 'none', border: 'none', padding: 4, cursor: 'pointer',
@@ -309,9 +310,10 @@ const ArticleCard = ({ article, onPreview, onDelete, onBookmark, isBookmarked })
              )}
 
              {onDelete && (
-               <button 
-                 className="art-delete-btn"
-                 onClick={handleDelete}
+               <button
+                                 aria-label="Delete article"
+                                 className="art-delete-btn"
+                                 onClick={handleDelete}
                  title={t('deletePermanently')}
                >
                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

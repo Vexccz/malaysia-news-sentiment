@@ -1246,17 +1246,17 @@ const Dashboard = () => {
                     <button onClick={() => setShowCustomizer(true)} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="Customize">
                       <Settings2 size={14} />
                     </button>
-                    <button onClick={handleManualForecast} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="AI Forecast">
+                    <button aria-label="Generate forecast" onClick={handleManualForecast} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="AI Forecast">
                       <BarChart3 size={14} />
                     </button>
                     <ExportPPT articles={articles} distribution={distribution} sources={sources} query={currentQuery} />
-                    <button onClick={handleDownloadPDF} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="Download PDF">
+                    <button aria-label="Download as PDF" onClick={handleDownloadPDF} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="Download PDF">
                       <FileDown size={14} />
                     </button>
-                    <button onClick={handlePrint} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="Print Report">
+                    <button aria-label="Print dashboard" onClick={handlePrint} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="Print Report">
                       <Printer size={14} />
                     </button>
-                    <button onClick={handleExport} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="Export CSV">
+                    <button aria-label="Export data" onClick={handleExport} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="Export CSV">
                       <Download size={14} />
                     </button>
                   </div>

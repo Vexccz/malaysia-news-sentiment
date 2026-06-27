@@ -249,7 +249,7 @@ const CommentItem = ({ c, onLike, timeAgo, sentimentColor, onUserClick, currentU
       </div>
       <p className="text-sm text-ink-secondary dark:text-ink-muted leading-relaxed ml-[38px]">{c.content}</p>
       <div className="flex items-center gap-3 mt-1.5 ml-[38px]">
-        <button onClick={handleLike} disabled={liking}
+        <button aria-label={liked ? 'Unlike post' : 'Like post'} onClick={handleLike} disabled={liking}
           className={`flex items-center gap-1 text-[10px] transition-colors ${liked ? 'text-red-500' : 'text-ink-faint hover:text-ink dark:hover:text-paper'}`}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>

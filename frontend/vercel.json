@@ -3,6 +3,9 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
+    { "source": "/sitemap.xml", "destination": "https://mynewsa-api.onrender.com/sitemap.xml" },
+    { "source": "/sitemap-static.xml", "destination": "https://mynewsa-api.onrender.com/sitemap-static.xml" },
+    { "source": "/sitemap-articles.xml", "destination": "https://mynewsa-api.onrender.com/sitemap-articles.xml" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

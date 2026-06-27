@@ -211,6 +211,10 @@ app.use('/api/v1/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/v1/behavior', require('./routes/behaviorRoutes'));
 app.use('/api/v1/collab', require('./routes/collaboration'));
 
+// ── Sitemap routes (root-level, no /api prefix) ─────────────
+// SEO crawlers expect /sitemap.xml at root, not nested under /api
+app.use('/', require('./routes/sitemapRoutes'));
+
 // ── Backward compatibility — old routes redirect to v1 ───────
 app.use('/api/auth', authLimiter, require('./routes/authRoutes'));
 app.use('/api/news', analysisLimiter, require('./routes/newsRoutes'));
@@ -239,6 +243,10 @@ app.get('/api/admin/metrics', protect, authorize('admin'), (req, res) => res.red
 // ── Global error handler ──────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err.message);
+  try {
+    const { logError } = require('./services/healthService');
+    logError(`${req.method} ${req.path}`, err);
+  } catch (_) { /* never let logging break response */ }
   res.status(err.status || 500).json({ error: err.message || 'Internal server error.' });
 });
 

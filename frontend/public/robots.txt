@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://malaysia-news-sentiment.vercel.app/sitemap.xml

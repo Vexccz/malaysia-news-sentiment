@@ -311,8 +311,9 @@ const FolderSidebar = ({
             className="px-2 py-1 text-xs border-2 border-black dark:border-white bg-transparent text-black dark:text-white outline-none w-32 placeholder:text-gray-400 dark:placeholder:text-[#666]"
           />
           <button
-            onClick={handleCreateFolder}
-            className="p-1 text-[#4ADE80] hover:opacity-70"
+                      aria-label="Create new folder"
+                      onClick={handleCreateFolder}
+                      className="p-1 text-[#4ADE80] hover:opacity-70"
           >
             <Check size={14} />
           </button>

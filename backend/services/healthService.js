@@ -66,11 +66,27 @@ function recordJob(jobName, fn) {
 
 /** Record RSS source fetch (sourceName = 'fmt', 'astroAwani', 'malaysiakini'). */
 function recordRssFetch(sourceName, ok, count = 0, error = null) {
+  const now = new Date().toISOString();
   state.rssSources[sourceName] = {
-    lastFetch: new Date().toISOString(),
+    lastFetch: now,
     lastStatus: ok ? 'success' : 'error',
     articlesFetched: count,
     error: error ? String(error).slice(0, 200) : null,
+  };
+
+  // Also bump rssIngestion job aggregate — uses latest source fetch as "last run"
+  const sources = Object.values(state.rssSources);
+  const totalArticles = sources.reduce((s, r) => s + (r.articlesFetched || 0), 0);
+  const anyError = sources.some(r => r.lastStatus === 'error');
+  state.jobs.rssIngestion = {
+    lastRun: now,
+    lastStatus: anyError ? 'partial' : 'success',
+    lastDurationMs: null, // per-source not aggregated yet
+    lastDetails: {
+      sources: Object.keys(state.rssSources).length,
+      totalArticles,
+      latestSource: sourceName,
+    },
   };
 }
 

@@ -157,6 +157,7 @@ const ShareModal = ({ isOpen, onClose, article }) => {
                 Share Article
               </span>
               <button
+                aria-label="Close share dialog"
                 onClick={onClose}
                 className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#252525] text-slate-400 dark:text-slate-500 transition-colors"
               >

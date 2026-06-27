@@ -549,15 +549,15 @@ const Heatmap = () => {
               </div>
               {/* Transport controls */}
               <div className="flex items-center justify-center gap-3">
-                <button onClick={stepBack} disabled={currentPeriodIdx === 0}
+                <button aria-label="Previous time period" onClick={stepBack} disabled={currentPeriodIdx === 0}
                   className="p-2 text-gray-500 dark:text-[#999] hover:text-black dark:hover:text-white disabled:opacity-30 transition-colors">
                   <SkipBack size={16} />
                 </button>
-                <button onClick={togglePlay}
+                <button aria-label={isPlaying ? 'Pause animation' : 'Play animation'} onClick={togglePlay}
                   className="w-10 h-10 flex items-center justify-center border-2 border-black dark:border-white text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors">
                   {isPlaying ? <Pause size={18} /> : <Play size={18} className="ml-0.5" />}
                 </button>
-                <button onClick={stepForward} disabled={currentPeriodIdx >= WEEK_PERIODS.length - 1}
+                <button aria-label="Next time period" onClick={stepForward} disabled={currentPeriodIdx >= WEEK_PERIODS.length - 1}
                   className="p-2 text-gray-500 dark:text-[#999] hover:text-black dark:hover:text-white disabled:opacity-30 transition-colors">
                   <SkipForward size={16} />
                 </button>
