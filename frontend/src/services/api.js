@@ -352,6 +352,30 @@ export const moveBookmarkToFolder = async (articleId, folderId) => {
 };
 
 /**
+ * Toggle Read Later flag on a bookmark (M)
+ */
+export const setReadLater = async (articleId, readLater) => {
+  const response = await api.put(`/bookmarks/${articleId}/read-later`, { readLater });
+  return response.data;
+};
+
+/**
+ * Mark Read Later bookmark as read (M)
+ */
+export const markBookmarkRead = async (articleId) => {
+  const response = await api.post(`/bookmarks/${articleId}/mark-read`);
+  return response.data;
+};
+
+/**
+ * Get all bookmark metadata (folder/readLater/readAt) for current user (M)
+ */
+export const getBookmarkMeta = async () => {
+  const response = await api.get('/bookmarks/meta');
+  return response.data;
+};
+
+/**
  * Get admin system overview stats (#4)
  */
 

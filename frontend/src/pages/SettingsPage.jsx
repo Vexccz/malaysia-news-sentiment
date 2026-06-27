@@ -684,6 +684,31 @@ const SettingsPage = () => {
         </SettingRow>
       </Section>
 
+      {/* Newsletter Digest (G) */}
+      {!isGuest && (
+        <Section title="Email Digest">
+          <SettingRow label="Receive Digest" desc="Get a curated email summary of Malaysian news sentiment">
+            <Toggle
+              id="newsletter-toggle"
+              checked={prefs.newsletter !== false}
+              onChange={v => savePreference('newsletter', v)}
+            />
+          </SettingRow>
+          {prefs.newsletter !== false && (
+            <SettingRow label="Frequency" desc="How often you want to receive the digest">
+              <select
+                value={prefs.digestFrequency || 'daily'}
+                onChange={e => savePreference('digestFrequency', e.target.value)}
+                className="px-3 py-1.5 text-sm border border-ink-faint dark:border-paper-faint bg-paper dark:bg-ink text-ink dark:text-paper rounded-none font-sans focus:outline-none focus:border-ink dark:focus:border-paper"
+              >
+                <option value="daily">Daily — 8 AM</option>
+                <option value="weekly">Weekly — Monday 8 AM</option>
+              </select>
+            </SettingRow>
+          )}
+        </Section>
+      )}
+
       {/* Language */}
       <Section title="Language and Region">
         <SettingRow label="Interface Language" desc="Display language for the dashboard">

@@ -96,19 +96,20 @@ const buildNewsletterHtml = (digest, stats, date) => {
 /**
  * Send daily digest to all subscribed users
  */
-const sendDailyDigest = async () => {
-  console.log('[Newsletter] Starting daily digest generation...');
-  
+const sendDailyDigest = async (frequency = 'daily') => {
+  console.log(`[Newsletter] Starting ${frequency} digest generation...`);
+
   try {
-    // Get articles from last 24 hours
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    // Get articles from last window (24h for daily, 7d for weekly)
+    const windowMs = frequency === 'weekly' ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+    const since = new Date(Date.now() - windowMs);
     const articles = await Article.find({ createdAt: { $gte: since } })
       .sort({ createdAt: -1 })
-      .limit(50)
+      .limit(frequency === 'weekly' ? 150 : 50)
       .lean();
 
     if (articles.length === 0) {
-      console.log('[Newsletter] No articles in last 24h. Skipping digest.');
+      console.log(`[Newsletter] No articles in last window. Skipping ${frequency} digest.`);
       return;
     }
 
@@ -121,9 +122,9 @@ const sendDailyDigest = async () => {
     };
 
     // Generate AI digest
-    let digest = { en: 'Daily digest summary unavailable.', ms: '' };
+    let digest = { en: `${frequency === 'weekly' ? 'Weekly' : 'Daily'} digest summary unavailable.`, ms: '' };
     try {
-      const result = await generateDigest(articles, 'Daily Overview');
+      const result = await generateDigest(articles, frequency === 'weekly' ? 'Weekly Overview' : 'Daily Overview');
       if (result?.digest) digest = result.digest;
     } catch (err) {
       console.warn('[Newsletter] AI digest failed:', err.message);
@@ -135,27 +136,26 @@ const sendDailyDigest = async () => {
 
     const html = buildNewsletterHtml(digest, stats, date);
 
-    // Find subscribed users (users with newsletter: true, or all verified users)
+    // Find subscribed users matching this frequency
     const users = await User.find({
       isVerified: true,
-      $or: [
-        { 'preferences.newsletter': true },
-        { 'preferences.newsletter': { $exists: false } } // default: subscribed
-      ]
+      'preferences.newsletter': { $ne: false },
+      'preferences.digestFrequency': frequency,
     }).select('email name').lean();
 
     if (users.length === 0) {
-      console.log('[Newsletter] No subscribed users found.');
+      console.log(`[Newsletter] No ${frequency} subscribers found.`);
       return;
     }
 
     let sent = 0;
+    const subjectPrefix = frequency === 'weekly' ? '📊 Weekly' : '📊 Daily';
 
     for (const user of users) {
       try {
         await sendEmail({
           to: user.email,
-          subject: `📊 Daily Sentiment Digest — ${date}`,
+          subject: `${subjectPrefix} Sentiment Digest — ${date}`,
           html,
         });
         sent++;
@@ -164,23 +164,29 @@ const sendDailyDigest = async () => {
       }
     }
 
-    console.log(`[Newsletter] ✅ Digest sent to ${sent}/${users.length} users.`);
+    console.log(`[Newsletter] ✅ ${frequency} digest sent to ${sent}/${users.length} users.`);
   } catch (err) {
     console.error('[Newsletter] Fatal error:', err.message);
   }
 };
 
 /**
- * Schedule daily digest — runs every day at 8:00 AM MYT (0:00 UTC)
+ * Schedule digests — daily at 8 AM MYT, weekly Monday at 8 AM MYT
  */
 const scheduleNewsletter = () => {
-  // Every day at 8:00 AM Malaysia Time
+  // Daily digest — every day at 8:00 AM Malaysia Time
   cron.schedule('0 8 * * *', () => {
-    console.log('[Newsletter] Cron triggered — generating daily digest...');
-    sendDailyDigest();
+    console.log('[Newsletter] Daily cron triggered');
+    sendDailyDigest('daily');
   }, { timezone: 'Asia/Kuala_Lumpur' });
 
-  console.log('📧 Newsletter scheduler active — daily digest at 8:00 AM MYT');
+  // Weekly digest — every Monday at 8:00 AM Malaysia Time
+  cron.schedule('0 8 * * 1', () => {
+    console.log('[Newsletter] Weekly cron triggered');
+    sendDailyDigest('weekly');
+  }, { timezone: 'Asia/Kuala_Lumpur' });
+
+  console.log('📧 Newsletter scheduler active — daily 8AM MYT, weekly Monday 8AM MYT');
 };
 
 module.exports = { sendDailyDigest, scheduleNewsletter, buildNewsletterHtml };

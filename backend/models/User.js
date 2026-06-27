@@ -30,6 +30,9 @@ const userSchema = new mongoose.Schema({
     alertNotifications: { type: Boolean, default: true },
     autoRefresh: { type: Boolean, default: false },
     defaultTopic: { type: String, default: 'Malaysia' },
+    // Newsletter digest preferences
+    newsletter: { type: Boolean, default: true },
+    digestFrequency: { type: String, enum: ['daily', 'weekly', 'off'], default: 'daily' },
   },
 
   // ── Dashboard Customization ───────────────────────────────
@@ -53,6 +56,8 @@ const userSchema = new mongoose.Schema({
     bookmarkMeta: [{
       articleId: { type: String, required: true },
       folderId: { type: String, default: null },
+      readLater: { type: Boolean, default: false }, // M — Read Later queue
+      readAt: { type: Date, default: null },         // M — when marked read
     }],
     analysisCount: { type: Number, default: 0 },
     recentlyViewed: [{ 

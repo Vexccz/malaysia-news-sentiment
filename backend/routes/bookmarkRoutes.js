@@ -125,4 +125,69 @@ router.put('/:id/folder', validate(bookmarkSchemas.moveBookmark), async (req, re
   }
 });
 
+// PUT /bookmarks/:id/read-later — toggle Read Later flag
+router.put('/:id/read-later', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { readLater } = req.body; // boolean
+
+    const existing = await User.findOne({
+      _id: req.userId,
+      'bookmarkMeta.articleId': id,
+    });
+
+    if (existing) {
+      await User.updateOne(
+        { _id: req.userId, 'bookmarkMeta.articleId': id },
+        { $set: { 'bookmarkMeta.$.readLater': !!readLater } }
+      );
+    } else {
+      await User.findByIdAndUpdate(req.userId, {
+        $push: { bookmarkMeta: { articleId: id, readLater: !!readLater } },
+      });
+    }
+
+    res.json({ success: true, articleId: id, readLater: !!readLater });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /bookmarks/:id/mark-read — mark Read Later item as read (sets readAt)
+router.post('/:id/mark-read', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const existing = await User.findOne({
+      _id: req.userId,
+      'bookmarkMeta.articleId': id,
+    });
+
+    if (existing) {
+      await User.updateOne(
+        { _id: req.userId, 'bookmarkMeta.articleId': id },
+        { $set: { 'bookmarkMeta.$.readAt': new Date(), 'bookmarkMeta.$.readLater': false } }
+      );
+    } else {
+      await User.findByIdAndUpdate(req.userId, {
+        $push: { bookmarkMeta: { articleId: id, readAt: new Date(), readLater: false } },
+      });
+    }
+
+    res.json({ success: true, articleId: id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /bookmarks/meta — fetch all bookmark metadata for current user
+router.get('/meta', async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('bookmarkMeta').lean();
+    res.json({ meta: user?.bookmarkMeta || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

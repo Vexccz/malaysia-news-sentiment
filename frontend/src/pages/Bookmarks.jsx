@@ -10,6 +10,9 @@ import {
   updateBookmarkFolder,
   deleteBookmarkFolder,
   moveBookmarkToFolder,
+  setReadLater,
+  markBookmarkRead,
+  getBookmarkMeta,
 } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -33,6 +36,8 @@ import {
   Filter,
   FileSpreadsheet,
   Hash,
+  Clock,
+  CheckCircle2,
 } from 'lucide-react';
 
 /* Page Interactive Animations */
@@ -457,6 +462,10 @@ const Bookmarks = () => {
   const [newFolderName, setNewFolderName] = useState('');
   const [showNewFolderInput, setShowNewFolderInput] = useState(false);
   const [editingFolderId, setEditingFolderId] = useState(null);
+
+  // View tab (M — Saved | Read Later | Read history)
+  const [viewTab, setViewTab] = useState('saved'); // saved | readlater | read
+  const [bookmarkMeta, setBookmarkMeta] = useState({}); // { articleId: { folderId, readLater, readAt } }
   const [editingFolderName, setEditingFolderName] = useState('');
   const [movingArticleId, setMovingArticleId] = useState(null);
 
@@ -471,14 +480,74 @@ const Bookmarks = () => {
     return Array.from(tagSet).sort();
   }, [allTagsMap]);
 
-  // Filtered articles (by active tag)
+  // Filtered articles (by view tab + active tag)
   const displayedArticles = useMemo(() => {
-    if (!activeTag) return articles;
-    return articles.filter((art) => {
-      const artId = art._id || art.id;
-      return (allTagsMap[artId] || []).includes(activeTag);
+    let result = articles;
+
+    // View tab filter (M)
+    if (viewTab === 'readlater') {
+      result = result.filter(art => {
+        const m = bookmarkMeta[art._id || art.id];
+        return m?.readLater === true;
+      });
+    } else if (viewTab === 'read') {
+      result = result.filter(art => {
+        const m = bookmarkMeta[art._id || art.id];
+        return !!m?.readAt;
+      });
+    } else {
+      // saved (default) — show all non-readLater bookmarks (or anything without meta = saved)
+      result = result.filter(art => {
+        const m = bookmarkMeta[art._id || art.id];
+        return !m?.readLater; // exclude items queued in Read Later
+      });
+    }
+
+    // Tag filter
+    if (activeTag) {
+      result = result.filter((art) => {
+        const artId = art._id || art.id;
+        return (allTagsMap[artId] || []).includes(activeTag);
+      });
+    }
+
+    return result;
+  }, [articles, activeTag, allTagsMap, viewTab, bookmarkMeta]);
+
+  // Tab counts (M)
+  const tabCounts = useMemo(() => {
+    let saved = 0, readlater = 0, read = 0;
+    articles.forEach(art => {
+      const m = bookmarkMeta[art._id || art.id];
+      if (m?.readLater) readlater++;
+      else saved++;
+      if (m?.readAt) read++;
     });
-  }, [articles, activeTag, allTagsMap]);
+    return { saved, readlater, read };
+  }, [articles, bookmarkMeta]);
+
+  // Toggle Read Later flag (M)
+  const handleToggleReadLater = async (artId) => {
+    const current = bookmarkMeta[artId]?.readLater === true;
+    try {
+      await setReadLater(artId, !current);
+      setBookmarkMeta(prev => ({ ...prev, [artId]: { ...(prev[artId] || {}), readLater: !current } }));
+      toast.success(!current ? '↪ Moved to Read Later' : '↩ Moved back to Saved');
+    } catch {
+      toast.error('Failed to update');
+    }
+  };
+
+  // Mark Read Later item as read (M)
+  const handleMarkRead = async (artId) => {
+    try {
+      await markBookmarkRead(artId);
+      setBookmarkMeta(prev => ({ ...prev, [artId]: { ...(prev[artId] || {}), readLater: false, readAt: new Date().toISOString() } }));
+      toast.success('✓ Marked as read');
+    } catch {
+      toast.error('Failed to mark read');
+    }
+  };
 
   // Count tagged articles
   const taggedCount = useMemo(() => {
@@ -494,6 +563,17 @@ const Bookmarks = () => {
       setFolders(data.folders || data || []);
     } catch {
       // Silently fail
+    }
+  }, []);
+
+  const loadMeta = useCallback(async () => {
+    try {
+      const data = await getBookmarkMeta();
+      const map = {};
+      (data.meta || []).forEach(m => { map[m.articleId] = m; });
+      setBookmarkMeta(map);
+    } catch {
+      // silently fail — UI still works with empty meta
     }
   }, []);
 
@@ -513,7 +593,8 @@ const Bookmarks = () => {
 
   useEffect(() => {
     loadFolders();
-  }, [loadFolders]);
+    loadMeta();
+  }, [loadFolders, loadMeta]);
 
   useEffect(() => {
     loadBookmarks();
@@ -678,6 +759,29 @@ const Bookmarks = () => {
         )}
       </div>
 
+      {/* ── View Tab (M) ─────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-1 mb-4 border-b border-[#e5e5e5] dark:border-[#222]">
+        {[
+          { id: 'saved', label: 'Saved', icon: Bookmark, count: tabCounts.saved },
+          { id: 'readlater', label: 'Read Later', icon: Clock, count: tabCounts.readlater },
+          { id: 'read', label: 'Read', icon: CheckCircle2, count: tabCounts.read },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setViewTab(tab.id)}
+            className={`flex items-center gap-2 px-4 py-2.5 text-[11px] font-medium uppercase tracking-[0.18em] border-b-2 transition-colors ${
+              viewTab === tab.id
+                ? 'border-black dark:border-white text-black dark:text-white'
+                : 'border-transparent text-gray-400 dark:text-[#666] hover:text-black dark:hover:text-white'
+            }`}
+          >
+            <tab.icon size={13} />
+            {tab.label}
+            <span className="text-[10px] tabular-nums opacity-60">({tab.count})</span>
+          </button>
+        ))}
+      </div>
+
       {/* ── Folder Management ─────────────────────────────────────────────── */}
       <FolderSidebar
         folders={folders}
@@ -778,19 +882,48 @@ const Bookmarks = () => {
                     lang={lang}
                   />
 
-                  {/* Move-to-folder button */}
-                  <div className="relative">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setMovingArticleId(movingArticleId === artId ? null : artId);
-                      }}
-                      className="flex items-center gap-1 px-2 py-1 text-[10px] uppercase tracking-[0.18em] border border-[#e5e5e5] dark:border-[#333] text-gray-400 dark:text-[#666] hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white transition-colors"
-                    >
-                      <Folder size={10} />
-                      <span className="hidden sm:inline">{tLocal('move', lang)}</span>
-                      <ChevronDown size={10} />
-                    </button>
+                  <div className="flex items-center gap-2">
+                    {viewTab !== 'read' && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleReadLater(artId);
+                        }}
+                        className="flex items-center gap-1 px-2 py-1 text-[10px] uppercase tracking-[0.18em] border border-[#e5e5e5] dark:border-[#333] text-gray-400 dark:text-[#666] hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white transition-colors"
+                        title={bookmarkMeta[artId]?.readLater ? 'Move back to Saved' : 'Move to Read Later'}
+                      >
+                        <Clock size={10} />
+                        {bookmarkMeta[artId]?.readLater ? 'Saved' : 'Read Later'}
+                      </button>
+                    )}
+
+                    {viewTab === 'readlater' && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMarkRead(artId);
+                        }}
+                        className="flex items-center gap-1 px-2 py-1 text-[10px] uppercase tracking-[0.18em] border border-[#e5e5e5] dark:border-[#333] text-gray-400 dark:text-[#666] hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white transition-colors"
+                        title="Mark as read and remove from Read Later"
+                      >
+                        <CheckCircle2 size={10} />
+                        Mark Read
+                      </button>
+                    )}
+
+                    {/* Move-to-folder button */}
+                    <div className="relative">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMovingArticleId(movingArticleId === artId ? null : artId);
+                        }}
+                        className="flex items-center gap-1 px-2 py-1 text-[10px] uppercase tracking-[0.18em] border border-[#e5e5e5] dark:border-[#333] text-gray-400 dark:text-[#666] hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white transition-colors"
+                      >
+                        <Folder size={10} />
+                        {tLocal('moveArticle', lang)}
+                        <ChevronDown size={10} />
+                      </button>
 
                     <AnimatePresence>
                       {movingArticleId === artId && (
@@ -830,6 +963,7 @@ const Bookmarks = () => {
                         </motion.div>
                       )}
                     </AnimatePresence>
+                  </div>
                   </div>
                 </div>
               </StaggerItem>

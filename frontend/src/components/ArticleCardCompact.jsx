@@ -439,10 +439,24 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
               {/* Footer: Confidence + Actions */}
               <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#eee] dark:border-[#1a1a1a]">
                 <div className="flex items-center gap-3">
-                  {article.confidence && (
-                    <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em]">
-                      {Math.round(article.confidence * 100)}% confidence
-                    </span>
+                  {article.confidence > 0 && (
+                    <div
+                      className="flex items-center gap-1.5"
+                      title={`NLP model confidence: ${Math.round(article.confidence * 100)}% — higher means more certain about the sentiment classification`}
+                    >
+                      <div className="w-12 h-1 bg-gray-200 dark:bg-gray-700 relative overflow-hidden">
+                        <div
+                          className="absolute inset-y-0 left-0 transition-all"
+                          style={{
+                            width: `${Math.round(article.confidence * 100)}%`,
+                            background: sentiment === 'Positive' ? '#22c55e' : sentiment === 'Negative' ? '#ef4444' : '#eab308',
+                          }}
+                        />
+                      </div>
+                      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 tabular-nums">
+                        {Math.round(article.confidence * 100)}%
+                      </span>
+                    </div>
                   )}
                 </div>
                 <div className="flex items-center gap-1">
