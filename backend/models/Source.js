@@ -47,6 +47,21 @@ const sourceSchema = new mongoose.Schema({
     max: 100,
     default: 50,
   },
+  biasScore: {
+    type: Number,
+    min: -1,
+    max: 1,
+    default: 0,
+  },
+  sentimentSkew: {
+    type: String,
+    enum: ['positive', 'negative', 'balanced', 'unknown'],
+    default: 'unknown',
+  },
+  lastBiasUpdate: {
+    type: Date,
+    default: null,
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Source', sourceSchema);

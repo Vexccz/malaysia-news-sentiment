@@ -1,5 +1,6 @@
 const Source = require('../models/Source');
 const Article = require('../models/Article');
+const { calculateSourceBias, updateAllBiasScores } = require('../services/biasService');
 
 // GET /api/credibility — list all sources with scores
 exports.getSources = async (req, res) => {
@@ -19,7 +20,7 @@ exports.getSources = async (req, res) => {
     const countMap = {};
     articleCounts.forEach(a => { countMap[a._id] = a.count; });
 
-    // Attach real article counts
+    // Attach real article counts and bias data
     sources.forEach(s => {
       s.totalArticles = countMap[s.name] || 0;
     });
@@ -62,6 +63,42 @@ exports.analyzeSource = async (req, res) => {
     await source.save();
 
     res.json({ source, message: 'Source analysis updated.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// GET /api/credibility/bias/:sourceName — get bias analysis for specific source
+exports.getSourceBias = async (req, res) => {
+  try {
+    const sourceName = req.params.sourceName;
+    const days = parseInt(req.query.days) || 90;
+    
+    const bias = await calculateSourceBias(sourceName, days);
+    
+    res.json({
+      source: sourceName,
+      biasScore: bias.biasScore,
+      sentimentSkew: bias.sentimentSkew,
+      totalArticles: bias.total,
+      distribution: bias.rates,
+      daysAnalyzed: days,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// POST /api/credibility/bias/recalculate — recalculate all source bias scores (admin only)
+exports.recalculateAllBias = async (req, res) => {
+  try {
+    const days = parseInt(req.body.days) || 90;
+    const results = await updateAllBiasScores(days);
+    
+    res.json({
+      message: `Bias scores updated for ${results.length} sources`,
+      results,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
