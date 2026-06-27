@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 import { useParams, Link } from 'react-router-dom';
 import api from '../services/api';
 import SentimentBadge from '../components/SentimentBadge';
@@ -191,7 +192,15 @@ const ArticleDetail = () => {
         {/* Body */}
         <article
           className="text-ink text-[15px] leading-[1.85] mb-10"
-          dangerouslySetInnerHTML={{ __html: bodyText }}
+          dangerouslySetInnerHTML={{
+            __html: DOMPurify.sanitize(bodyText, {
+              ALLOWED_TAGS: ['p','br','strong','em','b','i','u','a','span','ul','ol','li','blockquote','h1','h2','h3','h4','h5','h6','code','pre'],
+              ALLOWED_ATTR: ['href','target','rel','class'],
+              ALLOW_DATA_ATTR: false,
+              FORBID_TAGS: ['style','script','iframe','object','embed','link','img','svg','figure'],
+              FORBID_ATTR: ['style','onerror','onload','onclick','onmouseover','onfocus','onblur'],
+            })
+          }}
         />
         <style>{`
           article p { margin-bottom: 1.1em; }

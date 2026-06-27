@@ -186,10 +186,21 @@ const getAndAnalyzeNews = async (req, res) => {
 
     if (!rawArticles) {
       if (refresh) console.log(`🔄 Cache bypass triggered for: ${cacheKey}`);
+      const { recordRssFetch } = require('../services/healthService');
+      const trackFetch = async (name, fn) => {
+        try {
+          const arts = await fn();
+          recordRssFetch(name, true, arts?.length || 0);
+          return arts || [];
+        } catch (err) {
+          recordRssFetch(name, false, 0, err);
+          return [];
+        }
+      };
       const [fmtDirectArts, astroAwaniArts, mkiniArts] = await Promise.all([
-        fetchFMTNews().catch(() => []), 
-        fetchAstroAwaniNews().catch(() => []),
-        fetchMalaysiakiniNews().catch(() => []),
+        trackFetch('fmt', fetchFMTNews),
+        trackFetch('astroAwani', fetchAstroAwaniNews),
+        trackFetch('malaysiakini', fetchMalaysiakiniNews),
       ]);
 
       const queryWords = q.toLowerCase().split(/\s+/).filter(w => {

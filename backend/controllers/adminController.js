@@ -45,7 +45,7 @@ const getAdminDashboardStats = async (req, res) => {
       safeExec(Article.aggregate([{ $group: { _id: null, count: { $sum: '$viewCount' } } }]), []),
       safeExec(User.find().sort({ createdAt: -1 }).limit(100).select('name email role analysisCount createdAt').lean(), []),
       safeExec(Article.find().sort({ createdAt: -1 }).limit(5).select('title sentiment source publishedAt topic impactScore').lean(), []),
-      safeExec(Article.find().sort({ impactScore: -1 }).limit(5).select('title source impactScore sentiment').lean(), []),
+      safeExec(Article.find().sort({ impactScore: -1 }).limit(10).select('title source impactScore sentiment viewCount').lean(), []),
       safeExec(Article.aggregate([
         { $group: { _id: '$topic', count: { $sum: 1 } } },
         { $sort: { count: -1 } },

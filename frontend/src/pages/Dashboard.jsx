@@ -858,29 +858,17 @@ const Dashboard = () => {
     }
   };
 
-  // Activity 2.3: Memoize filtering logic to prevent unnecessary recalculations
-  // TEMPORARY: Mock data for Module 2 testing
-  const mockArticles = articles.length === 0 ? [
-    { id: 1, title: 'Malaysia GDP grows 5.2%', sentiment: 'Positive', publishedAt: new Date().toISOString(), url: 'https://example.com/1', urlToImage: null, source: { name: 'Test' } },
-    { id: 2, title: 'Traffic congestion worsens', sentiment: 'Negative', publishedAt: new Date().toISOString(), url: 'https://example.com/2', urlToImage: null, source: { name: 'Test' } },
-    { id: 3, title: 'New highway project', sentiment: 'Neutral', publishedAt: new Date().toISOString(), url: 'https://example.com/3', urlToImage: null, source: { name: 'Test' } },
-    { id: 4, title: 'Education reforms praised', sentiment: 'Positive', publishedAt: new Date().toISOString(), url: 'https://example.com/4', urlToImage: null, source: { name: 'Test' } },
-    { id: 5, title: 'Inflation concerns', sentiment: 'Negative', publishedAt: new Date().toISOString(), url: 'https://example.com/5', urlToImage: null, source: { name: 'Test' } },
-  ] : articles;
-
   // Extract unique sources for the source filter dropdown
   const uniqueSources = useMemo(() => {
-    const data = articles.length === 0 ? mockArticles : articles;
-    const names = [...new Set(data.map(a => {
+    const names = [...new Set(articles.map(a => {
       const s = a.source;
       return typeof s === 'object' ? s?.name : s;
     }).filter(Boolean))].sort();
     return names;
-  }, [articles, mockArticles]);
+  }, [articles]);
 
   const filteredArticles = useMemo(() => {
-    const data = articles.length === 0 ? mockArticles : articles;
-    let result = data;
+    let result = articles;
     if (filter !== 'All' && filter !== 'all') {
       result = result.filter(a => a.sentiment === filter);
     }
@@ -892,7 +880,7 @@ const Dashboard = () => {
       });
     }
     return result;
-  }, [articles, filter, sourceFilter, mockArticles]);
+  }, [articles, filter, sourceFilter]);
 
   const counts = {
     total:    stats.total || articles.length,
@@ -1432,7 +1420,19 @@ const Dashboard = () => {
 
                       <StaggerList>
                         <Skeleton name="article-card" loading={isLoading || historyLoading} count={3}>
-                          {filteredArticles.slice(0, 5).map((article, idx) => (
+                          {filteredArticles.length === 0 && !isLoading ? (
+                            <div className="text-center py-12 px-6 border border-dashed border-[#e5e5e5] dark:border-[#222]">
+                              <p className="font-display text-2xl text-ink dark:text-paper mb-2">
+                                No articles yet
+                              </p>
+                              <p className="text-[11px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint italic font-serif">
+                                {filter !== 'All' || sourceFilter !== ALL_SOURCES
+                                  ? 'Try clearing your filters to see all stories.'
+                                  : 'Stories appear here once the newsroom ingests fresh articles.'}
+                              </p>
+                              <div className="editorial-rule mt-6 max-w-[140px] mx-auto" />
+                            </div>
+                          ) : filteredArticles.slice(0, 5).map((article, idx) => (
                             <React.Fragment key={article._id || article.url}>
                               <StaggerItem>
                                 <ArticleCardCompact

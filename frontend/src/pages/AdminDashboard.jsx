@@ -30,6 +30,8 @@ const AdminDashboard = () => {
   const [deleteConfirmUserId, setDeleteConfirmUserId] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [health, setHealth] = useState(null);
+  const [healthLoading, setHealthLoading] = useState(false);
   const [processingUserId, setProcessingUserId] = useState(null);
 
   const loadData = useCallback(async () => {
@@ -158,6 +160,28 @@ const AdminDashboard = () => {
     }
   };
 
+  const loadHealth = async () => {
+    setHealthLoading(true);
+    try {
+      const res = await api.get('/admin/health');
+      setHealth(res.data);
+    } catch (err) {
+      console.error('Health fetch failed:', err);
+    } finally {
+      setHealthLoading(false);
+    }
+  };
+
+  const triggerImpactRecompute = async () => {
+    try {
+      const res = await api.post('/admin/recompute-impact');
+      alert(`Impact recompute done. ${res.data?.updated || 0} articles updated in ${res.data?.durationMs || 0}ms.`);
+      loadHealth();
+    } catch (err) {
+      alert('Recompute failed: ' + err.message);
+    }
+  };
+
   const CARD = 'bg-[#fafafa] dark:bg-[#111] border border-[#e5e5e5] dark:border-[#222]';
 
 
@@ -200,7 +224,7 @@ const AdminDashboard = () => {
   const sentimentData = stats.sentiment || { Positive: 0, Negative: 0, Neutral: 0 };
   const totalSentiment = sentimentData.Positive + sentimentData.Negative + sentimentData.Neutral || 1;
 
-  const TABS = ['overview', 'users', 'content', 'api', 'insights', 'analytics'];
+  const TABS = ['overview', 'users', 'content', 'api', 'insights', 'analytics', 'health'];
 
   return (
     <div className="relative">
@@ -235,7 +259,7 @@ const AdminDashboard = () => {
               className={`text-xs font-medium uppercase tracking-wider transition-colors font-sans px-1 capitalize ${
                 activeTab === tab ? 'text-ink dark:text-paper font-bold' : 'text-ink-faint hover:text-ink-muted'
               }`}
-              onClick={() => { setActiveTab(tab); if (tab === 'insights' && !insights) loadInsights(); if (tab === 'api') loadMetrics(); if (tab === 'analytics' && !analytics) loadAnalytics(); }}
+              onClick={() => { setActiveTab(tab); if (tab === 'insights' && !insights) loadInsights(); if (tab === 'api') loadMetrics(); if (tab === 'analytics' && !analytics) loadAnalytics(); if (tab === 'health') loadHealth(); }}
             >
               {tab === 'api' ? 'API Metrics' : tab}
             </button>
@@ -892,6 +916,118 @@ const AdminDashboard = () => {
                 <p className="text-xs text-ink-faint mb-3 font-sans">Advanced analytics from article sentiment analysis</p>
                 <button onClick={loadAnalytics} className="px-5 py-2.5 bg-ink text-paper text-xs font-semibold uppercase tracking-wider hover:bg-accent transition-colors font-sans">
                   Load Analytics
+                </button>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {activeTab === 'health' && (
+          <motion.div key="health" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+            {healthLoading ? (
+              <div className="py-10 text-center">
+                <div className="w-6 h-6 border-2 border-ink border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-xs text-ink-faint font-sans uppercase tracking-wider">Loading backend health</p>
+              </div>
+            ) : health ? (
+              <div className="space-y-5">
+                <div className="grid md:grid-cols-3 gap-3">
+                  <div className={`${CARD} p-4`}>
+                    <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold mb-2">Server Uptime</div>
+                    <div className="font-display text-3xl text-ink dark:text-paper">{health.server?.uptimeHuman || '—'}</div>
+                    <div className="text-xs text-ink-faint mt-1">Node {health.server?.nodeVersion || '—'}</div>
+                  </div>
+                  <div className={`${CARD} p-4`}>
+                    <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold mb-2">Database</div>
+                    <div className="font-display text-3xl text-ink dark:text-paper capitalize">{health.database?.state || 'unknown'}</div>
+                    <div className="text-xs text-ink-faint mt-1">{health.database?.name || '—'} @ {health.database?.host || '—'}</div>
+                  </div>
+                  <div className={`${CARD} p-4`}>
+                    <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold mb-2">Memory</div>
+                    <div className="font-display text-3xl text-ink dark:text-paper">{health.server?.memoryMb?.heapUsed || 0}MB</div>
+                    <div className="text-xs text-ink-faint mt-1">RSS {health.server?.memoryMb?.rss || 0}MB</div>
+                  </div>
+                </div>
+
+                <div className={`${CARD} p-5`}>
+                  <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
+                    <div>
+                      <h3 className="font-display text-xl text-ink dark:text-paper">Scheduled Jobs</h3>
+                      <p className="text-[11px] uppercase tracking-wider text-ink-faint mt-1">Cron health and last execution metadata</p>
+                    </div>
+                    <button onClick={triggerImpactRecompute} className="px-3 py-2 border border-ink dark:border-paper text-[10px] uppercase tracking-wider font-semibold hover:bg-ink hover:text-paper dark:hover:bg-paper dark:hover:text-ink transition-colors">
+                      Recompute Impact
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {Object.entries(health.jobs || {}).map(([name, job]) => (
+                      <div key={name} className="border border-[#e5e5e5] dark:border-[#222] p-3 grid md:grid-cols-4 gap-3">
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-ink-faint">Job</div>
+                          <div className="font-semibold text-ink dark:text-paper">{name}</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-ink-faint">Status</div>
+                          <div className={`font-semibold capitalize ${job?.lastStatus === 'success' ? 'text-green-700 dark:text-green-400' : job?.lastStatus === 'error' ? 'text-red-700 dark:text-red-400' : 'text-amber-700 dark:text-amber-400'}`}>{job?.lastStatus || 'pending'}</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-ink-faint">Last Run</div>
+                          <div className="text-sm text-ink dark:text-paper">{job?.lastRun ? new Date(job.lastRun).toLocaleString() : '—'}</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-ink-faint">Duration</div>
+                          <div className="text-sm text-ink dark:text-paper">{job?.lastDurationMs ? `${job.lastDurationMs}ms` : '—'}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid lg:grid-cols-2 gap-5">
+                  <div className={`${CARD} p-5`}>
+                    <h3 className="font-display text-xl text-ink dark:text-paper mb-4">RSS Sources</h3>
+                    <div className="space-y-3">
+                      {Object.keys(health.rssSources || {}).length === 0 ? (
+                        <p className="text-sm text-ink-faint">No RSS fetch recorded since last deploy.</p>
+                      ) : Object.entries(health.rssSources || {}).map(([name, src]) => (
+                        <div key={name} className="border border-[#e5e5e5] dark:border-[#222] p-3">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <span className="font-semibold text-ink dark:text-paper capitalize">{name}</span>
+                            <span className={`text-[10px] uppercase tracking-wider ${src?.lastStatus === 'success' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>{src?.lastStatus || 'unknown'}</span>
+                          </div>
+                          <div className="text-sm text-ink-faint">Articles fetched: {src?.articlesFetched ?? 0}</div>
+                          <div className="text-sm text-ink-faint">Last fetch: {src?.lastFetch ? new Date(src.lastFetch).toLocaleString() : '—'}</div>
+                          {src?.error && <div className="text-sm text-red-700 dark:text-red-400 mt-1">{src.error}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className={`${CARD} p-5`}>
+                    <h3 className="font-display text-xl text-ink dark:text-paper mb-4">Recent Errors</h3>
+                    <div className="space-y-3 max-h-[420px] overflow-auto pr-1">
+                      {(health.recentErrors || []).length === 0 ? (
+                        <p className="text-sm text-ink-faint">No recent backend errors recorded.</p>
+                      ) : (health.recentErrors || []).map((err, idx) => (
+                        <div key={`${err.timestamp}-${idx}`} className="border border-[#e5e5e5] dark:border-[#222] p-3">
+                          <div className="flex items-center justify-between gap-3 mb-1">
+                            <span className="font-semibold text-ink dark:text-paper">{err.source}</span>
+                            <span className="text-[10px] uppercase tracking-wider text-ink-faint">{new Date(err.timestamp).toLocaleString()}</span>
+                          </div>
+                          <div className="text-sm text-red-700 dark:text-red-400 break-words">{err.message}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className={`${CARD} p-6 text-center`}>
+                <p className="font-display text-2xl text-ink dark:text-paper mb-2">Backend health not loaded</p>
+                <p className="text-[11px] uppercase tracking-wider text-ink-faint mb-5">Fetch live diagnostics from Render backend</p>
+                <button onClick={loadHealth} className="px-5 py-2.5 bg-ink text-paper text-xs font-semibold uppercase tracking-wider hover:bg-accent transition-colors font-sans">
+                  Load Health
                 </button>
               </div>
             )}

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import DOMPurify from 'dompurify';
 import toast from 'react-hot-toast';
 import SentimentBadge from './SentimentBadge';
 import AlertBadge from './AlertBadge';
@@ -105,21 +106,20 @@ const ArticlePreviewModal = ({ article, isOpen, onClose }) => {
     return Math.floor(hrs / 24) + 'd ago';
   };
 
-  const cleanHtml = (html) => {
-    if (!html) return '';
-    let clean = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
-    clean = clean.replace(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi, '');
-    clean = clean.replace(/<object[^>]*>[\s\S]*?<\/object>/gi, '');
-    clean = clean.replace(/<embed[^>]*>/gi, '');
-    clean = clean.replace(/<link[^>]*>/gi, '');
-    clean = clean.replace(/<figure[^>]*>[\s\S]*?<\/figure>/gi, '');
-    clean = clean.replace(/<img[^>]*>/gi, '');
-    clean = clean.replace(/\son\w+\s*=\s*["'][^"']*["']/gi, '');
-    clean = clean.replace(/\son\w+\s*=\s*[^\s>]*/gi, '');
-    clean = clean.replace(/href\s*=\s*["']javascript:[^"']*["']/gi, '');
-    clean = clean.replace(/style="[^"]*"/gi, '');
-    return clean;
-  };
+    // XSS-safe HTML sanitizer powered by DOMPurify.
+    // Strips <script>, <iframe>, <object>, inline handlers, javascript: URLs,
+    // SVG payloads, and any DOM-clobbering tricks. Allow basic editorial markup
+    // (paragraphs, links, emphasis) so article body still renders properly.
+    const cleanHtml = (html) => {
+      if (!html) return '';
+      return DOMPurify.sanitize(html, {
+        ALLOWED_TAGS: ['p','br','strong','em','b','i','u','a','span','ul','ol','li','blockquote','h1','h2','h3','h4','h5','h6','code','pre'],
+        ALLOWED_ATTR: ['href','target','rel','class'],
+        ALLOW_DATA_ATTR: false,
+        FORBID_TAGS: ['style','script','iframe','object','embed','link','img','svg','figure'],
+        FORBID_ATTR: ['style','onerror','onload','onclick','onmouseover','onfocus','onblur'],
+      });
+    };
 
   return (
     <div 

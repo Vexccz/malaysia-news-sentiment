@@ -164,4 +164,18 @@ router.post('/recompute-impact', protect, authorize('admin'), async (req, res) =
   }
 });
 
+/**
+ * GET /api/v1/admin/health
+ * Backend health snapshot — DB state, cron job status, RSS ingestion,
+ * memory, uptime, recent errors. Admin only.
+ */
+router.get('/health', protect, authorize('admin'), (req, res) => {
+  try {
+    const { getHealthSnapshot } = require('../services/healthService');
+    res.json(getHealthSnapshot());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

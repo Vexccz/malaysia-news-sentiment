@@ -312,23 +312,26 @@ server.listen(PORT, () => {
 
   // Feature 29 — trending alert evaluator (push/email/telegram) every 15 minutes
   const { evaluateTrendingAlerts } = require('./services/alertService');
+  const { recordJob } = require('./services/healthService');
+  const trackedEvaluateAlerts = recordJob('trendingAlerts', evaluateTrendingAlerts);
   setInterval(() => {
-    evaluateTrendingAlerts().catch((err) => console.error('Trending eval interval failed:', err.message));
+    trackedEvaluateAlerts().catch((err) => console.error('Trending eval interval failed:', err.message));
   }, 15 * 60 * 1000);
   // Kick off once shortly after boot so first window populates quickly
   setTimeout(() => {
-    evaluateTrendingAlerts().catch(() => {});
+    trackedEvaluateAlerts().catch(() => {});
   }, 60 * 1000);
 
   // Impact score recompute — every 30 minutes
   // Replaces fake source-hash impact with real engagement-based score
   const { recomputeAllImpactScores } = require('./services/impactService');
+  const trackedRecomputeImpact = recordJob('impactRecompute', recomputeAllImpactScores);
   setInterval(() => {
-    recomputeAllImpactScores().catch((err) => console.error('Impact recompute failed:', err.message));
+    trackedRecomputeImpact().catch((err) => console.error('Impact recompute failed:', err.message));
   }, 30 * 60 * 1000);
   // Initial run 90s after boot
   setTimeout(() => {
-    recomputeAllImpactScores().catch(() => {});
+    trackedRecomputeImpact().catch(() => {});
   }, 90 * 1000);
 });
 
