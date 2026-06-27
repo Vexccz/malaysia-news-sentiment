@@ -253,4 +253,51 @@ router.get('/search', protect, authorize('admin'), async (req, res) => {
   }
 });
 
+// ── Knowledge Graph (Feature #5, Neo4j Aura) ─────────────────
+
+/**
+ * GET /api/v1/admin/graph-health
+ * Connection status + node/edge counts from Neo4j.
+ */
+router.get('/graph-health', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { getGraphHealth } = require('../services/graphSyncService');
+    const health = await getGraphHealth();
+    res.json(health);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/v1/admin/graph-schema
+ * Idempotent constraint + index bootstrap on Neo4j.
+ */
+router.post('/graph-schema', protect, authorize('admin'), async (req, res) => {
+  try {
+    const graphService = require('../services/graphService');
+    const result = await graphService.ensureSchema();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/v1/admin/graph-sync
+ * Body: { limit?: number, sinceHours?: number }
+ * Project recent MongoDB articles into the Neo4j knowledge graph.
+ */
+router.post('/graph-sync', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { bulkSyncArticlesToGraph } = require('../services/graphSyncService');
+    const limit = Number(req.body?.limit) || Number(req.query?.limit) || 200;
+    const sinceHours = req.body?.sinceHours ?? req.query?.sinceHours ?? null;
+    const result = await bulkSyncArticlesToGraph({ limit, sinceHours });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
