@@ -8,7 +8,8 @@ const getGraphOverview = async (req, res) => {
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 40, 5), 100);
     const minWeight = Math.min(Math.max(parseInt(req.query.minWeight, 10) || 2, 1), 20);
 
-    const result = await graphService.runRead(
+    // 1) Pull top entity nodes by mention count.
+    const nodesResult = await graphService.runRead(
       `
       MATCH (a:Article)-[:MENTIONS]->(e:Entity)
       WITH e, count(a) AS mentions,
@@ -17,55 +18,70 @@ const getGraphOverview = async (req, res) => {
            sum(CASE a.sentiment WHEN 'Neutral' THEN 1 ELSE 0 END) AS neutral
       ORDER BY mentions DESC
       LIMIT $limit
-      WITH collect({
-        id: e.name,
-        label: e.name,
-        category: e.category,
-        type: e.type,
-        mentions: mentions,
-        sentiment: CASE
-          WHEN positive >= negative AND positive >= neutral THEN 'Positive'
-          WHEN negative >= positive AND negative >= neutral THEN 'Negative'
-          ELSE 'Neutral'
-        END,
-        sentimentBreakdown: {
-          Positive: positive,
-          Negative: negative,
-          Neutral: neutral
-        }
-      }) AS nodes
-      UNWIND nodes AS n1
-      MATCH (e1:Entity {name: n1.id})<-[:MENTIONS]-(a:Article)-[:MENTIONS]->(e2:Entity)
-      WHERE e1.name < e2.name AND e2.name IN [n IN nodes | n.id]
-      WITH nodes, e1, e2, count(a) AS weight,
-           avg(CASE a.sentiment WHEN 'Positive' THEN 1.0 WHEN 'Negative' THEN -1.0 ELSE 0.0 END) AS avgSentiment
-      WHERE weight >= $minWeight
-      RETURN nodes,
-             collect({
-               source: e1.name,
-               target: e2.name,
-               weight: weight,
-               sentiment: round(avgSentiment * 100.0) / 100.0
-             }) AS edges
+      RETURN e.name AS id,
+             e.name AS label,
+             e.category AS category,
+             e.type AS type,
+             mentions,
+             positive,
+             negative,
+             neutral
       `,
-      { limit, minWeight }
+      { limit }
     );
 
-    const row = result?.records?.[0]?.toObject?.() || { nodes: [], edges: [] };
-    const nodes = (row.nodes || []).map((n) => ({
-      ...n,
-      mentions: intVal(n.mentions),
-      sentimentBreakdown: {
-        Positive: intVal(n.sentimentBreakdown?.Positive),
-        Negative: intVal(n.sentimentBreakdown?.Negative),
-        Neutral: intVal(n.sentimentBreakdown?.Neutral),
-      },
-    }));
-    const edges = (row.edges || []).map((e) => ({
-      ...e,
-      weight: intVal(e.weight),
-      sentiment: floatVal(e.sentiment),
-    }));
+    const nodes = (nodesResult?.records || []).map((r) => {
+      const o = r.toObject();
+      const positive = intVal(o.positive);
+      const negative = intVal(o.negative);
+      const neutral = intVal(o.neutral);
+      let sentiment = 'Neutral';
+      if (positive >= negative && positive >= neutral) sentiment = 'Positive';
+      else if (negative >= positive && negative >= neutral) sentiment = 'Negative';
+      return {
+        id: o.id,
+        label: o.label,
+        category: o.category,
+        type: o.type,
+        mentions: intVal(o.mentions),
+        sentiment,
+        sentimentBreakdown: { Positive: positive, Negative: negative, Neutral: neutral },
+      };
+    });
+
+    if (!nodes.length) {
+      return res.json({ nodes: [], edges: [], totalArticles: null, source: 'neo4j' });
+    }
+
+    const nodeNames = nodes.map((n) => n.id);
+
+    // 2) Pull co-occurrence edges between those nodes only.
+    const edgesResult = await graphService.runRead(
+      `
+      MATCH (e1:Entity)<-[:MENTIONS]-(a:Article)-[:MENTIONS]->(e2:Entity)
+      WHERE e1.name < e2.name AND e1.name IN $names AND e2.name IN $names
+      WITH e1, e2, count(a) AS weight,
+           avg(CASE a.sentiment WHEN 'Positive' THEN 1.0 WHEN 'Negative' THEN -1.0 ELSE 0.0 END) AS avgSentiment
+      WHERE weight >= $minWeight
+      RETURN e1.name AS source,
+             e2.name AS target,
+             weight,
+             round(avgSentiment * 100.0) / 100.0 AS sentiment
+      ORDER BY weight DESC
+      LIMIT 200
+      `,
+      { names: nodeNames, minWeight }
+    );
+
+    const edges = (edgesResult?.records || []).map((r) => {
+      const o = r.toObject();
+      return {
+        source: o.source,
+        target: o.target,
+        weight: intVal(o.weight),
+        sentiment: floatVal(o.sentiment),
+      };
+    });
 
     return res.json({ nodes, edges, totalArticles: null, source: 'neo4j' });
   } catch (err) {
