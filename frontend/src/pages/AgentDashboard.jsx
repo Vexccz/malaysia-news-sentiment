@@ -4,7 +4,7 @@ import { AlertTriangle, TrendingUp, Activity, Zap, ChevronDown, ChevronUp } from
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
-import { LoadingSkeleton } from '../components/Skeletons';
+import { PageHeaderSkeleton, StatStripSkeleton } from '../components/Skeletons';
 
 const AgentDashboard = () => {
   const { t } = useLanguage();
@@ -64,7 +64,8 @@ const AgentDashboard = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-white dark:bg-[#0a0a0a] p-6">
-        <LoadingSkeleton />
+        <PageHeaderSkeleton />
+        <StatStripSkeleton />
       </div>
     );
   }
