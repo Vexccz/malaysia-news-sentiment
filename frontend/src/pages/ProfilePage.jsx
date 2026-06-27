@@ -153,7 +153,7 @@ const QuickAction = ({ icon, label, path }) => (
 
 const ProfilePage = () => {
   const navigate = useNavigate();
-  const { user, refreshUser } = useAuth();
+  const { user, updateProfile } = useAuth();
   const { t } = useLanguage();
   const { theme } = useTheme();
   const [stats, setStats] = useState({ articlesViewed: 0, bookmarks: 0, shared: 0, comments: 0 });
@@ -199,13 +199,12 @@ const ProfilePage = () => {
     setEditSaving(true);
     setEditError(null);
     try {
-      const { data } = await api.patch('/auth/profile', {
+      const data = await updateProfile({
         name: editForm.name.trim(),
         bio: editForm.bio.trim(),
         phone: editForm.phone.trim(),
         avatar: editForm.avatar,
       });
-      if (typeof refreshUser === 'function') await refreshUser();
       setEditOpen(false);
       return data;
     } catch (err) {

@@ -313,6 +313,7 @@ const getMe = async (req, res) => {
       user: {
         id: user._id, name: user.name, email: user.email, phone: user.phone,
         avatar: user.avatar, role: user.role, provider: user.provider,
+        bio: user.bio,
         preferences: user.preferences, createdAt: user.createdAt,
         twoFactorEnabled: user.twoFactorEnabled || false,
         analysisCount: user.analysisCount || 0,
