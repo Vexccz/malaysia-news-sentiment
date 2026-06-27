@@ -9,11 +9,14 @@ const getGraphOverview = async (req, res) => {
   try {
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 40, 5), 100);
     const minWeight = Math.min(Math.max(parseInt(req.query.minWeight, 10) || 2, 1), 20);
+    const typeFilter = req.query.type;
 
     // 1) Pull top entity nodes by mention count.
+    const typeClause = typeFilter ? `WHERE e.type = $typeFilter` : '';
     const nodesResult = await graphService.runRead(
       `
       MATCH (a:Article)-[:MENTIONS]->(e:Entity)
+      ${typeClause}
       WITH e, count(a) AS mentions,
            sum(CASE a.sentiment WHEN 'Positive' THEN 1 ELSE 0 END) AS positive,
            sum(CASE a.sentiment WHEN 'Negative' THEN 1 ELSE 0 END) AS negative,
@@ -29,7 +32,7 @@ const getGraphOverview = async (req, res) => {
              negative,
              neutral
       `,
-      { limit: toCypherInt(limit) }
+      { limit: toCypherInt(limit), ...(typeFilter ? { typeFilter } : {}) }
     );
 
     const nodes = (nodesResult?.records || []).map((r) => {

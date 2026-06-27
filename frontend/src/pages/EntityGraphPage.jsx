@@ -139,15 +139,15 @@ export default function EntityGraphPage() {
       const token = localStorage.getItem('token');
       const API = import.meta.env.VITE_API_BASE || 'http://localhost:5001/api/v1';
       const params = new URLSearchParams();
-      if (search) params.set('query', search);
-      if (timeframe) params.set('timeframe', timeframe);
+      params.set('limit', 50);
+      params.set('minWeight', 2);
       if (typeFilter) params.set('type', typeFilter);
-      const res = await fetch(`${API}/entities/graph?${params}`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API}/graph/overview?${params}`, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) throw new Error('Failed');
       setData(await res.json());
     } catch { setData({ nodes: [], edges: [] }); }
     finally { setLoading(false); }
-  }, [search, timeframe, typeFilter]);
+  }, [typeFilter]);
 
   useEffect(() => { fetchGraph(); }, [fetchGraph]);
 
@@ -156,7 +156,7 @@ export default function EntityGraphPage() {
     try {
       const token = localStorage.getItem('token');
       const API = import.meta.env.VITE_API_BASE || 'http://localhost:5001/api/v1';
-      const res = await fetch(`${API}/entities/${encodeURIComponent(name)}`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API}/graph/entity/${encodeURIComponent(name)}`, { headers: { Authorization: `Bearer ${token}` } });
       setDetail(res.ok ? await res.json() : null);
     } catch { setDetail(null); }
     finally { setDetailLoading(false); }
