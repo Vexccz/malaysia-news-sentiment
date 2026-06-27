@@ -208,7 +208,8 @@ const SourceCredibility = () => {
         total,
         posPct: ((b.positive || 0) / total * 100),
         negPct: ((b.negative || 0) / total * 100),
-        biasScore: computeBiasScore(b.positive, b.negative, b.neutral),
+        biasScore: src.biasScore !== undefined ? src.biasScore * 100 : computeBiasScore(b.positive, b.negative, b.neutral),
+        sentimentSkew: src.sentimentSkew || 'unknown',
         reliability: reliabilityMap[b.source] ?? src.credibilityScore ?? 0,
         credibilityScore: src.credibilityScore ?? 0,
         factCheckScore: src.factCheckScore ?? 0,
@@ -691,6 +692,7 @@ const SourceCredibility = () => {
                     {t('credibility')} {sortBy === 'credibilityScore' && (sortOrder === 'asc' ? '\u2191' : '\u2193')}
                   </th>
                   <th className="text-center px-3 py-3">{t('bias')}</th>
+                  <th className="text-center px-3 py-3 cursor-pointer hover:text-black dark:hover:text-white" onClick={() => toggleSort('biasScore')}>Bias Score {sortBy === 'biasScore' && (sortOrder === 'asc' ? '\u2191' : '\u2193')}</th>
                   <th className="text-center px-3 py-3 cursor-pointer hover:text-black dark:hover:text-white" onClick={() => toggleSort('factCheckScore')}>
                     {t('factCheck')} {sortBy === 'factCheckScore' && (sortOrder === 'asc' ? '\u2191' : '\u2193')}
                   </th>
@@ -733,6 +735,13 @@ const SourceCredibility = () => {
                       <td className="px-3 py-4 text-center">
                         <span className={`inline-flex px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] border border-[#e5e5e5] dark:border-[#222] ${biasColors[source.bias] || biasColors.unknown}`}>
                           {source.bias}
+                        </span>
+                      </td>
+                      <td className="px-3 py-4 text-center">
+                        <span className="text-sm font-mono font-semibold" style={{
+                          color: Math.abs(source.biasScore || 0) < 10 ? '#4ADE80' : (source.biasScore || 0) > 0 ? '#F59E0B' : '#FB7185'
+                        }}>
+                          {(source.biasScore || 0) > 0 ? '+' : ''}{(source.biasScore || 0).toFixed(1)}
                         </span>
                       </td>
                       <td className="px-3 py-4 text-center">
@@ -784,6 +793,30 @@ const SourceCredibility = () => {
                     <div className="text-center p-3 bg-[#fafafa] dark:bg-[#0a0a0a]">
                       <p className="text-[10px] text-gray-500 dark:text-[#999] uppercase tracking-[0.18em] mb-1">Total Articles</p>
                       <p className="text-xl font-bold text-black dark:text-white" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>{selectedSource.totalArticles}</p>
+                    </div>
+                  </div>
+                  {/* Bias Score + Sentiment Skew */}
+                  <div className="mt-3 border-l-3 border-accent px-4 py-3 bg-[#fafafa] dark:bg-[#0a0a0a] border border-[#e5e5e5] dark:border-[#222]">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] text-gray-500 dark:text-[#999] uppercase tracking-[0.18em] mb-0.5">Bias Score (90-day)</p>
+                        <p className="text-lg font-bold font-mono" style={{
+                          color: Math.abs(selectedSource.biasScore || 0) < 10 ? '#4ADE80' : selectedSource.biasScore > 0 ? '#F59E0B' : '#FB7185'
+                        }}>
+                          {selectedSource.biasScore > 0 ? '+' : ''}{(selectedSource.biasScore || 0).toFixed(1)}
+                          <span className="text-[10px] text-gray-500 dark:text-[#666] ml-2 font-sans uppercase">
+                            {selectedSource.sentimentSkew && selectedSource.sentimentSkew !== 'unknown' ? selectedSource.sentimentSkew : 'balanced'}
+                          </span>
+                        </p>
+                      </div>
+                      <div className="w-24 h-2 bg-[#e5e5e5] dark:bg-[#222] relative">
+                        <div className="absolute top-0 left-1/2 w-px h-full bg-gray-400 dark:bg-[#666]" />
+                        <div className="absolute top-0 h-full rounded" style={{
+                          left: selectedSource.biasScore >= 0 ? '50%' : `${50 + (selectedSource.biasScore || 0) / 2}%`,
+                          width: `${Math.abs(selectedSource.biasScore || 0) / 2}%`,
+                          background: Math.abs(selectedSource.biasScore || 0) < 10 ? '#4ADE80' : selectedSource.biasScore > 0 ? '#F59E0B' : '#FB7185',
+                        }} />
+                      </div>
                     </div>
                   </div>
                   {selectedSource.url && (
