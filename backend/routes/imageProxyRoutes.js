@@ -34,6 +34,9 @@ router.get('/', async (req, res) => {
     // Override helmet CORP — image must be embeddable cross-origin (Vercel → Render)
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     res.setHeader('Access-Control-Allow-Origin', '*');
+    // CRITICAL: cannot have credentials=true with origin=* — browser rejects.
+    // Strip the default helmet credentials header that breaks the combo.
+    res.removeHeader('Access-Control-Allow-Credentials');
     res.send(buffer);
   } catch (err) {
     const status = err.response?.status || 502;
