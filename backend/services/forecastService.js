@@ -160,8 +160,8 @@ function ensembleForecast(rawSeries, steps = 14) {
     const widenFactor = 1 + 0.3 * Math.sqrt(i + 1);
     const halfWidth = residualStd * widenFactor;
     return {
-      lower: Math.max(-1, parseFloat((ensemblePred[i] - halfWidth).toFixed(3))),
-      upper: Math.min(1, parseFloat((ensemblePred[i] + halfWidth).toFixed(3))),
+      lower: Math.max(-1, Math.min(1, parseFloat((ensemblePred[i] - halfWidth).toFixed(3)))),
+      upper: Math.max(-1, Math.min(1, parseFloat((ensemblePred[i] + halfWidth).toFixed(3)))),
       width: parseFloat((halfWidth * 2).toFixed(3)),
     };
   });
