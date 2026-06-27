@@ -7,6 +7,7 @@ const { analyseArticle } = require('./openaiService');
 const { recordRssFetch } = require('./healthService');
 const { pushAlertToInterestedUsers } = require('./pushAlertService');
 const { broadcastArticle } = require('./streamService');
+const { syncArticleToGraph } = require('./graphSyncService');
 
 const sentimentLimit = pLimit(5);
 
@@ -177,6 +178,12 @@ const ingestRssBatch = async (ioInstance = null) => {
     if (upserted) {
       broadcastArticle(upserted, ioInstance).catch((err) => {
         console.error('[stream] broadcast failed:', err.message);
+      });
+
+      // Knowledge graph projection (Feature #5) — incremental sync to Neo4j.
+      // MongoDB stays source of truth; this just keeps Aura warm.
+      syncArticleToGraph(upserted).catch((err) => {
+        console.error('[graph] sync failed:', err.message);
       });
     }
 

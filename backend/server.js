@@ -209,6 +209,7 @@ app.use('/api/v1/admin', require('./routes/adminRoutes'));
 app.use('/api/v1/bookmarks', require('./routes/bookmarkRoutes'));
 app.use('/api/v1/monitor', require('./routes/monitorRoutes'));
 app.use('/api/v1/stream', require('./routes/streamRoutes'));
+app.use('/api/v1/graph', require('./routes/graphRoutes'));
 
 app.use('/api/v1/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/v1/behavior', require('./routes/behaviorRoutes'));
@@ -223,6 +224,7 @@ app.use('/api/auth', authLimiter, require('./routes/authRoutes'));
 app.use('/api/news', analysisLimiter, require('./routes/newsRoutes'));
 app.use('/api/history', require('./routes/historyRoutes'));
 app.use('/api/entities', require('./routes/entityRoutes'));
+app.use('/api/graph', require('./routes/graphRoutes'));
 app.use('/api/sources', require('./routes/sourceRoutes'));
 app.use('/api/feed', require('./routes/feedRoutes'));
 app.use('/api/alerts', require('./routes/alertRoutes'));
