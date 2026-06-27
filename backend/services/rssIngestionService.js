@@ -5,6 +5,7 @@ const { fetchAstroAwaniNews } = require('./astroAwaniService');
 const { fetchMalaysiakiniNews } = require('./malaysiakiniService');
 const { analyseArticle } = require('./openaiService');
 const { recordRssFetch } = require('./healthService');
+const { pushAlertToInterestedUsers } = require('./pushAlertService');
 
 const sentimentLimit = pLimit(5);
 
@@ -147,7 +148,8 @@ const ingestRssBatch = async () => {
 
     const analysis = await analyseArticle(article.title, article.description);
     const sourceName = article.source?.name || extractSourceFromUrl(article.url);
-    await Article.findOneAndUpdate(
+    const isAlert = isAlertArticle(article.title, article.description);
+    const upserted = await Article.findOneAndUpdate(
       { url: article.url },
       {
         $set: {
@@ -160,7 +162,7 @@ const ingestRssBatch = async () => {
           publishedAt: article.publishedAt ? new Date(article.publishedAt) : new Date(),
           topic: 'Malaysia',
           ...analysis,
-          isAlert: isAlertArticle(article.title, article.description),
+          isAlert,
           impactScore: SOURCE_SEED(sourceName),
           userId: null,
         }
@@ -168,6 +170,13 @@ const ingestRssBatch = async () => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
     created++;
+
+    // Push notification to interested users for new alert articles.
+    if (isAlert && upserted) {
+      pushAlertToInterestedUsers(upserted).catch((err) => {
+        console.error('Push alert fanout failed:', err.message);
+      });
+    }
   })));
 
   return {

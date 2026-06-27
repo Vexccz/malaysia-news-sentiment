@@ -15,6 +15,8 @@ const loadLS = (key, fallback) => {
 };
 const saveLS = (key, value) => localStorage.setItem(key, JSON.stringify(value));
 
+const DEFAULT_PUSH_TOPICS = ['economy', 'politics'];
+
 // ─── Translations ────────────────────────────────────────────────────
 const translations = {
   EN: {
@@ -210,10 +212,91 @@ const Alerts = () => {
     loadLS(LS_QUIET, { enabled: false, start: '22:00', end: '07:00' })
   );
 
+  // ── Web Push state ──────────────────────────────────────────────────
+  const [pushStatus, setPushStatus] = useState({
+    supported: false,
+    permission: 'default',
+    subscribed: false,
+    busy: false,
+    topics: [],
+  });
+
   // Persist to localStorage on change
   useEffect(() => { saveLS(LS_RULES, rules); }, [rules]);
   useEffect(() => { saveLS(LS_HISTORY, history); }, [history]);
   useEffect(() => { saveLS(LS_QUIET, quietHours); }, [quietHours]);
+
+  // Load push status on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const { isPushSupported, getPushPermissionStatus, getCurrentSubscription, getPushTopics } =
+          await import('../utils/webPush');
+        const supported = isPushSupported();
+        const permission = getPushPermissionStatus();
+        const sub = supported ? await getCurrentSubscription() : null;
+        const topics = supported && sub ? await getPushTopics().catch(() => []) : [];
+        setPushStatus({ supported, permission, subscribed: !!sub, busy: false, topics });
+      } catch { /* ignore */ }
+    })();
+  }, []);
+
+  const handleEnablePush = async () => {
+    setPushStatus((s) => ({ ...s, busy: true }));
+    try {
+      const { subscribePush, getPushTopics, setPushTopics } = await import('../utils/webPush');
+      await subscribePush();
+      let topics = await getPushTopics().catch(() => []);
+      // Seed with sensible defaults if user has nothing saved.
+      if (!topics.length) {
+        topics = await setPushTopics(DEFAULT_PUSH_TOPICS).catch(() => DEFAULT_PUSH_TOPICS);
+      }
+      setPushStatus({ supported: true, permission: 'granted', subscribed: true, busy: false, topics });
+      toast.success('Push notifications enabled');
+    } catch (err) {
+      toast.error(err.message || 'Failed to enable push');
+      setPushStatus((s) => ({ ...s, busy: false }));
+    }
+  };
+
+  const handleDisablePush = async () => {
+    setPushStatus((s) => ({ ...s, busy: true }));
+    try {
+      const { unsubscribePush } = await import('../utils/webPush');
+      await unsubscribePush();
+      setPushStatus((s) => ({ ...s, subscribed: false, busy: false }));
+      toast.success('Push notifications disabled');
+    } catch (err) {
+      toast.error(err.message || 'Failed to disable push');
+      setPushStatus((s) => ({ ...s, busy: false }));
+    }
+  };
+
+  const handleTestPush = async () => {
+    try {
+      const { sendTestPush } = await import('../utils/webPush');
+      const res = await sendTestPush();
+      toast.success(`Test push sent to ${res.sent}/${res.total} device(s)`);
+    } catch (err) {
+      toast.error(err.message || 'Test push failed');
+    }
+  };
+
+  const updatePushTopics = async (raw) => {
+    const topics = raw
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean)
+      .slice(0, 20);
+    try {
+      const { setPushTopics } = await import('../utils/webPush');
+      const saved = await setPushTopics(topics);
+      setPushStatus((s) => ({ ...s, topics: saved }));
+      toast.success('Topics updated');
+    } catch (err) {
+      toast.error(err.message || 'Failed to save topics');
+    }
+  };
 
   // ── Fetch server alerts (existing) ──────────────────────────────────
   useEffect(() => { fetchAlerts(); }, []);
@@ -435,6 +518,83 @@ const Alerts = () => {
           {tr.createAlert}
         </button>
       </div>
+
+      {/* Web Push setup banner */}
+      {pushStatus.supported && (
+        <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] p-4">
+          <div className="flex items-start gap-3 flex-wrap">
+            <div className="flex-1 min-w-[260px]">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-accent" />
+                <h3 className="font-['Playfair_Display'] text-base font-bold text-ink dark:text-paper">
+                  Browser push notifications
+                </h3>
+                <span className={`text-[10px] uppercase tracking-wider font-sans px-2 py-0.5 ${
+                  pushStatus.subscribed
+                    ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                    : 'bg-gray-100 dark:bg-[#1a1a1a] text-gray-600 dark:text-gray-400'
+                }`}>
+                  {pushStatus.subscribed ? 'ACTIVE' : 'OFF'}
+                </span>
+              </div>
+              <p className="text-xs text-ink-muted dark:text-ink-faint font-sans leading-relaxed">
+                Get a push notification when a Malaysia-related alert article hits the wire.
+                Filter by keyword topics or leave empty to receive all alerts.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {pushStatus.subscribed ? (
+                <>
+                  <button
+                    onClick={handleTestPush}
+                    disabled={pushStatus.busy}
+                    className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider border border-[#e5e5e5] dark:border-[#222] text-ink dark:text-paper hover:bg-ink/5 dark:hover:bg-paper/5 transition-colors disabled:opacity-50 font-sans"
+                  >
+                    Send Test
+                  </button>
+                  <button
+                    onClick={handleDisablePush}
+                    disabled={pushStatus.busy}
+                    className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider border border-red-300 dark:border-red-900 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors disabled:opacity-50 font-sans"
+                  >
+                    Disable
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={handleEnablePush}
+                  disabled={pushStatus.busy || pushStatus.permission === 'denied'}
+                  className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider bg-ink dark:bg-paper text-paper dark:text-ink hover:bg-accent transition-colors disabled:opacity-50 font-sans"
+                  title={pushStatus.permission === 'denied' ? 'Permission blocked in browser settings' : ''}
+                >
+                  {pushStatus.busy ? 'Enabling…' : 'Enable Push'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {pushStatus.subscribed && (
+            <div className="mt-3 pt-3 border-t border-[#e5e5e5] dark:border-[#222]">
+              <label className="text-[10px] uppercase tracking-[0.18em] font-semibold text-ink-muted dark:text-ink-faint font-sans block mb-1.5">
+                Topics (comma-separated, blank = all alerts)
+              </label>
+              <input
+                type="text"
+                defaultValue={pushStatus.topics.join(', ')}
+                onBlur={(e) => updatePushTopics(e.target.value)}
+                placeholder="economy, politics, ringgit"
+                className="w-full px-3 py-2 text-sm bg-paper dark:bg-[#0a0a0a] border border-[#e5e5e5] dark:border-[#222] focus:border-accent focus:outline-none font-sans"
+              />
+            </div>
+          )}
+
+          {pushStatus.permission === 'denied' && (
+            <p className="mt-3 text-[11px] text-red-700 dark:text-red-400 font-sans">
+              Notifications are blocked in your browser settings. Allow them and reload to enable.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Quiet hours warning banner */}
       {isQuietHoursActive() && (

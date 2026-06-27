@@ -33,6 +33,10 @@ const AdminDashboard = () => {
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [health, setHealth] = useState(null);
   const [healthLoading, setHealthLoading] = useState(false);
+  // Admin search tab
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState(null);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [processingUserId, setProcessingUserId] = useState(null);
 
   const loadData = useCallback(async () => {
@@ -173,6 +177,24 @@ const AdminDashboard = () => {
     }
   };
 
+  const performAdminSearch = async () => {
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setSearchResults({ users: [], articles: [], comments: [], q });
+      return;
+    }
+    setSearchLoading(true);
+    try {
+      const res = await api.get('/admin/search', { params: { q } });
+      setSearchResults(res.data);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Search failed');
+      setSearchResults({ users: [], articles: [], comments: [], q });
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
   const triggerImpactRecompute = async () => {
     const t = toast.loading('Recomputing impact scores...');
     try {
@@ -232,7 +254,7 @@ const AdminDashboard = () => {
   const sentimentData = stats.sentiment || { Positive: 0, Negative: 0, Neutral: 0 };
   const totalSentiment = sentimentData.Positive + sentimentData.Negative + sentimentData.Neutral || 1;
 
-  const TABS = ['overview', 'users', 'content', 'api', 'insights', 'analytics', 'health'];
+  const TABS = ['overview', 'users', 'content', 'search', 'api', 'insights', 'analytics', 'health'];
 
   return (
     <div className="relative">
@@ -925,6 +947,98 @@ const AdminDashboard = () => {
                 <button onClick={loadAnalytics} className="px-5 py-2.5 bg-ink text-paper text-xs font-semibold uppercase tracking-wider hover:bg-accent transition-colors font-sans">
                   Load Analytics
                 </button>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {activeTab === 'search' && (
+          <motion.div key="search" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+            <div className={`${CARD} p-5 mb-5`}>
+              <div className="flex flex-col lg:flex-row gap-3 lg:items-end">
+                <div className="flex-1">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-ink-muted dark:text-ink-faint mb-2 font-sans">Admin Search</p>
+                  <input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') performAdminSearch(); }}
+                    placeholder="Search user, email, article title, topic, source, comment, or ObjectId"
+                    className="w-full px-3 py-2.5 bg-paper dark:bg-[#0a0a0a] border border-[#e5e5e5] dark:border-[#222] text-sm text-ink dark:text-paper font-sans focus:outline-none focus:border-accent"
+                  />
+                </div>
+                <button
+                  onClick={performAdminSearch}
+                  disabled={searchLoading}
+                  className="px-4 py-2.5 bg-ink text-paper dark:bg-paper dark:text-ink text-[11px] uppercase tracking-[0.18em] font-semibold hover:bg-accent transition-colors disabled:opacity-50 font-sans"
+                >
+                  {searchLoading ? 'Searching…' : 'Search'}
+                </button>
+              </div>
+            </div>
+
+            {searchResults && (
+              <div className="space-y-5">
+                <div className={`${CARD} p-5`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-display text-lg font-bold text-ink dark:text-paper">Users</h3>
+                    <span className="text-[10px] uppercase tracking-wider text-ink-faint font-sans">{searchResults.users?.length || 0} found</span>
+                  </div>
+                  {searchResults.users?.length ? (
+                    <div className="space-y-2">
+                      {searchResults.users.map((u) => (
+                        <div key={u._id} className="border border-[#e5e5e5] dark:border-[#222] p-3 flex items-center justify-between gap-3">
+                          <div>
+                            <p className="font-medium text-ink dark:text-paper font-sans">{u.name || 'Unnamed user'}</p>
+                            <p className="text-xs text-ink-faint font-sans">{u.email}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[10px] uppercase tracking-wider text-ink-faint font-sans">{u.role}</p>
+                            <p className="text-xs text-ink-muted font-sans">{u.analysisCount || 0} analyses</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : <p className="text-sm text-ink-faint font-sans">No users found.</p>}
+                </div>
+
+                <div className={`${CARD} p-5`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-display text-lg font-bold text-ink dark:text-paper">Articles</h3>
+                    <span className="text-[10px] uppercase tracking-wider text-ink-faint font-sans">{searchResults.articles?.length || 0} found</span>
+                  </div>
+                  {searchResults.articles?.length ? (
+                    <div className="space-y-2">
+                      {searchResults.articles.map((a) => (
+                        <div key={a._id} className="border border-[#e5e5e5] dark:border-[#222] p-3">
+                          <p className="font-medium text-ink dark:text-paper font-sans mb-1">{a.title}</p>
+                          <div className="flex flex-wrap gap-3 text-[11px] text-ink-faint font-sans uppercase tracking-wider">
+                            <span>{a.source}</span>
+                            <span>{a.sentiment}</span>
+                            <span>{a.topic}</span>
+                            {a.isAlert && <span className="text-red-700 dark:text-red-400">ALERT</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : <p className="text-sm text-ink-faint font-sans">No articles found.</p>}
+                </div>
+
+                <div className={`${CARD} p-5`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-display text-lg font-bold text-ink dark:text-paper">Comments</h3>
+                    <span className="text-[10px] uppercase tracking-wider text-ink-faint font-sans">{searchResults.comments?.length || 0} found</span>
+                  </div>
+                  {searchResults.comments?.length ? (
+                    <div className="space-y-2">
+                      {searchResults.comments.map((c) => (
+                        <div key={c._id} className="border border-[#e5e5e5] dark:border-[#222] p-3">
+                          <p className="text-sm text-ink dark:text-paper font-sans line-clamp-2">{c.content}</p>
+                          <p className="mt-1 text-[11px] text-ink-faint font-sans">Article ID: {String(c.articleId || '').slice(0, 24)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : <p className="text-sm text-ink-faint font-sans">No comments found.</p>}
+                </div>
               </div>
             )}
           </motion.div>

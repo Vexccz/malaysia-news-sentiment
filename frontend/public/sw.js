@@ -132,3 +132,45 @@ self.addEventListener('message', (event) => {
     );
   }
 });
+
+// ─── Web Push: incoming notification ───────────────────────────────────
+// Payload (from backend) is JSON: { title, body, url, sentiment, articleId }
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try { payload = event.data ? event.data.json() : {}; } catch { /* keep empty */ }
+
+  const title = payload.title || 'MY News Sentiment';
+  const body  = payload.body  || 'New activity on your feed.';
+  const url   = payload.url   || '/';
+
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: '/favicon.svg',
+      badge: '/favicon.svg',
+      data: { url, articleId: payload.articleId },
+      tag: payload.articleId || 'mns-alert',
+      renotify: false,
+      requireInteraction: false,
+    })
+  );
+});
+
+// ─── Web Push: click handler ───────────────────────────────────────────
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || '/';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // If a tab is already open on our origin, focus it and navigate.
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.navigate(targetUrl).catch(() => {});
+          return client.focus();
+        }
+      }
+      // Otherwise open a new tab.
+      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
+    })
+  );
+});

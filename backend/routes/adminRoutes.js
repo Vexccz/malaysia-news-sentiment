@@ -194,4 +194,62 @@ router.post('/ingest-rss', protect, authorize('admin'), async (req, res) => {
   }
 });
 
+/**
+ * GET /api/v1/admin/search?q=<query>
+ * Unified admin search across users + articles + comments.
+ * Limit 10 per category. Used by the admin "Search" tab.
+ */
+router.get('/search', protect, authorize('admin'), async (req, res) => {
+  try {
+    const q = String(req.query.q || '').trim();
+    if (!q || q.length < 2) {
+      return res.json({ q, users: [], articles: [], comments: [] });
+    }
+
+    const Article = require('../models/Article');
+    const Comment = require('../models/Comment');
+    const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escape(q), 'i');
+
+    const isOid = /^[a-fA-F0-9]{24}$/.test(q);
+
+    const [users, articles, comments] = await Promise.all([
+      User.find({
+        $or: [
+          { name: regex },
+          { email: regex },
+          ...(isOid ? [{ _id: q }] : []),
+        ],
+      })
+        .select('name email role createdAt analysisCount')
+        .limit(10)
+        .lean(),
+
+      Article.find({
+        $or: [
+          { title: regex },
+          { source: regex },
+          { topic: regex },
+          ...(isOid ? [{ _id: q }] : []),
+        ],
+      })
+        .select('title source sentiment topic publishedAt isAlert url')
+        .sort({ publishedAt: -1 })
+        .limit(10)
+        .lean(),
+
+      Comment.find({ content: regex })
+        .select('content user articleId createdAt')
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .lean()
+        .catch(() => []), // Comment model may not exist in all installs
+    ]);
+
+    res.json({ q, users, articles, comments });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

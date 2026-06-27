@@ -67,6 +67,24 @@ const userSchema = new mongoose.Schema({
   twoFactorSecret: { type: String, select: false },
   twoFactorEnabled: { type: Boolean, default: false },
 
+  // ── Web Push subscriptions ───────────────────────────────
+  // Multiple devices/browsers per user. Each entry = a PushSubscription
+  // object from the browser (endpoint + keys.auth + keys.p256dh).
+  pushSubscriptions: [{
+    endpoint:  { type: String, required: true },
+    keys: {
+      auth:    { type: String, required: true },
+      p256dh:  { type: String, required: true },
+    },
+    deviceLabel: { type: String, default: '' }, // browser/OS hint, optional
+    createdAt:   { type: Date, default: Date.now },
+  }],
+
+  // ── Push topic preferences ───────────────────────────────
+  // Saved topics the user wants alert articles pushed for.
+  // Lowercased, trimmed keywords. Match against article title+description.
+  pushTopics: [{ type: String, lowercase: true, trim: true }],
+
 }, { timestamps: true });
 
 // Hash password before saving

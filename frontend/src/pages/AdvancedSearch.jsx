@@ -90,7 +90,17 @@ const AdvancedSearch = () => {
     return { sentimentData, sourceData, total: articles.length };
   }, []);
 
+  // Track in-flight search to cancel on rapid typing
+  const searchAbortRef = useRef(null);
+
   const performSearch = useCallback(async (pageNum = 1) => {
+    // Cancel previous in-flight search
+    if (searchAbortRef.current) {
+      searchAbortRef.current.abort();
+    }
+    const controller = new AbortController();
+    searchAbortRef.current = controller;
+
     setLoading(true);
     try {
       const params = {
@@ -106,7 +116,7 @@ const AdvancedSearch = () => {
       if (filters.language) params.language = filters.language;
       if (filters.minConfidence > 0) params.minConfidence = filters.minConfidence;
 
-      const { data } = await api.get('/news/advanced-search', { params });
+      const { data } = await api.get('/news/advanced-search', { params, signal: controller.signal });
       setResults(data);
       setFacets(data.facets);
       setPage(pageNum);
@@ -126,9 +136,17 @@ const AdvancedSearch = () => {
         });
       }
     } catch (err) {
+      if (err.name === 'CanceledError' || err.name === 'AbortError') {
+        // Aborted by next query — silent, expected.
+        return;
+      }
       console.error('Search failed:', err);
     } finally {
-      setLoading(false);
+      // Only flip loading off if this controller is still the active one
+      if (searchAbortRef.current === controller) {
+        setLoading(false);
+        searchAbortRef.current = null;
+      }
     }
   }, [query, filters, computeAnalytics]);
 

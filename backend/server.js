@@ -187,6 +187,7 @@ app.get('/api/v1/admin/metrics', protect, authorize('admin'), (req, res) => {
 app.use('/api/v1/auth', authLimiter, require('./routes/authRoutes'));
 app.use('/api/v1/news', analysisLimiter, require('./routes/newsRoutes'));
 app.use('/api/v1/image', require('./routes/imageProxyRoutes'));
+app.use('/api/v1/push', require('./routes/pushRoutes'));
 app.use('/api/v1/history', require('./routes/historyRoutes'));
 
 // ── New feature routes ────────────────────────────────────────

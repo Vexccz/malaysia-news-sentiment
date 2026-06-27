@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import ThemeToggle from './ThemeToggle';
 import NotificationsBell from './NotificationsBell';
+import BottomNav from './BottomNav';
 
 const navItems = [
   { path: '/dashboard', labelKey: 'dashboard', tourId: 'dashboard', icon: (
@@ -294,11 +295,14 @@ const Layout = ({ children }) => {
           <ThemeToggle />
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-8">
+        {/* Page content — pb on mobile so BottomNav doesn't cover last items */}
+        <main className="flex-1 overflow-y-auto p-4 lg:p-8 pb-20 lg:pb-8">
           {children}
         </main>
       </div>
+
+      {/* Mobile bottom navigation (4 main tabs) */}
+      <BottomNav />
     </div>
   );
 };
