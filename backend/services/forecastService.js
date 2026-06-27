@@ -78,10 +78,11 @@ function naiveSeasonal(series, period = WEEK) {
 }
 
 function walkForwardBacktest(series, methods, testSize = 14) {
-  if (series.length < testSize + 14) return null;
+  if (series.length < testSize + 7) return null; // need 7+ train points
   const results = {};
   methods.forEach(m => { results[m.name] = { squaredErrors: [], mape: [] }; });
-  for (let t = 14; t <= series.length - testSize; t++) {
+  const trainStart = Math.max(7, Math.floor(series.length * 0.4));
+  for (let t = trainStart; t <= series.length - testSize; t++) {
     const trainSeries = series.slice(0, t);
     const actual = series[t].value;
     methods.forEach(m => {

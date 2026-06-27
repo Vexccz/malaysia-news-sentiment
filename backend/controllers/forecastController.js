@@ -88,7 +88,7 @@ const getForecast = async (req, res) => {
 
         predicted.push({
           date: dateStr,
-          predictedSentiment: forecast.predicted[i],
+          predictedSentiment: Math.max(-1, Math.min(1, forecast.predicted[i])),
         });
 
         confidenceIntervals.push({
