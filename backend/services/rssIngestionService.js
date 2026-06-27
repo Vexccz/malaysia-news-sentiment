@@ -6,6 +6,7 @@ const { fetchMalaysiakiniNews } = require('./malaysiakiniService');
 const { analyseArticle } = require('./openaiService');
 const { recordRssFetch } = require('./healthService');
 const { pushAlertToInterestedUsers } = require('./pushAlertService');
+const { broadcastArticle } = require('./streamService');
 
 const sentimentLimit = pLimit(5);
 
@@ -91,7 +92,7 @@ const SOURCE_SEED = (name) => {
   return 1 + (h % 5);
 };
 
-const ingestRssBatch = async () => {
+const ingestRssBatch = async (ioInstance = null) => {
   const trackFetch = async (name, fn) => {
     try {
       const arts = await fn();
@@ -170,6 +171,14 @@ const ingestRssBatch = async () => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
     created++;
+
+    // Real-time broadcast (Feature #2) — fan-out the freshly-created article
+    // to all connected Socket.IO clients + persist to Redis stream.
+    if (upserted) {
+      broadcastArticle(upserted, ioInstance).catch((err) => {
+        console.error('[stream] broadcast failed:', err.message);
+      });
+    }
 
     // Push notification to interested users for new alert articles.
     if (isAlert && upserted) {

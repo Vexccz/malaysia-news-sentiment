@@ -18,6 +18,7 @@ import ForecastCard from '../components/ForecastCard';
 import ScrollToTop from '../components/ScrollToTop';
 import AnalyzingOverlay from '../components/AnalyzingOverlay';
 import TrendingTicker from '../components/TrendingTicker';
+import LiveArticleStream from '../components/LiveArticleStream';
 import usePullToRefresh from '../hooks/usePullToRefresh';
 import useSwipeTabs from '../hooks/useSwipeTabs';
 import { hapticImpact } from '../utils/haptics';
@@ -1166,6 +1167,31 @@ const Dashboard = () => {
 
       {/* Trending Entities Ticker (O) */}
       <TrendingTicker />
+
+      {/* Real-time article stream (Feature #2) */}
+      {isHistoryView && (
+        <LiveArticleStream
+          onApply={(newArticles) => {
+            if (!newArticles?.length) return;
+            queryClient.setQueryData(['dashboardInit', timeframe, page], (old) => {
+              if (!old?.history?.articles) return old;
+              const existingIds = new Set((old.history.articles || []).map(a => String(a._id || a.id)));
+              const merged = [
+                ...newArticles.filter(a => !existingIds.has(String(a.id || a._id))),
+                ...old.history.articles,
+              ].slice(0, LIMIT);
+              return {
+                ...old,
+                history: {
+                  ...old.history,
+                  articles: merged,
+                },
+              };
+            });
+            toast.success(`${newArticles.length} new article${newArticles.length === 1 ? '' : 's'} added to dashboard`);
+          }}
+        />
+      )}
 
       {/* Search — editorial frame */}
       <div className="border-x border-t border-ink/10 dark:border-paper/10 bg-paper-card dark:bg-paper-dark-card">

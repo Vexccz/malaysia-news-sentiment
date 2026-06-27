@@ -208,6 +208,7 @@ app.use('/api/v1/user', require('./routes/userRoutes'));
 app.use('/api/v1/admin', require('./routes/adminRoutes'));
 app.use('/api/v1/bookmarks', require('./routes/bookmarkRoutes'));
 app.use('/api/v1/monitor', require('./routes/monitorRoutes'));
+app.use('/api/v1/stream', require('./routes/streamRoutes'));
 
 app.use('/api/v1/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/v1/behavior', require('./routes/behaviorRoutes'));
@@ -238,6 +239,7 @@ app.use('/api/user', require('./routes/userRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/bookmarks', require('./routes/bookmarkRoutes'));
 app.use('/api/monitor', require('./routes/monitorRoutes'));
+app.use('/api/stream', require('./routes/streamRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/behavior', require('./routes/behaviorRoutes'));
 // Metrics backward compat
@@ -346,11 +348,9 @@ server.listen(PORT, () => {
 
   // RSS ingestion — every 10 minutes
   // Pulls fresh articles from FMT/Astro Awani/Malaysiakini in the background,
-  // analyses sentiment, upserts into DB. Decouples the user-facing /news endpoint
-  // (which used to do this synchronously, taking 20-30s per request) from the
-  // expensive RSS+AI work.
+  // analyses sentiment, upserts into DB, broadcasts new articles via Socket.IO (#2).
   const { ingestRssBatch } = require('./services/rssIngestionService');
-  const trackedIngestRss = recordJob('rssIngestion', ingestRssBatch);
+  const trackedIngestRss = recordJob('rssIngestion', () => ingestRssBatch(io));
   setInterval(() => {
     trackedIngestRss().catch((err) => console.error('RSS ingestion failed:', err.message));
   }, 10 * 60 * 1000);

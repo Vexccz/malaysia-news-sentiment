@@ -187,7 +187,8 @@ router.post('/ingest-rss', protect, authorize('admin'), async (req, res) => {
   try {
     const { ingestRssBatch } = require('../services/rssIngestionService');
     const { recordJob } = require('../services/healthService');
-    const result = await recordJob('rssIngestion', ingestRssBatch)();
+    const io = req.app.get('io');
+    const result = await recordJob('rssIngestion', () => ingestRssBatch(io))();
     res.json({ ok: true, ...result });
   } catch (err) {
     res.status(500).json({ error: err.message });

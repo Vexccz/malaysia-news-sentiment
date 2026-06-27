@@ -19,3 +19,5 @@ before.json
 after.json
 stats.json
 health.json
+.atlas_new_pw
+.env.major-upgrades
