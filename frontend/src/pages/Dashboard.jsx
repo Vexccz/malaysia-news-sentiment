@@ -17,6 +17,7 @@ import WordCloud from '../components/WordCloud';
 import ForecastCard from '../components/ForecastCard';
 import ScrollToTop from '../components/ScrollToTop';
 import AnalyzingOverlay from '../components/AnalyzingOverlay';
+import TrendingTicker from '../components/TrendingTicker';
 import usePullToRefresh from '../hooks/usePullToRefresh';
 import useSwipeTabs from '../hooks/useSwipeTabs';
 import { hapticImpact } from '../utils/haptics';
@@ -1162,6 +1163,9 @@ const Dashboard = () => {
           </div>
         </div>
       </motion.div>
+
+      {/* Trending Entities Ticker (O) */}
+      <TrendingTicker />
 
       {/* Search — editorial frame */}
       <div className="border-x border-t border-ink/10 dark:border-paper/10 bg-paper-card dark:bg-paper-dark-card">

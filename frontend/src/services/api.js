@@ -376,6 +376,14 @@ export const getBookmarkMeta = async () => {
 };
 
 /**
+ * Get trending entities last N hours with sentiment breakdown (O)
+ */
+export const getTrendingEntities = async (hours = 24, limit = 10) => {
+  const response = await api.get('/entities/trending', { params: { hours, limit } });
+  return response.data;
+};
+
+/**
  * Get admin system overview stats (#4)
  */
 

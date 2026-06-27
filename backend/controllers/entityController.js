@@ -276,4 +276,48 @@ const getEntityDetail = async (req, res) => {
   }
 };
 
-module.exports = { getEntityGraph, searchEntities, getEntityDetail };
+/**
+ * GET /api/entities/trending?hours=24
+ * Returns top mentioned entities in the last N hours with sentiment breakdown.
+ * Used by the Dashboard ticker (O).
+ */
+const getTrendingEntities = async (req, res) => {
+  try {
+    const hours = Math.min(parseInt(req.query.hours) || 24, 168);
+    const limit = Math.min(parseInt(req.query.limit) || 10, 30);
+    const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+    const articles = await Article.find({ createdAt: { $gte: since } })
+      .select('title description content sentiment')
+      .limit(500)
+      .lean();
+
+    const counts = {}; // name -> { count, pos, neg, neu, category }
+    for (const art of articles) {
+      const text = `${art.title || ''} ${art.description || ''} ${art.content || ''}`;
+      const entities = extractEntities(text);
+      const sentKey = art.sentiment === 'Positive' ? 'pos' : art.sentiment === 'Negative' ? 'neg' : 'neu';
+      for (const e of entities) {
+        if (!counts[e.name]) counts[e.name] = { name: e.name, category: e.category, count: 0, pos: 0, neg: 0, neu: 0 };
+        counts[e.name].count++;
+        counts[e.name][sentKey]++;
+      }
+    }
+
+    const top = Object.values(counts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limit)
+      .map(e => {
+        const dominant = e.pos > e.neg && e.pos > e.neu ? 'Positive'
+          : e.neg > e.pos && e.neg > e.neu ? 'Negative' : 'Neutral';
+        return { ...e, dominant };
+      });
+
+    res.json({ hours, entities: top, total: Object.keys(counts).length });
+  } catch (err) {
+    console.error('[trending entities]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+module.exports = { getEntityGraph, searchEntities, getEntityDetail, getTrendingEntities };

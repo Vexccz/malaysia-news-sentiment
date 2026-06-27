@@ -157,7 +157,7 @@ const ProfilePage = () => {
   const { user, updateProfile } = useAuth();
   const { t } = useLanguage();
   const { theme } = useTheme();
-  const [stats, setStats] = useState({ articlesViewed: 0, bookmarks: 0, shared: 0, comments: 0 });
+  const [stats, setStats] = useState({ articlesViewed: 0, bookmarks: 0, shared: 0, comments: 0, uniqueSources: 0 });
   const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
   const [badges, setBadges] = useState([]);
@@ -259,11 +259,20 @@ const ProfilePage = () => {
         const sharedArr = sharedRes.status === 'fulfilled' ? (Array.isArray(sharedRes.value.data) ? sharedRes.value.data : sharedRes.value.data.articles || []) : [];
         const discussionsArr = commentsRes.status === 'fulfilled' ? (Array.isArray(commentsRes.value.data) ? commentsRes.value.data : commentsRes.value.data.discussions || []) : [];
 
+        // Q — Source diversity: count unique sources in viewing history
+        const sourceSet = new Set();
+        historyArr.forEach(item => {
+          const src = item.article?.source || item.source;
+          if (src) sourceSet.add(typeof src === 'string' ? src : (src.name || src.source || ''));
+        });
+        const uniqueSources = Array.from(sourceSet).filter(Boolean).length;
+
         setStats({
           articlesViewed: user?.analysisCount || historyArr.length || 0,
           bookmarks: bookmarksArr.length,
           shared: sharedArr.length,
           comments: discussionsArr.length,
+          uniqueSources, // Q
         });
 
         // Build activity timeline
@@ -474,6 +483,7 @@ const ProfilePage = () => {
       >
         <div className="flex divide-x divide-[#e5e5e5] dark:divide-[#222] min-w-max">
           <StatPill icon={<Eye size={16} />} label={t('articlesViewed', 'Articles')} value={loading ? 0 : stats.articlesViewed} color="text-ink-muted" />
+          <StatPill icon={<Globe size={16} />} label={t('sources', 'Sources')} value={loading ? 0 : stats.uniqueSources} color="text-purple-600" />
           <StatPill icon={<Bookmark size={16} />} label={t('bookmarks', 'Bookmarks')} value={loading ? 0 : stats.bookmarks} color="text-accent" />
           <StatPill icon={<Share2 size={16} />} label={t('shared', 'Shared')} value={loading ? 0 : stats.shared} color="text-emerald-600" />
           <StatPill icon={<MessageSquare size={16} />} label={t('comments', 'Comments')} value={loading ? 0 : stats.comments} color="text-blue-600" />

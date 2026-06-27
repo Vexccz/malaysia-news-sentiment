@@ -19,7 +19,9 @@ const applyTheme = (theme) => {
 };
 
 export const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+  // P — default to 'system' so first-time visitors get their OS preference,
+  // but respect any explicit user choice already saved.
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'system');
 
   useEffect(() => {
     applyTheme(theme);
