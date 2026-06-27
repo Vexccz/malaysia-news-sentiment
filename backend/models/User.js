@@ -10,6 +10,7 @@ const userSchema = new mongoose.Schema({
   provider: { type: String, enum: ['local', 'google'], default: 'local' },
   googleId: { type: String, unique: true, sparse: true },
   avatar: { type: String, default: '' },
+  bio: { type: String, maxlength: 280, default: '' },
 
   // Verification
   isVerified: { type: Boolean, default: false },

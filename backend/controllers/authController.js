@@ -357,24 +357,27 @@ const updatePreferences = async (req, res) => {
 // ── UPDATE PROFILE ─────────────────────────────────────────────
 const updateProfile = async (req, res) => {
   try {
-    const { name, avatar } = req.body;
+    const { name, avatar, bio, phone } = req.body;
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
-    if (name) user.name = name;
-    if (avatar) user.avatar = avatar;
-    
+    if (name !== undefined) user.name = name;
+    if (avatar !== undefined) user.avatar = avatar;
+    if (bio !== undefined) user.bio = bio;
+    if (phone !== undefined) user.phone = phone || undefined; // avoid empty string unique conflict
+
     await user.save();
 
-    res.json({ 
-      message: 'Profile updated.', 
-      user: { 
-        id: user._id, 
-        name: user.name, 
-        email: user.email, 
-        phone: user.phone, 
-        avatar: user.avatar 
-      } 
+    res.json({
+      message: 'Profile updated.',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        avatar: user.avatar,
+        bio: user.bio,
+      },
     });
   } catch (err) {
     console.error('Update profile error:', err.message);

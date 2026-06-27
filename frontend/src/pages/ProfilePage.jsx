@@ -8,7 +8,8 @@ import api from '../services/api';
 import {
   User, Mail, Calendar, Shield, Edit3, ExternalLink, Bookmark, MessageSquare,
   Share2, TrendingUp, Clock, Settings, Globe, Bell, Eye, BarChart3, FileText,
-  Search, MapPin, Award, Activity, ChevronRight, Sparkles, Target, Zap
+  Search, MapPin, Award, Activity, ChevronRight, Sparkles, Target, Zap,
+  X, Save, Loader2, Camera, Phone
 } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_BASE || '/api/v1';
@@ -163,6 +164,56 @@ const ProfilePage = () => {
   const [badgesLoading, setBadgesLoading] = useState(true);
   const [savingBadges, setSavingBadges] = useState(false);
   const badgeScrollRef = useRef(null);
+
+  // Inline profile editor state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ name: '', bio: '', phone: '', avatar: '' });
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState(null);
+  const avatarFileRef = useRef(null);
+
+  const openEditor = () => {
+    setEditForm({
+      name: user?.name || '',
+      bio: user?.bio || '',
+      phone: user?.phone || '',
+      avatar: user?.avatar || '',
+    });
+    setEditError(null);
+    setEditOpen(true);
+  };
+
+  const handleAvatarPick = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setEditError('Image too large (max 2 MB).');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => setEditForm(f => ({ ...f, avatar: ev.target.result }));
+    reader.readAsDataURL(file);
+  };
+
+  const saveProfile = async () => {
+    setEditSaving(true);
+    setEditError(null);
+    try {
+      const { data } = await api.patch('/auth/profile', {
+        name: editForm.name.trim(),
+        bio: editForm.bio.trim(),
+        phone: editForm.phone.trim(),
+        avatar: editForm.avatar,
+      });
+      if (typeof refreshUser === 'function') await refreshUser();
+      setEditOpen(false);
+      return data;
+    } catch (err) {
+      setEditError(err?.response?.data?.error || 'Failed to save profile.');
+    } finally {
+      setEditSaving(false);
+    }
+  };
 
   const initials = (user?.name || user?.email || 'U')
     .split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -378,7 +429,7 @@ const ProfilePage = () => {
               </div>
             </div>
             <button
-              onClick={() => navigate('/settings')}
+              onClick={openEditor}
               className="flex items-center gap-2 px-4 py-2 border border-[#e5e5e5] dark:border-[#222] text-sm font-sans text-ink dark:text-paper hover:border-accent hover:text-accent transition-colors"
             >
               <Edit3 size={14} />
@@ -557,6 +608,133 @@ const ProfilePage = () => {
           </div>
         </motion.div>
       </div>
+
+      <AnimatePresence>
+        {editOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+            onClick={() => !editSaving && setEditOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 12 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-2xl bg-white dark:bg-[#0f0f0f] border border-[#e5e5e5] dark:border-[#222] shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-[#e5e5e5] dark:border-[#222]">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.22em] text-ink-faint font-sans">Profile</p>
+                  <h2 className="text-xl font-display text-ink dark:text-paper">Edit profile</h2>
+                </div>
+                <button
+                  aria-label="Close profile editor"
+                  onClick={() => !editSaving && setEditOpen(false)}
+                  className="p-2 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-0">
+                <div className="p-5 border-b lg:border-b-0 lg:border-r border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#0a0a0a]">
+                  <p className="text-[10px] uppercase tracking-[0.22em] text-ink-faint font-sans mb-3">Avatar</p>
+                  <div className="w-28 h-28 rounded-full overflow-hidden border-2 border-[#111] dark:border-[#f5f3ee] bg-[#f3f0ea] dark:bg-[#151515] mx-auto">
+                    {editForm.avatar ? (
+                      <img src={editForm.avatar} alt="Profile avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-2xl font-display text-ink dark:text-paper">{initials}</div>
+                    )}
+                  </div>
+                  <input
+                    ref={avatarFileRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarPick}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => avatarFileRef.current?.click()}
+                    className="mt-4 w-full flex items-center justify-center gap-2 px-3 py-2 border border-[#e5e5e5] dark:border-[#222] text-sm text-ink dark:text-paper hover:border-accent hover:text-accent transition-colors"
+                  >
+                    <Camera size={14} />
+                    Change image
+                  </button>
+                  <p className="mt-2 text-[11px] text-ink-faint font-sans text-center">PNG/JPG, max 2 MB</p>
+                </div>
+
+                <div className="p-5 space-y-4">
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-[0.22em] text-ink-faint font-sans mb-2">Display name</label>
+                    <input
+                      value={editForm.name}
+                      onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                      className="w-full px-3 py-2.5 border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#0a0a0a] text-ink dark:text-paper focus:outline-none focus:border-accent transition-colors"
+                      placeholder="Your name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-[0.22em] text-ink-faint font-sans mb-2">Phone</label>
+                    <div className="relative">
+                      <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
+                      <input
+                        value={editForm.phone}
+                        onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+                        className="w-full pl-10 pr-3 py-2.5 border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#0a0a0a] text-ink dark:text-paper focus:outline-none focus:border-accent transition-colors"
+                        placeholder="Optional phone number"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-[0.22em] text-ink-faint font-sans mb-2">Bio</label>
+                    <textarea
+                      value={editForm.bio}
+                      onChange={(e) => setEditForm((f) => ({ ...f, bio: e.target.value.slice(0, 280) }))}
+                      rows={5}
+                      className="w-full px-3 py-2.5 border border-[#e5e5e5] dark:border-[#222] bg-white dark:bg-[#0a0a0a] text-ink dark:text-paper focus:outline-none focus:border-accent transition-colors resize-none"
+                      placeholder="Short intro about you"
+                    />
+                    <div className="mt-1 text-right text-[11px] text-ink-faint font-sans">{editForm.bio.length}/280</div>
+                  </div>
+
+                  {editError && (
+                    <div className="px-3 py-2 border border-red-200 bg-red-50 text-red-700 text-sm font-sans dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
+                      {editError}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#0a0a0a]">
+                <button
+                  type="button"
+                  onClick={() => setEditOpen(false)}
+                  disabled={editSaving}
+                  className="px-4 py-2 text-sm border border-[#e5e5e5] dark:border-[#222] text-ink dark:text-paper hover:border-accent hover:text-accent transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={saveProfile}
+                  disabled={editSaving}
+                  className="px-4 py-2 text-sm bg-[#111] text-white dark:bg-[#f5f3ee] dark:text-[#111] hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
+                >
+                  {editSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                  {editSaving ? 'Saving...' : 'Save changes'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
