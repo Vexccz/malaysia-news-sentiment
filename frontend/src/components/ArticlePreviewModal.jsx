@@ -5,6 +5,7 @@ import SentimentBadge from './SentimentBadge';
 import AlertBadge from './AlertBadge';
 import { trackView, voteSentiment, toggleBookmark } from '../services/api';
 import api from '../services/api';
+import { proxyImage } from '../utils/imageProxy';
 import { X, Bookmark, BookmarkCheck, ExternalLink, TrendingUp, TrendingDown, Minus, Lightbulb, MessageSquare } from 'lucide-react';
 
 const formatDate = (dateStr) => {
@@ -217,7 +218,7 @@ const ArticlePreviewModal = ({ article, isOpen, onClose }) => {
               borderBottom: '1px solid var(--border, #e5e5e5)',
             }}>
               <img 
-                src={urlToImage} alt={title} 
+                src={proxyImage(urlToImage)} alt={title} 
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 loading="lazy" decoding="async" 
               />

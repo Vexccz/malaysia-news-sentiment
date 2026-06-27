@@ -10,6 +10,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { formatRelativeTime, formatAbsoluteDate } from '../utils/dateFormat';
 import { translateArticle } from '../services/translateService';
 import { hapticImpact } from '../utils/haptics';
+import { proxyImage } from '../utils/imageProxy';
 import toast from 'react-hot-toast';
 
 const getFaviconUrl = (url) => {
@@ -171,7 +172,7 @@ const ArticleCard = ({ article, onPreview, onDelete, onBookmark, isBookmarked })
       <div className="art-thumb-container">
         {urlToImage ? (
           <img 
-            src={urlToImage} 
+            src={proxyImage(urlToImage)} 
             alt={title} 
             className="art-thumb" 
             loading="lazy"

@@ -186,6 +186,7 @@ app.get('/api/v1/admin/metrics', protect, authorize('admin'), (req, res) => {
 // ── Routes (v1) ───────────────────────────────────────────────
 app.use('/api/v1/auth', authLimiter, require('./routes/authRoutes'));
 app.use('/api/v1/news', analysisLimiter, require('./routes/newsRoutes'));
+app.use('/api/v1/image', require('./routes/imageProxyRoutes'));
 app.use('/api/v1/history', require('./routes/historyRoutes'));
 
 // ── New feature routes ────────────────────────────────────────
@@ -341,5 +342,20 @@ server.listen(PORT, () => {
   setTimeout(() => {
     trackedRecomputeImpact().catch(() => {});
   }, 90 * 1000);
+
+  // RSS ingestion — every 10 minutes
+  // Pulls fresh articles from FMT/Astro Awani/Malaysiakini in the background,
+  // analyses sentiment, upserts into DB. Decouples the user-facing /news endpoint
+  // (which used to do this synchronously, taking 20-30s per request) from the
+  // expensive RSS+AI work.
+  const { ingestRssBatch } = require('./services/rssIngestionService');
+  const trackedIngestRss = recordJob('rssIngestion', ingestRssBatch);
+  setInterval(() => {
+    trackedIngestRss().catch((err) => console.error('RSS ingestion failed:', err.message));
+  }, 10 * 60 * 1000);
+  // Initial run 30s after boot (so first fast-path request has fresh data)
+  setTimeout(() => {
+    trackedIngestRss().catch(() => {});
+  }, 30 * 1000);
 });
 

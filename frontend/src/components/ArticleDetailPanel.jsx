@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getArticleAnalysis, trackView } from '../services/api';
 import api from '../services/api';
+import { proxyImage } from '../utils/imageProxy';
 
 const deriveSourceLabel = (source, url) => {
   if (source && source !== 'Unknown' && source !== 'Source' && source !== 'Media Source') return source;
@@ -112,7 +113,7 @@ const ArticleDetailPanel = ({ article, isOpen, onClose }) => {
         
         {/* Cinematic Header */}
         <div className="detail-header-premium">
-          <div className="detail-header-bg" style={{ backgroundImage: urlToImage ? `url(${urlToImage})` : 'none' }} />
+          <div className="detail-header-bg" style={{ backgroundImage: urlToImage ? `url(${proxyImage(urlToImage)})` : 'none' }} />
           <div className="detail-header-content">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                <div className="detail-meta-premium">

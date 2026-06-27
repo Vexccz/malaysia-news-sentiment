@@ -5,6 +5,7 @@ import { ExternalLink, Bookmark, BookmarkCheck, Share2, Copy, X } from 'lucide-r
 import SentimentBadge from './SentimentBadge';
 import ContextMenu from './ContextMenu';
 import { useArticleAnalysis } from '../context/ArticleAnalysisContext';
+import { proxyImage } from '../utils/imageProxy';
 
 // ─── Sentiment border color map ─────────────────────────────────────────────
 const SENTIMENT_BORDER = {
@@ -375,7 +376,7 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
             {article.urlToImage && !imageError ? (
               <div className="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 overflow-hidden">
                 <img
-                  src={article.urlToImage}
+                  src={proxyImage(article.urlToImage)}
                   alt=""
                   className="w-full h-full object-cover"
                   loading="lazy"

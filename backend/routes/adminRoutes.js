@@ -178,4 +178,20 @@ router.get('/health', protect, authorize('admin'), (req, res) => {
   }
 });
 
+/**
+ * POST /api/v1/admin/ingest-rss
+ * Manually trigger RSS ingestion (FMT + Astro Awani + Malaysiakini).
+ * Background job runs every 10 min — this is for admin debugging / forced refresh.
+ */
+router.post('/ingest-rss', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { ingestRssBatch } = require('../services/rssIngestionService');
+    const { recordJob } = require('../services/healthService');
+    const result = await recordJob('rssIngestion', ingestRssBatch)();
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

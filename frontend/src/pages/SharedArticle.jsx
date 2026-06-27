@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import api from '../services/api';
+import { proxyImage } from '../utils/imageProxy';
 
 const SharedArticle = () => {
   const { id } = useParams();
@@ -127,7 +128,7 @@ const SharedArticle = () => {
         <div className="bg-white dark:bg-[#1a1a1a] border border-[#eee] dark:border-[#2a2a2a] rounded-sm overflow-hidden shadow-sm">
           {article.urlToImage && (
             <img
-              src={article.urlToImage}
+              src={proxyImage(article.urlToImage)}
               alt={article.title}
               className="w-full h-48 object-cover"
               onError={(e) => { e.target.style.display = 'none'; }}
