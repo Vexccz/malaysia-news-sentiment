@@ -43,22 +43,44 @@ const categoryToType = (category) => {
   return 'ORGANIZATION';
 };
 
+const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Cache compiled regex per entity term so we only build them once per process.
+const matcherCache = new Map();
+
+const buildMatcher = (term) => {
+  if (matcherCache.has(term)) return matcherCache.get(term);
+  // Word-boundary, case-insensitive whole-token match.
+  // Short uppercase acronyms (e.g. "UN", "PAS", "DAP") must match the exact
+  // case to avoid colliding with substrings like "launches" -> "UN".
+  const isAcronym = /^[A-Z0-9]{2,5}$/.test(term);
+  const flags = isAcronym ? '' : 'i';
+  const escaped = escapeRegExp(term);
+  // For multi-word terms (e.g. "Anwar Ibrahim"), use \b on both ends.
+  // For acronyms, also require boundaries so "USA" doesn't match "USAID".
+  const pattern = new RegExp(`\\b${escaped}\\b`, flags);
+  matcherCache.set(term, pattern);
+  return pattern;
+};
+
 /**
  * Extract entities from a text blob.
- * Case-insensitive substring match against the curated pattern list.
+ * Case-insensitive word-boundary match against the curated pattern list,
+ * with case-sensitive matching for short acronyms to avoid false positives
+ * like "UN" matching inside "launches".
+ *
  * @param {string} text
  * @param {string} [typeFilter] optional category key
  * @returns {{name:string, category:string, type:string}[]}
  */
 const extractEntities = (text, typeFilter) => {
   if (!text) return [];
-  const lower = text.toLowerCase();
   const found = [];
   const patterns = typeFilter ? { [typeFilter]: entityPatterns[typeFilter] } : entityPatterns;
   for (const [category, entities] of Object.entries(patterns)) {
     if (!entities) continue;
     for (const entity of entities) {
-      if (lower.includes(entity.toLowerCase())) {
+      if (buildMatcher(entity).test(text)) {
         found.push({ name: entity, category, type: categoryToType(category) });
       }
     }
