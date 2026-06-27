@@ -1,31 +1,8 @@
 const Article = require('../models/Article');
-const { performAiRequest } = require('../services/openaiService');
+const { ensembleForecast } = require('../services/forecastService');
 
 const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-/**
- * Simple linear regression helper
- */
-const linearRegression = (points) => {
-  const n = points.length;
-  if (n < 2) return { slope: 0, intercept: 0 };
-  
-  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-  for (let i = 0; i < n; i++) {
-    sumX += i;
-    sumY += points[i];
-    sumXY += i * points[i];
-    sumX2 += i * i;
-  }
-  
-  const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-  const intercept = (sumY - slope * sumX) / n;
-  return { slope: isNaN(slope) ? 0 : slope, intercept: isNaN(intercept) ? 0 : intercept };
-};
-
-/**
- * Calculate sentiment score: Positive=1, Neutral=0, Negative=-1
- */
 const sentimentToScore = (sentiment) => {
   if (sentiment === 'Positive') return 1;
   if (sentiment === 'Negative') return -1;
@@ -33,14 +10,14 @@ const sentimentToScore = (sentiment) => {
 };
 
 /**
- * GET /api/forecast/:topic?days=7
- * Returns historical sentiment + predicted future sentiment
+ * GET /api/forecast/:topic?days=14
+ * Multi-method ensemble forecast with backtest validation
  */
 const getForecast = async (req, res) => {
   try {
     const { topic } = req.params;
-    const days = Math.min(parseInt(req.query.days) || 7, 30);
-    const historyDays = 60; // Look back 60 days
+    const days = Math.min(parseInt(req.query.days) || 14, 30);
+    const historyDays = Math.min(parseInt(req.query.history) || 60, 120);
 
     if (!topic) {
       return res.status(400).json({ error: 'Topic is required' });
@@ -49,7 +26,6 @@ const getForecast = async (req, res) => {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - historyDays);
 
-    // Get articles matching topic
     const safeTopic = escapeRegex(topic);
     const articles = await Article.find({
       $or: [
@@ -65,13 +41,15 @@ const getForecast = async (req, res) => {
       return res.status(200).json({
         historical: [],
         predicted: [],
-        aiInsight: `Not enough data for topic "${topic}". Need at least 3 articles in the last ${historyDays} days.`,
+        confidenceIntervals: [],
         trend: 'Insufficient Data',
+        method: 'N/A',
+        insight: `Not enough data for "${topic}". Need at least 3 articles in the last ${historyDays} days.`,
         totalArticles: articles.length,
       });
     }
 
-    // Group by date and calculate daily average sentiment score
+    // Group by date
     const dailyMap = {};
     articles.forEach(article => {
       const articleDate = article.publishedAt || article.createdAt;
@@ -82,10 +60,9 @@ const getForecast = async (req, res) => {
       dailyMap[dateKey].count++;
     });
 
-    // Fill gaps with interpolation and build historical array
+    // Build historical array
     const historical = [];
     const sortedDates = Object.keys(dailyMap).sort();
-    
     sortedDates.forEach(date => {
       const avg = dailyMap[date].scores.reduce((a, b) => a + b, 0) / dailyMap[date].scores.length;
       historical.push({
@@ -95,78 +72,52 @@ const getForecast = async (req, res) => {
       });
     });
 
-    // Calculate 7-day moving average for smoothing
-    const smoothed = [];
-    for (let i = 0; i < historical.length; i++) {
-      const window = historical.slice(Math.max(0, i - 6), i + 1);
-      const avg = window.reduce((sum, d) => sum + d.sentiment, 0) / window.length;
-      smoothed.push(avg);
-    }
+    // Run ensemble forecast
+    const forecast = ensembleForecast(historical, days);
 
-    // Linear regression on smoothed data for prediction
-    const { slope, intercept } = linearRegression(smoothed);
-
-    // Generate predictions
-    const predicted = [];
+    // Build predicted array with dates
     const lastDate = new Date(sortedDates[sortedDates.length - 1]);
-    
-    for (let i = 1; i <= days; i++) {
-      const predDate = new Date(lastDate);
-      predDate.setDate(predDate.getDate() + i);
-      
-      const predictedValue = slope * (smoothed.length - 1 + i) + intercept;
-      // Clamp between -1 and 1
-      const clamped = Math.max(-1, Math.min(1, predictedValue));
-      // Confidence decreases as we predict further out
-      const confidence = Math.max(0.2, 1 - (i * 0.1));
-      
-      predicted.push({
-        date: predDate.toISOString().split('T')[0],
-        predictedSentiment: parseFloat(clamped.toFixed(3)),
-        confidence: parseFloat(confidence.toFixed(2)),
-      });
-    }
+    const predicted = [];
+    const confidenceIntervals = [];
 
-    // Determine trend
-    let trend = 'Stable';
-    if (slope > 0.02) trend = 'Improving';
-    else if (slope < -0.02) trend = 'Declining';
+    if (!forecast.insufficient) {
+      for (let i = 0; i < days; i++) {
+        const predDate = new Date(lastDate);
+        predDate.setDate(predDate.getDate() + i + 1);
+        const dateStr = predDate.toISOString().split('T')[0];
 
-    // Generate AI insight
-    let aiInsight = '';
-    try {
-      // Only if AI is available
-      if (process.env.OPENAI_API_KEY && !process.env.OPENAI_API_KEY.includes('your_')) {
-        const avgSentiment = smoothed[smoothed.length - 1];
-        const prompt = `You are a Malaysian news analyst. Based on sentiment data for the topic "${topic}":
-- Current average sentiment score: ${avgSentiment.toFixed(2)} (scale: -1 negative to +1 positive)
-- Trend direction: ${trend} (slope: ${slope.toFixed(4)})
-- Total articles analyzed: ${articles.length} over ${historyDays} days
-- Predicted sentiment for next ${days} days: ${predicted[0]?.predictedSentiment} to ${predicted[predicted.length-1]?.predictedSentiment}
+        predicted.push({
+          date: dateStr,
+          predictedSentiment: forecast.predicted[i],
+        });
 
-Write a brief 2-3 sentence qualitative forecast about what this means for public sentiment on "${topic}" in Malaysia. Be specific and actionable. Do not use JSON format, just plain text.`;
-
-        const raw = await performAiRequest(prompt, process.env.QWEN_MODEL || 'gpt-4o-mini', 0.4, 200);
-        aiInsight = raw?.trim() || '';
+        confidenceIntervals.push({
+          date: dateStr,
+          lower: forecast.confidenceIntervals[i].lower,
+          upper: forecast.confidenceIntervals[i].upper,
+          width: forecast.confidenceIntervals[i].width,
+        });
       }
-    } catch (err) {
-      console.warn('[Forecast] AI insight generation failed:', err.message);
     }
 
-    if (!aiInsight) {
-      // Fallback insight
-      const avgScore = smoothed[smoothed.length - 1];
-      const sentimentLabel = avgScore > 0.2 ? 'positive' : avgScore < -0.2 ? 'negative' : 'neutral';
-      aiInsight = `Based on ${articles.length} articles over the past ${historyDays} days, public sentiment for "${topic}" is currently ${sentimentLabel} with a ${trend.toLowerCase()} trend. ${trend === 'Improving' ? 'Coverage is becoming more favorable.' : trend === 'Declining' ? 'Negative coverage is increasing.' : 'Sentiment remains relatively stable.'}`;
-    }
+    // Data-driven insight (no LLM needed)
+    const insight = generateInsight(topic, historical, forecast, articles.length, historyDays);
 
     res.json({
       historical,
       predicted,
-      aiInsight,
-      trend,
+      confidenceIntervals,
+      trend: forecast.trend || 'Insufficient Data',
+      method: forecast.method || 'N/A',
+      weights: forecast.weights || {},
+      seasonality: forecast.seasonality || 'none',
+      residualStd: forecast.residualStd || 0,
+      backtest: forecast.backtest || null,
+      models: forecast.models || [],
+      insight,
       totalArticles: articles.length,
       daysAnalyzed: historyDays,
+      dataPoints: historical.length,
     });
   } catch (err) {
     console.error('[Forecast] Error:', err.message);
@@ -174,4 +125,91 @@ Write a brief 2-3 sentence qualitative forecast about what this means for public
   }
 };
 
-module.exports = { getForecast };
+/**
+ * GET /api/forecast/backtest/:topic
+ * Run walk-forward backtest only (no prediction)
+ */
+const getBacktest = async (req, res) => {
+  try {
+    const { topic } = req.params;
+    const historyDays = Math.min(parseInt(req.query.history) || 90, 120);
+
+    if (!topic) return res.status(400).json({ error: 'Topic is required' });
+
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - historyDays);
+
+    const safeTopic = escapeRegex(topic);
+    const articles = await Article.find({
+      $or: [
+        { topic: { $regex: safeTopic, $options: 'i' } },
+        { title: { $regex: safeTopic, $options: 'i' } },
+      ],
+      publishedAt: { $gte: startDate },
+    }).select('sentiment publishedAt createdAt').sort({ publishedAt: 1 });
+
+    const dailyMap = {};
+    articles.forEach(article => {
+      const d = article.publishedAt || article.createdAt;
+      if (!d) return;
+      const key = d.toISOString().split('T')[0];
+      if (!dailyMap[key]) dailyMap[key] = { scores: [], count: 0 };
+      dailyMap[key].scores.push(sentimentToScore(article.sentiment));
+      dailyMap[key].count++;
+    });
+
+    const historical = Object.keys(dailyMap).sort().map(date => ({
+      date,
+      sentiment: parseFloat((dailyMap[date].scores.reduce((a, b) => a + b, 0) / dailyMap[date].scores.length).toFixed(3)),
+      articleCount: dailyMap[date].count,
+    }));
+
+    const forecast = ensembleForecast(historical, 1);
+
+    res.json({
+      topic,
+      dataPoints: historical.length,
+      totalArticles: articles.length,
+      backtest: forecast.backtest || null,
+      method: forecast.method,
+      weights: forecast.weights,
+      seasonality: forecast.seasonality,
+      residualStd: forecast.residualStd,
+    });
+  } catch (err) {
+    console.error('[Backtest] Error:', err.message);
+    res.status(500).json({ error: 'Backtest failed' });
+  }
+};
+
+function generateInsight(topic, historical, forecast, totalArticles, historyDays) {
+  if (forecast.insufficient) {
+    return `Insufficient data for "${topic}". Only ${historical.length} days of data available (minimum 7 required).`;
+  }
+
+  const current = historical[historical.length - 1].sentiment;
+  const predicted7 = forecast.predicted[Math.min(6, forecast.predicted.length - 1)];
+  const predicted14 = forecast.predicted[forecast.predicted.length - 1];
+  const ci7 = forecast.confidenceIntervals[Math.min(6, forecast.confidenceIntervals.length - 1)];
+
+  const sentimentLabel = current > 0.2 ? 'positive' : current < -0.2 ? 'negative' : 'neutral';
+  const direction = forecast.trend === 'Improving' ? 'becoming more favorable'
+    : forecast.trend === 'Declining' ? 'shifting negative'
+    : 'remaining stable';
+
+  const confWidth = ci7 ? ci7.width.toFixed(2) : 'wide';
+  const confidence = parseFloat(confWidth) < 0.3 ? 'high confidence' : parseFloat(confWidth) < 0.6 ? 'moderate confidence' : 'low confidence';
+
+  let seasonalityNote = '';
+  if (forecast.seasonality === 'weekly') {
+    seasonalityNote = ' Weekly patterns detected in coverage volume, suggesting editorial cycles influence sentiment swings.';
+  }
+
+  const methodNote = forecast.method !== 'Ensemble'
+    ? ` Best-performing individual method: ${forecast.method}.`
+    : ' All methods weighted equally in ensemble.';
+
+  return `Based on ${totalArticles} articles over ${historyDays} days (${historical.length} data points), public sentiment on "${topic}" is currently ${sentimentLabel} (${current.toFixed(2)}) and ${direction}. 7-day forecast: ${predicted7.toFixed(2)} (CI: ${ci7 ? ci7.lower.toFixed(2) + ' to ' + ci7.upper.toFixed(2) : 'N/A'}), 14-day: ${predicted14.toFixed(2)} with ${confidence}.${seasonalityNote}${methodNote} Residual standard deviation: ${forecast.residualStd.toFixed(3)}.`;
+}
+
+module.exports = { getForecast, getBacktest };
