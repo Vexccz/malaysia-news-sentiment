@@ -1,25 +1,28 @@
-// #10 Haptic feedback utility
-// Wraps @capacitor/haptics with graceful fallback for web
-let Haptics = null;
-let hapticsReady = false;
+// Haptic feedback utility — Web Vibration API (graceful no-op on unsupported)
+// Previously depended on @capacitor/haptics (mobile-only). Dropped Capacitor
+// because no native shell ships and the dep brought high-severity tar/cli
+// vulnerabilities. The Vibration API gives equivalent UX on Chrome Android.
 
-try {
-  import('@capacitor/haptics').then(mod => {
-    Haptics = mod.Haptics;
-    hapticsReady = true;
-  }).catch(() => {});
-} catch {}
-
-export const hapticImpact = async (style = 'Medium') => {
-  if (!hapticsReady || !Haptics) return;
+const safeVibrate = (ms) => {
   try {
-    await Haptics.impact({ style });
-  } catch {}
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      navigator.vibrate(ms);
+    }
+  } catch {
+    // navigator.vibrate may throw in privacy-restricted iframes
+  }
 };
 
+// style: 'Light' | 'Medium' | 'Heavy'
+export const hapticImpact = async (style = 'Medium') => {
+  const ms = style === 'Light' ? 10 : style === 'Heavy' ? 30 : 18;
+  safeVibrate(ms);
+};
+
+// type: 'Success' | 'Warning' | 'Error'
 export const hapticNotification = async (type = 'Success') => {
-  if (!hapticsReady || !Haptics) return;
-  try {
-    await Haptics.notification({ type });
-  } catch {}
+  const pattern = type === 'Success' ? [10, 30, 10]
+    : type === 'Warning' ? [20, 60, 20]
+    : [40, 100, 40, 100, 40]; // Error — longer triple
+  safeVibrate(pattern);
 };

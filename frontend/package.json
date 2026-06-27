@@ -13,8 +13,6 @@
   },
   "dependencies": {
     "@antv/g6": "^4.8.25",
-    "@capacitor/cli": "^6.2.1",
-    "@capacitor/haptics": "^6.0.3",
     "@react-oauth/google": "^0.13.4",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
