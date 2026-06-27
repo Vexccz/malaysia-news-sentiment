@@ -58,7 +58,6 @@ import PricingPage from './pages/PricingPage';
 import AboutPage from './pages/AboutPage';
 import ChangelogPage from './pages/ChangelogPage';
 import InsightsLabPage from './pages/InsightsLabPage';
-const AgentDashboard = lazy(() => import('./pages/AgentDashboard'));
 import NotFound from './pages/NotFound';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 
@@ -511,7 +510,6 @@ const AppInner = () => (
     <Route path="/timeline" element={<ProtectedRoute><Layout><SentimentTimeline /></Layout></ProtectedRoute>} />
     <Route path="/alerts" element={<ProtectedRoute><Layout><Alerts /></Layout></ProtectedRoute>} />
     <Route path="/insights-lab" element={<ProtectedRoute><Layout><InsightsLabPage /></Layout></ProtectedRoute>} />
-    <Route path="/agent" element={<ProtectedRoute><Layout><Suspense fallback={<div className="p-8 text-center">Loading...</div>}><AgentDashboard /></Suspense></Layout></ProtectedRoute>} />
     <Route path="/credibility" element={<ProtectedRoute><Layout><SourceCredibility /></Layout></ProtectedRoute>} />
     <Route path="/digest" element={<ProtectedRoute><Layout><Digest /></Layout></ProtectedRoute>} />
     <Route path="/search" element={<ProtectedRoute><Layout><AdvancedSearch /></Layout></ProtectedRoute>} />

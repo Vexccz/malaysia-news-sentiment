@@ -381,6 +381,187 @@ const CommunityInline = () => {
   );
 };
 
+/* ─── Inline: Agent Insights (Sentiment Spikes, Trending, Anomalies) ─── */
+const AgentInline = () => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: res } = await api.get('/agent/insights');
+        if (!cancelled) setData(res);
+      } catch (err) {
+        console.error('Agent insights fetch failed:', err);
+        if (!cancelled) setError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Loading skeleton
+  if (loading) {
+    return (
+      <div style={{ background: '#111', border: '1px solid #222' }} className="p-4 space-y-3 animate-pulse">
+        <div className="h-3 w-40" style={{ background: '#222' }} />
+        <div className="h-20" style={{ background: '#0a0a0a' }} />
+        <div className="h-3 w-32" style={{ background: '#222' }} />
+        <div className="h-16" style={{ background: '#0a0a0a' }} />
+        <div className="h-3 w-28" style={{ background: '#222' }} />
+        <div className="h-10" style={{ background: '#0a0a0a' }} />
+      </div>
+    );
+  }
+
+  // Error / no data
+  if (error || !data) {
+    return (
+      <div style={{ background: '#111', border: '1px solid #222' }} className="p-5 text-center">
+        <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#666', marginBottom: '6px' }}>
+          Agent Insights
+        </div>
+        <div style={{ fontSize: '12px', color: '#555' }}>No agent data available</div>
+      </div>
+    );
+  }
+
+  const { spikes = [], trending = [], anomalies = [] } = data;
+
+  const fmtNum = (n) => {
+    if (n == null) return '—';
+    return typeof n === 'number' ? n.toLocaleString() : n;
+  };
+
+  const anomalyColor = (sev) => {
+    const s = (sev || '').toLowerCase();
+    if (s === 'high') return { bg: '#3a1111', fg: '#ef4444', border: '#5a1a1a' };
+    if (s === 'medium') return { bg: '#3a2e11', fg: '#f59e0b', border: '#5a4a1a' };
+    return { bg: '#1a1a1a', fg: '#888', border: '#333' };
+  };
+
+  return (
+    <div style={{ background: '#111', border: '1px solid #222', maxHeight: '400px', overflowY: 'auto' }}>
+      {/* Header */}
+      <div style={{ padding: '10px 14px', borderBottom: '1px solid #222', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#aaa' }}>
+          Agent Insights
+        </span>
+        {data.generatedAt && (
+          <span style={{ fontSize: '9px', fontFamily: 'monospace', color: '#555', letterSpacing: '0.05em' }}>
+            {new Date(data.generatedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+          </span>
+        )}
+      </div>
+
+      {/* Section 1: Sentiment Spikes */}
+      {spikes.length > 0 && (
+        <div style={{ padding: '10px 14px', borderBottom: '1px solid #222' }}>
+          <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#666', marginBottom: '6px' }}>
+            Sentiment Spikes
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #222' }}>
+                <th style={{ textAlign: 'left', padding: '3px 0', color: '#555', fontWeight: 600, fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Entity</th>
+                <th style={{ textAlign: 'right', padding: '3px 0', color: '#555', fontWeight: 600, fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Direction</th>
+                <th style={{ textAlign: 'right', padding: '3px 0 3px 8px', color: '#555', fontWeight: 600, fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Δ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {spikes.slice(0, 5).map((s, i) => {
+                const isSurge = (s.direction || '').toLowerCase() === 'surge' || (s.change || 0) > 0;
+                const indicator = isSurge ? '▲' : '▼';
+                const color = isSurge ? '#4ade80' : '#f87171';
+                return (
+                  <tr key={i} style={{ borderBottom: '1px solid #1a1a1a' }}>
+                    <td style={{ padding: '4px 0', color: '#ccc', fontFamily: 'inherit', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }}>
+                      {s.entity || s.name || '—'}
+                    </td>
+                    <td style={{ padding: '4px 0', textAlign: 'right', fontFamily: 'monospace', fontSize: '10px', color, fontWeight: 700 }}>
+                      {indicator} {isSurge ? 'SURGE' : 'DROP'}
+                    </td>
+                    <td style={{ padding: '4px 0 4px 8px', textAlign: 'right', fontFamily: 'monospace', fontSize: '10px', color: '#aaa' }}>
+                      {s.change != null ? (isSurge ? '+' : '') + s.change + '%' : fmtNum(s.magnitude)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Section 2: Trending Entities */}
+      {trending.length > 0 && (
+        <div style={{ padding: '10px 14px', borderBottom: '1px solid #222' }}>
+          <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#666', marginBottom: '6px' }}>
+            Trending Entities
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            {trending.slice(0, 5).map((t, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                  <span style={{ fontFamily: 'monospace', fontSize: '10px', color: '#555', width: '14px', textAlign: 'right', flexShrink: 0 }}>
+                    {i + 1}.
+                  </span>
+                  <span style={{ fontSize: '11px', color: '#ccc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {t.entity || t.name || '—'}
+                  </span>
+                </div>
+                <span style={{ fontFamily: 'monospace', fontSize: '10px', fontWeight: 700, color: (t.change || 0) >= 0 ? '#4ade80' : '#f87171', flexShrink: 0, marginLeft: '8px' }}>
+                  {(t.change || 0) >= 0 ? '+' : ''}{t.change ?? t.mentions ?? '—'}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Section 3: Anomalies */}
+      {anomalies.length > 0 && (
+        <div style={{ padding: '10px 14px' }}>
+          <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#666', marginBottom: '6px' }}>
+            Anomalies
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+            {anomalies.map((a, i) => {
+              const c = anomalyColor(a.severity);
+              return (
+                <span key={i} title={a.description || a.message || ''}
+                  style={{
+                    display: 'inline-block',
+                    padding: '2px 6px',
+                    fontSize: '9px',
+                    fontWeight: 700,
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    background: c.bg,
+                    color: c.fg,
+                    border: `1px solid ${c.border}`,
+                    lineHeight: '1.4',
+                  }}>
+                  {a.type || a.label || a.message || 'Alert'}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Empty state if all sections empty */}
+      {spikes.length === 0 && trending.length === 0 && anomalies.length === 0 && (
+        <div style={{ padding: '14px', textAlign: 'center', fontSize: '11px', color: '#555' }}>
+          No signals detected
+        </div>
+      )}
+    </div>
+  );
+};
+
 /* Shared comment item component */
 const CommentItem = ({ c, onLike, timeAgo, sentimentColor }) => {
   const [showReply, setShowReply] = useState(false);
@@ -1657,6 +1838,9 @@ const Dashboard = () => {
                         <SourceCredibility />
                       </InlineErrorBoundary>
                     </div>
+                    <InlineErrorBoundary name="Agent Insights">
+                      <AgentInline />
+                    </InlineErrorBoundary>
                   </div>
                   </motion.div>
                 )}
@@ -1892,6 +2076,11 @@ const Dashboard = () => {
                         </InlineErrorBoundary>
                       </div>
                       )}
+                      <div className={`${CARD} p-0 border-l-[3px] border-l-accent`}>
+                        <InlineErrorBoundary name="Agent Insights">
+                          <AgentInline />
+                        </InlineErrorBoundary>
+                      </div>
                     </div>
                   </aside>
                 </div>
