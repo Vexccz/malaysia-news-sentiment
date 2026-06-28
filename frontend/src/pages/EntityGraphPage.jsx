@@ -353,39 +353,55 @@ export default function EntityGraphPage() {
     }
 
     const maxMentions = Math.max(...graphNodes.map(n => n.mentions), 1);
-    const baseNodeSize = mobileGraphMode ? 18 : 24;
-    const sizeRange = mobileGraphMode ? 30 : 70;
+    const baseNodeSize = mobileGraphMode ? 14 : 22;
+    const sizeRange = mobileGraphMode ? 24 : 55;
+
+    const CATEGORY_GRADIENTS = {
+      politicians: { fill: 'l(0,0,0,1)0:#4f46e5 1:#6366f1', stroke: '#4f46e5', bg: 'rgba(99,102,241,0.12)' },
+      parties: { fill: 'l(0,0,0,1)0:#7c3aed 1:#8b5cf6', stroke: '#7c3aed', bg: 'rgba(139,92,246,0.12)' },
+      organizations: { fill: 'l(0,0,0,1)0:#0891b2 1:#06b6d4', stroke: '#0891b2', bg: 'rgba(6,182,212,0.12)' },
+      locations: { fill: 'l(0,0,0,1)0:#d97706 1:#f59e0b', stroke: '#d97706', bg: 'rgba(245,158,11,0.12)' },
+    };
+    const DEFAULT_CAT = { fill: 'l(0,0,0,1)0:#475569 1:#64748b', stroke: '#475569', bg: 'rgba(100,116,139,0.12)' };
 
     const g6Data = {
       nodes: graphNodes.map(n => {
-        const color = SENTIMENT_COLORS[n.sentiment] || SENTIMENT_COLORS.Neutral;
+        const cat = CATEGORY_GRADIENTS[n.category] || DEFAULT_CAT;
         const nodeSize = baseNodeSize + (n.mentions / maxMentions) * sizeRange;
-        const isHighlighted = n.highlighted !== false;
-        // Feature 5: Path highlight dimming
-        const onPath = !highlightedPath || highlightedPath.includes(n.id);
-        // Feature 7: Expanded nodes get a distinct border
         const isExpanded = n._expanded;
+        const isHighMention = n.mentions > maxMentions * 0.5;
+        const cardW = mobileGraphMode ? nodeSize * 2.2 : nodeSize * 2.8;
+        const cardH = mobileGraphMode ? nodeSize * 0.8 : nodeSize * 1.1;
         return {
           id: n.id,
-          label: n.label,
+          type: 'rect',
+          label: isExpanded ? `${n.label}
+(EXPANDED)` : `${n.label}
+${n.mentions} mentions`,
           data: { label: n.label, mentions: n.mentions, sentiment: n.sentiment, category: n.category },
-          size: isExpanded ? nodeSize * 0.85 : nodeSize,
+          size: [cardW, cardH],
           style: {
-            fill: color,
-            stroke: isExpanded ? '#6366F1' : color,
-            lineWidth: n.mentions > maxMentions * 0.6 ? 3.5 : 2,
+            fill: isDark ? (isExpanded ? 'rgba(99,102,241,0.15)' : cat.bg) : cat.bg,
+            stroke: isExpanded ? '#6366F1' : cat.stroke,
+            lineWidth: isExpanded ? 2.5 : (isHighMention ? 2 : 1.5),
+            radius: mobileGraphMode ? 6 : 8,
+            cursor: 'pointer',
+            shadowBlur: isHighMention ? 16 : 6,
+            shadowColor: isHighMention ? cat.stroke + '50' : (isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.08)'),
+            shadowOffsetY: isHighMention ? 4 : 2,
             lineDash: isExpanded ? [4, 2] : undefined,
-            shadowBlur: n.mentions > maxMentions * 0.6 ? 20 : 0,
-            shadowColor: `${color}60`,
           },
           labelCfg: {
             style: {
-              fill: isDark ? '#f1f5f9' : '#0f172a',
-              fontSize: mobileGraphMode ? 10 : 13,
+              fill: isDark ? '#e2e8f0' : '#1e293b',
+              fontSize: mobileGraphMode ? 9 : 12,
               fontWeight: 600,
+              fontFamily: "'Playfair Display', Georgia, serif",
+              lineHeight: mobileGraphMode ? 13 : 17,
+              textAlign: 'center',
             },
-            position: 'bottom',
-            offset: 6,
+            position: 'center',
+            offset: 0,
           },
         };
       }),
@@ -465,9 +481,9 @@ export default function EntityGraphPage() {
       node: {
         style: { cursor: 'pointer' },
         state: {
-          active: { lineWidth: 5, fillOpacity: 1, shadowBlur: 30, shadowColor: 'rgba(99,102,241,0.5)' },
-          inactive: { fillOpacity: 0.06, strokeOpacity: 0.15, labelOpacity: 0.15, shadowBlur: 0 },
-          selected: { lineWidth: 5, stroke: '#6366F1', shadowBlur: 24, shadowColor: 'rgba(99,102,241,0.6)' },
+          active: { lineWidth: 3, shadowBlur: 24, shadowColor: 'rgba(99,102,241,0.5)' },
+          inactive: { fillOpacity: 0.08, strokeOpacity: 0.12, labelOpacity: 0.12, shadowBlur: 0 },
+          selected: { lineWidth: 3, stroke: '#6366F1', shadowBlur: 20, shadowColor: 'rgba(99,102,241,0.6)' },
         },
       },
       edge: {
@@ -529,7 +545,7 @@ export default function EntityGraphPage() {
           currentSize -= 1.2;
           if (currentSize <= originalSize) growing = true;
         }
-        try { graphInstance.current.updateItem(item, { size: currentSize }); } catch { /* item may be removed */ }
+        try { graphInstance.current.updateItem(item, { size: [currentSize * 2.8, currentSize * 1.1] }); } catch { /* item may be removed */ }
       }, 50);
     });
     graph.on('node:mouseleave', () => {
