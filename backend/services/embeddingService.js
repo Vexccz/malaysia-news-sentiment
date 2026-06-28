@@ -79,14 +79,25 @@ function cosineSimilarity(a, b) {
 async function generateBatchEmbeddings(limit = 50) {
   const Article = require('../models/Article');
   
-  // Find articles without embeddings
-  const articles = await Article.find({
+  // Find articles without embeddings (try multiple query patterns)
+  let articles = await Article.find({
     $or: [
       { embedding: { $exists: false } },
       { embedding: { $size: 0 } },
-      { embedding: null }
+      { embedding: null },
+      { embedding: { $type: 'array', $size: 0 } }
     ]
-  }).limit(limit).lean();
+  }).select('title description content').limit(limit).lean();
+  
+  // Fallback: if query returns nothing, get recent articles and filter in JS
+  if (articles.length === 0) {
+    const allArticles = await Article.find({})
+      .select('title description content embedding')
+      .sort({ publishedAt: -1 })
+      .limit(limit * 2)
+      .lean();
+    articles = allArticles.filter(a => !a.embedding || a.embedding.length === 0).slice(0, limit);
+  }
 
   let processed = 0, success = 0, failed = 0, skipped = 0;
 
