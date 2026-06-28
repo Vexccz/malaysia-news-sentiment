@@ -24,8 +24,8 @@ const dedupeEntities = (entities = []) => {
   });
 };
 
-const normaliseArticlePayload = (article = {}) => {
-  const entities = dedupeEntities(extractEntities(buildArticleText(article), null, await getCustomEntities()));
+const normaliseArticlePayload = (article = {}, customEnts = []) => {
+  const entities = dedupeEntities(extractEntities(buildArticleText(article), null, customEnts));
   return {
     articleId: String(article._id || article.id || article.url || ''),
     title: article.title || '',
@@ -51,10 +51,11 @@ const normaliseArticlePayload = (article = {}) => {
  * MongoDB remains source of truth; graph is derived cache.
  */
 const syncArticleToGraph = async (article) => {
+  const customEnts = await getCustomEntities();
   if (!article) return { ok: false, skipped: true, reason: 'article_missing' };
   if (!graphService.isConfigured()) return { ok: false, skipped: true, reason: 'neo4j_not_configured' };
 
-  const payload = normaliseArticlePayload(article);
+  const payload = normaliseArticlePayload(article, customEnts);
   if (!payload.articleId || !payload.url) {
     return { ok: false, skipped: true, reason: 'article_missing_id_or_url' };
   }

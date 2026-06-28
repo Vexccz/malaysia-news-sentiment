@@ -15,9 +15,10 @@ async function getCorrelationMatrix(days = 30, minMentions = 2) {
 
   // Extract entities per article
   const entityArticleMap = {}; // entity -> [{date, sentiment}]
+  const customEnts = await getCustomEntities();
   articles.forEach(art => {
     const text = (art.title || '') + ' ' + (art.description || '');
-    const entities = extractEntities(text, null, await getCustomEntities());
+    const entities = extractEntities(text, null, customEnts);
     const unique = [...new Set(entities.map(e => e.name))];
     unique.forEach(name => {
       if (!entityArticleMap[name]) entityArticleMap[name] = [];

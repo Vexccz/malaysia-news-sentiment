@@ -22,9 +22,10 @@ async function getEntitySourceBreakdown(entityName) {
   // Group by source, check if entity mentioned
   const sourceMap = {};
   
+  const customEnts = await getCustomEntities();
   articles.forEach(art => {
     const text = `${art.title || ''} ${art.description || ''}`;
-    const entities = extractEntities(text, null, await getCustomEntities());
+    const entities = extractEntities(text, null, customEnts);
     const hasEntity = entities.some(e => e.name.toLowerCase() === entityName.toLowerCase());
     
     if (!hasEntity) return;
