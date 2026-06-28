@@ -37,6 +37,52 @@ export default function EntityGraphPage() {
   const [selectedNode, setSelectedNode] = useState(null);
   const [sourceBreakdown, setSourceBreakdown] = useState([]);
   const [loadingSources, setLoadingSources] = useState(false);
+  const [customEntities, setCustomEntities] = useState([]);
+  const [showAddEntity, setShowAddEntity] = useState(false);
+  const [newEntityName, setNewEntityName] = useState('');
+  const [newEntitySynonyms, setNewEntitySynonyms] = useState('');
+  
+  // Fetch custom entities on mount
+  useEffect(() => {
+    const fetchCustom = async () => {
+      try {
+        const res = await fetch('/api/v1/custom-entities', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        const data = await res.json();
+        setCustomEntities(data.entities || []);
+      } catch (err) {
+        console.error('Failed to fetch custom entities:', err);
+      }
+    };
+    fetchCustom();
+  }, []);
+  
+  const addCustomEntity = async () => {
+    if (!newEntityName.trim()) return;
+    try {
+      const res = await fetch('/api/v1/custom-entities', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          name: newEntityName.trim(),
+          synonyms: newEntitySynonyms.split(',').map(s => s.trim()).filter(Boolean)
+        })
+      });
+      if (res.ok) {
+        const entity = await res.json();
+        setCustomEntities(prev => [entity, ...prev]);
+        setNewEntityName('');
+        setNewEntitySynonyms('');
+        setShowAddEntity(false);
+      }
+    } catch (err) {
+      console.error('Failed to add entity:', err);
+    }
+  };
   const [focusedNode, setFocusedNode] = useState(null);
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -961,6 +1007,59 @@ export default function EntityGraphPage() {
           </div>
         )}
 
+        {/* Add Custom Entity Modal */}
+        {showAddEntity && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowAddEntity(false)}>
+            <div className="bg-white dark:bg-[#1a1a1a] border-2 border-black dark:border-white p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
+              <h3 className="text-lg font-bold text-black dark:text-white mb-4" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+                Add Custom Entity
+              </h3>
+              <input
+                type="text"
+                placeholder="Entity name (e.g., Tesla Malaysia)"
+                value={newEntityName}
+                onChange={e => setNewEntityName(e.target.value)}
+                className="w-full px-3 py-2 mb-3 border border-[#e5e5e5] dark:border-[#222] bg-transparent text-sm text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+              />
+              <input
+                type="text"
+                placeholder="Synonyms (comma-separated, optional)"
+                value={newEntitySynonyms}
+                onChange={e => setNewEntitySynonyms(e.target.value)}
+                className="w-full px-3 py-2 mb-4 border border-[#e5e5e5] dark:border-[#222] bg-transparent text-sm text-black dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={addCustomEntity}
+                  className="flex-1 px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-sm font-semibold uppercase tracking-wider hover:bg-gray-800 dark:hover:bg-gray-200"
+                >
+                  Add
+                </button>
+                <button
+                  onClick={() => setShowAddEntity(false)}
+                  className="flex-1 px-4 py-2 border border-[#e5e5e5] dark:border-[#222] text-sm font-semibold uppercase tracking-wider text-black dark:text-white hover:bg-[#fafafa] dark:hover:bg-[#111]"
+                >
+                  Cancel
+                </button>
+              </div>
+              {customEntities.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-[#e5e5e5] dark:border-[#222]">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                    Your Custom Entities ({customEntities.length})
+                  </p>
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {customEntities.slice(0, 5).map(ce => (
+                      <div key={ce._id} className="text-xs text-gray-600 dark:text-gray-400">
+                        {ce.name} {ce.synonyms?.length > 0 && <span className="text-gray-400">({ce.synonyms.join(', ')})</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
         {/* Detail Sidebar */}
         <AnimatePresence>
           {selectedNode && (

@@ -71,12 +71,15 @@ const buildMatcher = (term) => {
  *
  * @param {string} text
  * @param {string} [typeFilter] optional category key
+ * @param {Array} [customEntities] optional user-defined entities [{name, synonyms, category}]
  * @returns {{name:string, category:string, type:string}[]}
  */
-const extractEntities = (text, typeFilter) => {
+const extractEntities = (text, typeFilter, customEntities = []) => {
   if (!text) return [];
   const found = [];
   const patterns = typeFilter ? { [typeFilter]: entityPatterns[typeFilter] } : entityPatterns;
+  
+  // Extract from built-in patterns
   for (const [category, entities] of Object.entries(patterns)) {
     if (!entities) continue;
     for (const entity of entities) {
@@ -85,6 +88,20 @@ const extractEntities = (text, typeFilter) => {
       }
     }
   }
+  
+  // Extract from custom entities
+  customEntities.forEach(ce => {
+    if (!ce.isActive) return;
+    const terms = [ce.name, ...(ce.synonyms || [])];
+    const category = ce.category || 'CUSTOM';
+    for (const term of terms) {
+      if (buildMatcher(term).test(text)) {
+        found.push({ name: ce.name, category: 'custom', type: category });
+        break; // Only add once per entity
+      }
+    }
+  });
+  
   return found;
 };
 
