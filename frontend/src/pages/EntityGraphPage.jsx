@@ -38,6 +38,7 @@ export default function EntityGraphPage() {
   const [focusedNode, setFocusedNode] = useState(null);
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [timeline, setTimeline] = useState([]);
   const [search, setSearch] = useState('');
   const [searchHighlight, setSearchHighlight] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -160,6 +161,15 @@ export default function EntityGraphPage() {
       setDetail(res.ok ? await res.json() : null);
     } catch { setDetail(null); }
     finally { setDetailLoading(false); }
+
+    // Fetch timeline data
+    try {
+      const tlRes = await fetch(`${API}/graph/entity/${encodeURIComponent(name)}/timeline?days=30`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const tlData = await tlRes.json();
+      setTimeline(tlData.timeline || []);
+    } catch { setTimeline([]); }
   };
 
   const handleNodeClick = (name) => {
@@ -1007,50 +1017,46 @@ export default function EntityGraphPage() {
                     ))}
                   </div>
 
-                  {/* Mini Sentiment Timeline Chart */}
+                  {/* Sentiment Evolution Timeline */}
                   <div>
-                    <div className="text-[11px] font-semibold text-gray-900 dark:text-white mb-2">Sentiment Trend</div>
-                    <div style={{ height: 150 }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart
-                          data={
-                            detail.sentimentHistory?.length >= 2
-                              ? detail.sentimentHistory.slice(-7)
-                              : [
-                                  { day: 'Mon', score: 0.3 },
-                                  { day: 'Tue', score: 0.5 },
-                                  { day: 'Wed', score: 0.2 },
-                                  { day: 'Thu', score: 0.6 },
-                                  { day: 'Fri', score: 0.4 },
-                                  { day: 'Sat', score: 0.7 },
-                                  { day: 'Sun', score: 0.5 },
-                                ]
-                          }
-                          margin={{ top: 4, right: 4, bottom: 4, left: 4 }}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#333' : '#e5e7eb'} />
-                          <XAxis dataKey="day" tick={{ fontSize: 9, fill: isDark ? '#94a3b8' : '#6b7280' }} axisLine={false} tickLine={false} />
-                          <YAxis domain={[-1, 1]} tick={{ fontSize: 9, fill: isDark ? '#94a3b8' : '#6b7280' }} axisLine={false} tickLine={false} width={24} />
-                          <Tooltip
-                            contentStyle={{
-                              background: isDark ? '#1e1e1e' : '#fff',
-                              border: `1px solid ${isDark ? '#333' : '#e5e7eb'}`,
-                              borderRadius: 0,
-                              fontSize: 11,
-                              color: isDark ? '#e2e8f0' : '#1e293b',
-                            }}
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="score"
-                            stroke={SENTIMENT_COLORS[detail.sentiment || 'Neutral']}
-                            strokeWidth={2}
-                            dot={false}
-                            activeDot={{ r: 4, fill: SENTIMENT_COLORS[detail.sentiment || 'Neutral'] }}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
+                    <div className="text-[11px] font-semibold text-gray-900 dark:text-white mb-2">Sentiment Evolution (30 days)</div>
+                    {timeline.length > 1 ? (
+                      <div style={{ height: 180 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={timeline} margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#333' : '#e5e7eb'} />
+                            <XAxis 
+                              dataKey="date" 
+                              tick={{ fontSize: 9, fill: isDark ? '#94a3b8' : '#6b7280' }} 
+                              axisLine={false} 
+                              tickLine={false}
+                              tickFormatter={(val) => val.slice(5)}
+                            />
+                            <YAxis 
+                              tick={{ fontSize: 9, fill: isDark ? '#94a3b8' : '#6b7280' }} 
+                              axisLine={false} 
+                              tickLine={false} 
+                              width={24}
+                            />
+                            <Tooltip
+                              contentStyle={{
+                                background: isDark ? '#1e1e1e' : '#fff',
+                                border: `1px solid ${isDark ? '#333' : '#e5e7eb'}`,
+                                borderRadius: 0,
+                                fontSize: 11,
+                                color: isDark ? '#e2e8f0' : '#1e293b',
+                              }}
+                              labelFormatter={(val) => `Date: ${val}`}
+                            />
+                            <Line type="monotone" dataKey="positive" stroke="#10b981" strokeWidth={2} dot={false} name="Positive" />
+                            <Line type="monotone" dataKey="negative" stroke="#ef4444" strokeWidth={2} dot={false} name="Negative" />
+                            <Line type="monotone" dataKey="neutral" stroke="#f59e0b" strokeWidth={2} dot={false} name="Neutral" />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    ) : (
+                      <div className="text-[11px] text-gray-500 italic py-4">No timeline data available</div>
+                    )}
                   </div>
 
                   {/* Focus Neighborhood Button */}

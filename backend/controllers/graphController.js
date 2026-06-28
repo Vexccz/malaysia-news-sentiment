@@ -157,7 +157,55 @@ const getEntityEgo = async (req, res) => {
   }
 };
 
+
+const getEntityTimeline = async (req, res) => {
+  try {
+    const name = decodeURIComponent(req.params.name || '').trim();
+    if (!name) return res.status(400).json({ error: 'Entity name required' });
+    
+    const days = Math.min(Math.max(parseInt(req.query.days, 10) || 30, 7), 90);
+    
+    const result = await graphService.runRead(
+      `
+      MATCH (e:Entity {name: $name})<-[:MENTIONS]-(a:Article)
+      WHERE a.publishedAt >= datetime() - duration({days: $days})
+      WITH date(a.publishedAt) AS date,
+           a.sentiment AS sentiment,
+           count(a) AS count
+      WITH date,
+           sum(CASE WHEN sentiment = 'Positive' THEN count ELSE 0 END) AS positive,
+           sum(CASE WHEN sentiment = 'Negative' THEN count ELSE 0 END) AS negative,
+           sum(CASE WHEN sentiment = 'Neutral' THEN count ELSE 0 END) AS neutral
+      RETURN date,
+             positive,
+             negative,
+             neutral,
+             positive + negative + neutral AS total
+      ORDER BY date
+      `,
+      { name, days: toCypherInt(days) }
+    );
+    
+    const timeline = (result?.records || []).map((r) => {
+      const o = r.toObject();
+      return {
+        date: o.date.toString(),
+        positive: intVal(o.positive),
+        negative: intVal(o.negative),
+        neutral: intVal(o.neutral),
+        total: intVal(o.total),
+      };
+    });
+    
+    return res.json({ timeline, source: 'neo4j' });
+  } catch (err) {
+    console.error('Neo4j entity timeline error:', err.message);
+    return res.status(500).json({ error: 'Failed to load entity timeline', details: err.message });
+  }
+};
+
 module.exports = {
   getGraphOverview,
   getEntityEgo,
+  getEntityTimeline,
 };
