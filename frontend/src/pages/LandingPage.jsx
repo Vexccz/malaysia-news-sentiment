@@ -862,6 +862,59 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-paper dark:bg-paper-dark transition-colors overflow-x-hidden relative">
+      {/* Global style enhancements */}
+      <style>{`
+        .noise-bg::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          opacity: 0.03;
+          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+          pointer-events: none;
+          z-index: 1;
+        }
+        .pinstripe-bg {
+          background-image: repeating-linear-gradient(
+            -45deg, transparent, transparent 10px,
+            rgba(0,0,0,0.02) 10px, rgba(0,0,0,0.02) 11px
+          );
+        }
+        .dark .pinstripe-bg {
+          background-image: repeating-linear-gradient(
+            -45deg, transparent, transparent 10px,
+            rgba(255,255,255,0.015) 10px, rgba(255,255,255,0.015) 11px
+          );
+        }
+        .scroll-progress {
+          position: fixed;
+          top: 0;
+          left: 0;
+          height: 2px;
+          background: linear-gradient(90deg, #0d9488, #06b6d4);
+          z-index: 9999;
+          transition: width 0.1s ease-out;
+        }
+        .section-number {
+          font-family: 'JetBrains Mono', 'Fira Code', monospace;
+          font-size: 9px;
+          letter-spacing: 0.25em;
+          text-transform: uppercase;
+        }
+        /* Dark mode polish */
+        .dark .dark\:bg-paper-dark {
+          background-color: #0a0e1a !important;
+        }
+        .dark .text-accent {
+          color: #2dd4bf !important;
+        }
+        .dark .bg-accent {
+          background-color: #14b8a6 !important;
+          box-shadow: 0 0 20px rgba(20, 184, 166, 0.3);
+        }
+        .dark .hover\:bg-accent:hover {
+          background-color: #2dd4bf !important;
+        }
+      `}</style>
       {/* Scroll progress indicator */}
       <motion.div
         className="fixed top-0 left-0 right-0 h-[3px] bg-accent origin-left z-[60]"
