@@ -35,6 +35,22 @@ router.post('/:id/vote',      protect, handleSentimentVote);
 router.post('/:id/bookmark',  protect, toggleBookmarkStatus);
 
 
+// Sentiment explanation (XAI)
+router.get('/:id/explain', protect, async (req, res) => {
+  const Article = require('../models/Article');
+  const { getSentimentExplanation } = require('../services/sentimentExplanation');
+  try {
+    const article = await Article.findById(req.params.id).lean();
+    if (!article) return res.status(404).json({ error: 'Article not found' });
+    
+    const text = `${article.title || ''} ${article.description || ''}`;
+    const explanation = getSentimentExplanation(text, article.sentiment, article.confidence || 0);
+    res.json(explanation);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Markdown export
 router.get('/:id/markdown', protect, async (req, res) => {
   const Article = require('../models/Article');

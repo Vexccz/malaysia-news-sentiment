@@ -228,6 +228,38 @@ const ArticlePreviewModal = ({ article, isOpen, onClose }) => {
 
         {/* Analysis section — editorial style */}
         <div style={{ padding: '0 20px 16px' }}>
+          {/* Sentiment Explanation (XAI) */}
+          {showExplain && explanation && (
+            <div style={{
+              marginBottom: 16, padding: '12px 16px',
+              border: '1px solid var(--border, #e5e5e5)',
+              borderLeft: `3px solid ${sentimentColor}`,
+              background: 'var(--surface, #fafafa)',
+              fontSize: 12, lineHeight: 1.6,
+            }}>
+              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 6, color: 'var(--text-muted, #999)' }}>
+                Sentiment Analysis
+              </div>
+              <div style={{ color: 'var(--text, #333)' }}>
+                {explanation.explanation}
+              </div>
+              {explanation.words && explanation.words.length > 0 && (
+                <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {explanation.words.map((w, i) => (
+                    <span key={i} style={{
+                      padding: '2px 8px', fontSize: 10, fontWeight: 600,
+                      background: w.sentiment === 'positive' ? '#22c55e15' : '#ef444415',
+                      color: w.sentiment === 'positive' ? '#16a34a' : '#dc2626',
+                      border: `1px solid ${w.sentiment === 'positive' ? '#22c55e30' : '#ef444430'}`,
+                    }}>
+                      {w.original}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          
           {/* Sentiment + Confidence row */}
           <div style={{
             display: 'flex', alignItems: 'stretch', gap: 0,
@@ -261,6 +293,20 @@ const ArticlePreviewModal = ({ article, isOpen, onClose }) => {
                   {effectiveSentiment}
                 </div>
               </div>
+              <button
+                onClick={fetchExplanation}
+                disabled={loadingExplain}
+                style={{
+                  marginLeft: 'auto', padding: '4px 8px', fontSize: 9,
+                  fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+                  border: '1px solid var(--border, #e5e5e5)', background: 'transparent',
+                  color: 'var(--text-muted, #999)', cursor: 'pointer',
+                  opacity: loadingExplain ? 0.5 : 1,
+                }}
+                title="Why this sentiment?"
+              >
+                {loadingExplain ? '...' : 'Explain'}
+              </button>
             </div>
 
             {/* Confidence */}
