@@ -35,6 +35,19 @@ router.post('/:id/vote',      protect, handleSentimentVote);
 router.post('/:id/bookmark',  protect, toggleBookmarkStatus);
 
 
+// Article similarity detection
+router.get('/:id/similar', protect, async (req, res) => {
+  const { findSimilarArticles } = require('../services/articleSimilarity');
+  try {
+    const threshold = parseFloat(req.query.threshold) || 0.75;
+    const limit = parseInt(req.query.limit) || 3;
+    const similar = await findSimilarArticles(req.params.id, threshold, limit);
+    res.json({ similar });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Sentiment explanation (XAI)
 router.get('/:id/explain', protect, async (req, res) => {
   const Article = require('../models/Article');

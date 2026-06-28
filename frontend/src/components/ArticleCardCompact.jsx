@@ -339,6 +339,25 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
 
   const sentiment = article.sentiment || 'Neutral';
   const [userVote, setUserVote] = useState(null);
+  const [similarArticles, setSimilarArticles] = useState([]);
+  
+  useEffect(() => {
+    // Fetch similar articles on mount
+    const fetchSimilar = async () => {
+      try {
+        const res = await fetch(`/api/v1/news/${article._id || article.id}/similar?threshold=0.75&limit=2`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        const data = await res.json();
+        if (data.similar && data.similar.length > 0) {
+          setSimilarArticles(data.similar);
+        }
+      } catch (err) {
+        // Silent fail - similarity is optional
+      }
+    };
+    fetchSimilar();
+  }, [article._id, article.id]);
   const [feedback, setFeedback] = useState(article.feedback || { Positive: 0, Negative: 0, Neutral: 0 });
   const [voting, setVoting] = useState(false);
 
