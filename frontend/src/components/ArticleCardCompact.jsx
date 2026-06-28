@@ -338,6 +338,29 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
   };
 
   const sentiment = article.sentiment || 'Neutral';
+  const [userVote, setUserVote] = useState(null);
+  const [feedback, setFeedback] = useState(article.feedback || { Positive: 0, Negative: 0, Neutral: 0 });
+  const [voting, setVoting] = useState(false);
+
+  const handleVote = async (voteSentiment) => {
+    if (userVote || voting) return;
+    setVoting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/v1/news/${article._id || article.id}/vote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ sentiment: voteSentiment }),
+      });
+      if (res.ok) {
+        setUserVote(voteSentiment);
+        setFeedback(prev => ({ ...prev, [voteSentiment]: prev[voteSentiment] + 1 }));
+      }
+    } catch (err) {
+      console.error('Vote failed:', err);
+    }
+    setVoting(false);
+  };
   const borderColor = SENTIMENT_BORDER[sentiment] || SENTIMENT_BORDER.Neutral;
 
   return (
@@ -494,6 +517,68 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
                     <ExternalLink className="w-3.5 h-3.5" />
                   </button>
                 </div>
+              </div>
+
+              {/* Reader Sentiment Voting */}
+              <div className="mt-2 pt-2 border-t border-[#eee] dark:border-[#1a1a1a]">
+                {!userVote ? (
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-gray-500 dark:text-gray-400">
+                      Your take?
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleVote('Positive'); }}
+                        disabled={voting}
+                        className="px-2 py-1 text-[10px] font-semibold bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-500/30 hover:bg-green-100 dark:hover:bg-green-500/20 transition-colors disabled:opacity-50"
+                        title="Positive"
+                      >
+                        + Positive
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleVote('Neutral'); }}
+                        disabled={voting}
+                        className="px-2 py-1 text-[10px] font-semibold bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors disabled:opacity-50"
+                        title="Neutral"
+                      >
+                        ~ Neutral
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleVote('Negative'); }}
+                        disabled={voting}
+                        className="px-2 py-1 text-[10px] font-semibold bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/30 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                        title="Negative"
+                      >
+                        - Negative
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-gray-500 dark:text-gray-400">
+                        AI:
+                      </span>
+                      <span className={`text-[11px] font-semibold ${
+                        sentiment === 'Positive' ? 'text-green-600 dark:text-green-400' :
+                        sentiment === 'Negative' ? 'text-red-600 dark:text-red-400' :
+                        'text-amber-600 dark:text-amber-400'
+                      }`}>
+                        {sentiment}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-gray-500 dark:text-gray-400">
+                        Readers:
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-green-600 dark:text-green-400 font-medium">+{feedback.Positive}</span>
+                        <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">~{feedback.Neutral}</span>
+                        <span className="text-[10px] text-red-600 dark:text-red-400 font-medium">-{feedback.Negative}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
