@@ -488,13 +488,13 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
 
               {/* Summary */}
               {article.summary && (
-                <p className="text-[13px] leading-relaxed text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">
+                <p className="text-[13px] leading-relaxed text-gray-600 dark:text-gray-400 line-clamp-2 mb-1">
                   {article.summary}
                 </p>
               )}
 
               {/* Footer: Confidence + Actions */}
-              <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#eee] dark:border-[#1a1a1a]">
+              <div className="flex items-center justify-between mt-1 pt-1 border-t border-[#eee] dark:border-[#1a1a1a]">
                 <div className="flex items-center gap-3">
                   {article.confidence > 0 && (
                     <div
