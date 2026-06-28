@@ -709,7 +709,7 @@ const LandingHeatmap = () => {
 
   return (
     <AnimatedSection className="py-16 px-6 border-t border-ink/10 dark:border-paper/10 relative" variants={staggerContainer}>
-        <div className="absolute top-4 left-6 section-number text-ink-faint dark:text-ink-faint">05 / Use Cases</div>
+        <div className="absolute top-4 left-6 section-number text-ink-faint dark:text-ink-faint">05 / Geography</div>
       <div className="max-w-5xl mx-auto">
         <motion.div variants={staggerItem} className="text-center mb-10">
           <p className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-2">Coverage</p>
