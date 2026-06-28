@@ -6,6 +6,7 @@ const User = require('../models/User');
 const { validate } = require('../middleware/validate');
 const { bookmarkSchemas } = require('../middleware/schemas');
 
+const { suggestCategory, autoAssignFolder } = require('../services/bookmarkAutoCategorize');
 // ── All bookmark folder routes require authentication ──
 router.use(protect, blockGuest);
 
@@ -191,3 +192,29 @@ router.get('/meta', async (req, res) => {
 });
 
 module.exports = router;
+
+// POST /bookmarks/suggest — suggest folder category for an article
+router.post('/suggest', async (req, res) => {
+  try {
+    const { articleId } = req.body;
+    if (!articleId) return res.status(400).json({ error: 'articleId required' });
+    
+    const suggestion = await suggestCategory(articleId);
+    res.json(suggestion);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /bookmarks/auto-assign — auto-categorize and assign bookmark to folder
+router.post('/auto-assign', async (req, res) => {
+  try {
+    const { articleId } = req.body;
+    if (!articleId) return res.status(400).json({ error: 'articleId required' });
+    
+    const result = await autoAssignFolder(req.userId, articleId, User);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});

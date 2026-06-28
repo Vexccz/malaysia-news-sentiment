@@ -145,6 +145,15 @@ export const AuthProvider = ({ children }) => {
         : [...(user.bookmarks || []), id];
       
       setUser(u => ({ ...u, bookmarks: newBookmarks }));
+      
+      // Auto-categorize if newly bookmarked
+      if (!isCurrentlyBookmarked) {
+        try {
+          await api.post('/bookmarks/auto-assign', { articleId: id });
+        } catch (err) {
+          console.warn('Auto-categorize failed (non-critical):', err);
+        }
+      }
     } catch (err) {
       console.error('Bookmark toggle failed:', err);
     }
