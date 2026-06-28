@@ -13,6 +13,12 @@ import {
 } from 'lucide-react';
 import HeroIllustration from '../components/HeroIllustration';
 
+// Google Fonts: JetBrains Mono for data/numbers
+const MONO_FONT_LINK = document.createElement('link');
+MONO_FONT_LINK.href = 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap';
+MONO_FONT_LINK.rel = 'stylesheet';
+if (!document.querySelector('link[href*="JetBrains+Mono"]')) document.head.appendChild(MONO_FONT_LINK);
+
 // ── Animation Variants ──
 const fadeInUp = {
   hidden: { opacity: 0, y: 40 },
@@ -89,9 +95,9 @@ const LiveSentimentDemo = () => {
         <p className="text-sm text-ink dark:text-paper font-medium">
           {displayText}
           <motion.span
-            className="inline-block w-0.5 h-4 bg-accent ml-0.5 align-middle"
+            className="inline-block w-[2px] h-5 bg-accent ml-0.5 align-middle"
             animate={{ opacity: [1, 0] }}
-            transition={{ duration: 0.5, repeat: Infinity }}
+            transition={{ duration: 0.6, repeat: Infinity }}
           />
         </p>
       </div>
@@ -702,11 +708,15 @@ const LandingHeatmap = () => {
   }, []);
 
   return (
-    <AnimatedSection className="py-16 px-6 border-t border-ink/10 dark:border-paper/10" variants={staggerContainer}>
+    <AnimatedSection className="py-16 px-6 border-t border-ink/10 dark:border-paper/10 relative" variants={staggerContainer}>
+        <div className="absolute top-4 left-6 section-number text-ink-faint dark:text-ink-faint">05 / Use Cases</div>
       <div className="max-w-5xl mx-auto">
         <motion.div variants={staggerItem} className="text-center mb-10">
           <p className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-2">Coverage</p>
-          <h2 className="font-['Playfair_Display'] text-3xl sm:text-4xl font-bold text-ink dark:text-paper mb-4">Malaysia Sentiment Map</h2>
+          <div className="flex items-start gap-3 justify-center">
+            <div className="w-[3px] h-12 bg-accent mt-1 flex-shrink-0" />
+            <h2 className="font-['Playfair_Display'] text-3xl sm:text-4xl font-bold text-ink dark:text-paper mb-4">Malaysia Sentiment Map</h2>
+          </div>
           <div className="max-w-xs mx-auto flex flex-col items-center gap-1 mb-4">
             <div className="w-full h-[2px] bg-ink/20 dark:bg-paper/20" />
             <div className="w-full h-px bg-ink/10 dark:bg-paper/10" />
@@ -862,7 +872,7 @@ const LandingPage = () => {
       <Navbar isDark={isDark} toggleTheme={toggleTheme} navigate={navigate} />
 
       {/* ─── HERO ─── */}
-      <motion.header ref={heroRef} className="relative pt-32 pb-20 px-6 min-h-[90vh] flex items-center" style={{ y: heroY, opacity: heroOpacity }}>
+      <motion.header ref={heroRef} className="relative pt-32 pb-20 px-6 min-h-[90vh] flex items-center noise-bg" style={{ y: heroY, opacity: heroOpacity }}>
         <motion.div className="relative max-w-5xl mx-auto text-center w-full" initial="hidden" animate="visible" variants={staggerContainer}>
           {/* Masthead bar */}
           <motion.div variants={staggerItem} className="flex items-center justify-center gap-4 mb-8">
@@ -872,26 +882,30 @@ const LandingPage = () => {
           </motion.div>
 
           {/* Title */}
-          <motion.h1 variants={staggerItem} className="font-['Playfair_Display'] text-5xl sm:text-6xl md:text-7xl font-bold text-ink dark:text-paper leading-[1.05] mb-6 tracking-tight">
-            Malaysia's News Sentiment,{' '}
-            <span className="italic text-accent">
-              Decoded in Real-Time.
+          <motion.h1 variants={staggerItem} className="font-['Playfair_Display'] text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black text-ink dark:text-paper leading-[0.95] mb-8 tracking-tighter">
+            <span className="block">Malaysia's News</span>
+            <span className="block mt-2">
+              <span className="italic font-light">Sentiment,</span>{' '}
+              <span className="not-italic text-accent">Decoded.</span>
             </span>
-            <br />
-            <span className="block mt-4 text-2xl sm:text-3xl md:text-4xl font-normal italic text-ink-muted dark:text-ink-faint">
-              Tracking <span className="not-italic text-accent font-semibold">{typingText}</span>
-              <span className="animate-pulse text-accent">|</span>
+            <span className="block mt-6 text-xl sm:text-2xl md:text-3xl font-light italic text-ink-muted dark:text-ink-faint tracking-normal leading-relaxed">
+              Real-time tracking of{' '}
+              <span className="not-italic text-accent font-semibold bg-accent/10 px-2 py-0.5">
+                {typingText}
+              </span>
+              <span className="animate-pulse text-accent ml-1 text-3xl sm:text-4xl font-light">|</span>
             </span>
           </motion.h1>
 
-          {/* Double rule */}
-          <motion.div variants={staggerItem} className="max-w-md mx-auto mb-8 flex flex-col items-center gap-1">
-            <div className="w-full h-[2px] bg-ink dark:bg-paper" />
-            <div className="w-full h-px bg-ink/40 dark:bg-paper/40" />
+          {/* Accent gradient rule */}
+          <motion.div variants={staggerItem} className="max-w-sm mx-auto mb-10 flex flex-col items-center gap-2">
+            <div className="w-4/5 h-[3px] bg-gradient-to-r from-transparent via-accent to-transparent" />
+            <div className="w-2/3 h-px bg-ink/20 dark:bg-paper/20" />
+            <div className="w-1.5 h-1.5 rotate-45 bg-accent" />
           </motion.div>
 
           {/* Subtitle */}
-          <motion.p variants={staggerItem} className="text-lg text-ink-muted dark:text-ink-faint max-w-2xl mx-auto mb-10 font-serif italic">
+          <motion.p variants={staggerItem} className="text-lg sm:text-xl text-ink-muted dark:text-ink-faint max-w-2xl mx-auto mb-10 font-light italic tracking-wide">
             Real-time AI sentiment analysis tracking Malaysia's media landscape. From breaking news to trending narratives—understand public sentiment as it unfolds.
           </motion.p>
 
@@ -922,17 +936,22 @@ const LandingPage = () => {
           {/* Source tags */}
           <motion.div variants={staggerItem} className="mt-12 flex flex-wrap items-center justify-center gap-3">
             <span className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">Powered by</span>
-            {['Malaysiakini', 'Astro Awani', 'FMT', 'Bernama', 'The Star'].map((s, i) => (
-              <motion.span
-                key={s}
-                className="px-3 py-1 text-xs font-medium text-ink-muted dark:text-ink-faint border border-ink/10 dark:border-paper/10 font-sans"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 1.5 + i * 0.1, duration: 0.4 }}
-              >
-                {s}
-              </motion.span>
-            ))}
+            {['Malaysiakini', 'Astro Awani', 'FMT', 'Bernama', 'The Star'].map((s, i) => {
+              const sentiments = ['border-emerald-500/40', 'border-rose-500/40', 'border-amber-500/40', 'border-emerald-500/40', 'border-rose-500/40'];
+              const dots = ['bg-emerald-500', 'bg-rose-500', 'bg-amber-500', 'bg-emerald-500', 'bg-rose-500'];
+              return (
+                <motion.span
+                  key={s}
+                  className={`px-3 py-1.5 text-xs font-medium text-ink-muted dark:text-ink-faint border ${sentiments[i]} bg-paper dark:bg-paper-dark font-sans flex items-center gap-1.5`}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 1.5 + i * 0.1, duration: 0.4 }}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${dots[i]}`} />
+                  {s}
+                </motion.span>
+              );
+            })}
           </motion.div>
 
           {/* Performance Badge Row */}
@@ -955,10 +974,10 @@ const LandingPage = () => {
                 whileHover={{ y: -2 }}
               >
                 <div className="flex items-baseline justify-center gap-1">
-                  <span className="font-['Playfair_Display'] text-2xl font-bold text-ink dark:text-paper">{b.value}</span>
+                  <span className="font-['JetBrains_Mono'] text-2xl font-bold text-ink dark:text-paper tabular-nums">{b.value}</span>
                   {b.suffix && <span className="text-xs text-ink-muted dark:text-ink-faint font-sans">{b.suffix}</span>}
                 </div>
-                <p className="text-center text-[9px] uppercase tracking-[0.18em] text-ink-faint dark:text-ink-faint font-sans mt-1">{b.meta}</p>
+                <p className="text-center text-[9px] uppercase tracking-[0.18em] text-ink-faint dark:text-ink-faint font-['JetBrains_Mono'] mt-1">{b.meta}</p>
                 <p className="text-center text-[10px] uppercase tracking-[0.15em] text-accent font-sans mt-0.5 font-semibold">{b.label}</p>
               </motion.div>
             ))}
@@ -970,7 +989,8 @@ const LandingPage = () => {
       </motion.header>
 
       {/* ─── STATS ─── */}
-      <AnimatedSection className="py-10 px-6" variants={staggerContainer}>
+      <AnimatedSection className="py-10 px-6 relative" variants={staggerContainer}>
+        <div className="absolute top-4 left-6 section-number text-ink-faint dark:text-ink-faint">02 / Metrics</div>
         <div className="max-w-4xl mx-auto">
           {/* Section label */}
           <div className="text-center mb-8">
@@ -1002,11 +1022,15 @@ const LandingPage = () => {
       <NewsTicker />
 
       {/* ─── FEATURES ─── */}
-      <AnimatedSection className="py-16 px-6" id="features" variants={staggerContainer}>
+      <AnimatedSection className="py-16 px-6 relative" id="features" variants={staggerContainer}>
+        <div className="absolute top-4 left-6 section-number text-ink-faint dark:text-ink-faint">03 / Features</div>
         <div className="max-w-6xl mx-auto">
           <motion.div variants={staggerItem} className="text-center mb-14">
             <p className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-2">Features</p>
-            <h2 className="font-['Playfair_Display'] text-3xl sm:text-4xl font-bold text-ink dark:text-paper mb-4">Everything you need to understand Malaysian news</h2>
+            <div className="flex items-start gap-3">
+              <div className="w-[3px] h-12 bg-accent mt-1 flex-shrink-0" />
+              <h2 className="font-['Playfair_Display'] text-3xl sm:text-4xl font-bold text-ink dark:text-paper mb-4">Everything you need to understand Malaysian news</h2>
+            </div>
             <div className="max-w-xs mx-auto flex flex-col items-center gap-1 mb-4">
               <div className="w-full h-[2px] bg-ink/20 dark:bg-paper/20" />
               <div className="w-full h-px bg-ink/10 dark:bg-paper/10" />
@@ -1014,7 +1038,7 @@ const LandingPage = () => {
             <p className="text-ink-muted dark:text-ink-faint max-w-2xl mx-auto font-sans text-sm">Powerful AI tools designed for researchers, analysts, and anyone tracking Malaysian media sentiment.</p>
           </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-0 border-t border-l border-ink/10 dark:border-paper/10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-0 border-t border-l border-ink/10 dark:border-paper/10 [&>*:first-child]:lg:col-span-2 [&>*:first-child]:lg:row-span-1">
             {features.map((f, i) => (
               <motion.div
                 key={i}
@@ -1041,11 +1065,15 @@ const LandingPage = () => {
       </AnimatedSection>
 
       {/* ─── HOW IT WORKS ─── */}
-      <AnimatedSection className="py-20 px-6 border-t border-ink/10 dark:border-paper/10" variants={staggerContainer}>
+      <AnimatedSection className="py-20 px-6 border-t border-ink/10 dark:border-paper/10 relative" variants={staggerContainer}>
+        <div className="absolute top-4 left-6 section-number text-ink-faint dark:text-ink-faint">04 / Process</div>
         <div className="max-w-5xl mx-auto">
           <motion.div variants={staggerItem} className="text-center mb-16">
             <p className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-2">How it works</p>
-            <h2 className="font-['Playfair_Display'] text-3xl sm:text-4xl font-bold text-ink dark:text-paper mb-4">From search to insight in seconds</h2>
+            <div className="flex items-start gap-3 justify-center">
+              <div className="w-[3px] h-12 bg-accent mt-1 flex-shrink-0" />
+              <h2 className="font-['Playfair_Display'] text-3xl sm:text-4xl font-bold text-ink dark:text-paper mb-4">From search to insight in seconds</h2>
+            </div>
             <div className="max-w-xs mx-auto flex flex-col items-center gap-1 mb-4">
               <div className="w-full h-[2px] bg-ink/20 dark:bg-paper/20" />
               <div className="w-full h-px bg-ink/10 dark:bg-paper/10" />
@@ -1086,7 +1114,8 @@ const LandingPage = () => {
       <TechStackBar />
 
       {/* ─── USE CASES ─── */}
-      <AnimatedSection className="py-16 px-6 border-t border-ink/10 dark:border-paper/10" variants={staggerContainer}>
+      <AnimatedSection className="py-16 px-6 border-t border-ink/10 dark:border-paper/10 relative" variants={staggerContainer}>
+        <div className="absolute top-4 left-6 section-number text-ink-faint dark:text-ink-faint">05 / Use Cases</div>
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <motion.p variants={staggerItem} className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-2">Use Cases</motion.p>
@@ -1121,7 +1150,8 @@ const LandingPage = () => {
       </AnimatedSection>
 
       {/* ─── FAQ ─── */}
-      <AnimatedSection className="py-12 px-6" variants={staggerContainer}>
+      <AnimatedSection className="py-12 px-6 relative" variants={staggerContainer}>
+        <div className="absolute top-4 left-6 section-number text-ink-faint dark:text-ink-faint">06 / FAQ</div>
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-8">
             <p className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-2">FAQ</p>
@@ -1146,7 +1176,8 @@ const LandingPage = () => {
       </AnimatedSection>
 
       {/* ─── CTA ─── */}
-      <AnimatedSection className="py-16 px-6" variants={scaleIn}>
+      <AnimatedSection className="py-16 px-6 relative" variants={scaleIn}>
+        <div className="absolute top-4 left-6 section-number text-ink-faint dark:text-ink-faint">07 / Get Started</div>
         <div className="max-w-3xl mx-auto text-center">
           <motion.div
             className="relative border-2 border-ink dark:border-paper p-12 overflow-hidden"
