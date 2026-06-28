@@ -1,0 +1,78 @@
+{
+  "nav": {
+    "dashboard": "Papan Pemuka",
+    "trending": "Trending",
+    "liveFeed": "Siaran Langsung",
+    "timeline": "Garis Masa",
+    "entities": "Entiti",
+    "history": "Sejarah",
+    "bookmarks": "Senarai Bacaan",
+    "settings": "Tetapan",
+    "alerts": "Amaran",
+    "search": "Carian",
+    "compare": "Banding",
+    "reports": "Laporan",
+    "heatmap": "Peta Haba",
+    "categories": "Kategori",
+    "forecast": "Ramalan",
+    "digest": "Ringkasan AI",
+    "sources": "Sumber",
+    "admin": "Admin",
+    "insightsLab": "Makmal Wawasan",
+    "crossSource": "Rentas Sumber",
+    "community": "Komuniti",
+    "sections": "SEKSYEN"
+  },
+  "action": {
+    "search": "Cari",
+    "filter": "Tapis",
+    "sort": "Isih",
+    "export": "Eksport",
+    "save": "Simpan",
+    "cancel": "Batal",
+    "delete": "Padam",
+    "close": "Tutup",
+    "refresh": "Muat Semula",
+    "analyze": "Analisis",
+    "back": "Kembali",
+    "reset": "Set Semula",
+    "generate": "Jana",
+    "translate": "Terjemah",
+    "copy": "Salin"
+  },
+  "sentiment": {
+    "positive": "Positif",
+    "negative": "Negatif",
+    "neutral": "Neutral"
+  },
+  "period": {
+    "last7d": "7 hari lalu",
+    "last30d": "30 hari lalu",
+    "last24h": "24 jam lalu",
+    "allTime": "Sepanjang masa",
+    "today": "Hari ini",
+    "thisWeek": "Minggu ini"
+  },
+  "status": {
+    "loading": "Memuatkan...",
+    "error": "Ralat",
+    "noData": "Tiada data tersedia",
+    "success": "Berjaya",
+    "analyzing": "Menganalisis..."
+  },
+  "auth": {
+    "login": "Log Masuk",
+    "register": "Daftar",
+    "logout": "Log Keluar",
+    "email": "E-mel",
+    "password": "Kata Laluan",
+    "profile": "Profil"
+  },
+  "common": {
+    "articles": "Artikel",
+    "totalArticles": "Jumlah Artikel",
+    "welcomeBack": "Selamat kembali",
+    "ofTotal": "daripada jumlah",
+    "more": "Lagi"
+  }
+}

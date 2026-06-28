@@ -1,0 +1,78 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "trending": "Trending",
+    "liveFeed": "Live Feed",
+    "timeline": "Timeline",
+    "entities": "Entities",
+    "history": "History",
+    "bookmarks": "Bookmarks",
+    "settings": "Settings",
+    "alerts": "Alerts",
+    "search": "Search",
+    "compare": "Compare",
+    "reports": "Reports",
+    "heatmap": "Heatmap",
+    "categories": "Categories",
+    "forecast": "Forecast",
+    "digest": "AI Digest",
+    "sources": "Sources",
+    "admin": "Admin",
+    "insightsLab": "Insights Lab",
+    "crossSource": "Cross-Source",
+    "community": "Community",
+    "sections": "SECTIONS"
+  },
+  "action": {
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "export": "Export",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "close": "Close",
+    "refresh": "Refresh",
+    "analyze": "Analyze",
+    "back": "Back",
+    "reset": "Reset",
+    "generate": "Generate",
+    "translate": "Translate",
+    "copy": "Copy"
+  },
+  "sentiment": {
+    "positive": "Positive",
+    "negative": "Negative",
+    "neutral": "Neutral"
+  },
+  "period": {
+    "last7d": "Last 7 days",
+    "last30d": "Last 30 days",
+    "last24h": "Last 24h",
+    "allTime": "All time",
+    "today": "Today",
+    "thisWeek": "This Week"
+  },
+  "status": {
+    "loading": "Loading...",
+    "error": "Error",
+    "noData": "No data available",
+    "success": "Success",
+    "analyzing": "Analyzing..."
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "profile": "Profile"
+  },
+  "common": {
+    "articles": "Articles",
+    "totalArticles": "Total Articles",
+    "welcomeBack": "Welcome back",
+    "ofTotal": "of total",
+    "more": "More"
+  }
+}

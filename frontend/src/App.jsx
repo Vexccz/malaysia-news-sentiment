@@ -7,6 +7,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
+import './i18n'; // i18next initialization
 
 // Lazy-loaded heavy pages (code splitting)
 const Dashboard = lazy(() => import('./pages/Dashboard'));
