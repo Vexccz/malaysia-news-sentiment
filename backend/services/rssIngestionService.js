@@ -185,6 +185,18 @@ const ingestRssBatch = async (ioInstance = null) => {
       syncArticleToGraph(upserted).catch((err) => {
         console.error('[graph] sync failed:', err.message);
       });
+
+      // Generate embedding for similarity detection (auto on new articles)
+      const { generateEmbedding } = require('./embeddingService');
+      const text = `${upserted.title || ''} ${upserted.description || ''}`.trim();
+      if (text) {
+        generateEmbedding(text).then(embedding => {
+          if (embedding && embedding.length > 0) {
+            Article.updateOne({ _id: upserted._id }, { $set: { embedding } })
+              .catch(err => console.error('[embedding] update failed:', err.message));
+          }
+        }).catch(err => console.error('[embedding] generation failed:', err.message));
+      }
     }
 
     // Push notification to interested users for new alert articles.

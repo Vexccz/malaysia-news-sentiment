@@ -4,6 +4,8 @@
  */
 const Article = require('../models/Article');
 const { extractEntities } = require('./entityExtraction');
+const CustomEntity = require('../models/CustomEntity');
+async function getCustomEntities() { try { return await CustomEntity.find({ isActive: true }).select('name synonyms category').lean(); } catch(e) { return []; } }
 
 async function getCorrelationMatrix(days = 30, minMentions = 2) {
   const startDate = new Date();
@@ -15,7 +17,7 @@ async function getCorrelationMatrix(days = 30, minMentions = 2) {
   const entityArticleMap = {}; // entity -> [{date, sentiment}]
   articles.forEach(art => {
     const text = (art.title || '') + ' ' + (art.description || '');
-    const entities = extractEntities(text);
+    const entities = extractEntities(text, null, await getCustomEntities());
     const unique = [...new Set(entities.map(e => e.name))];
     unique.forEach(name => {
       if (!entityArticleMap[name]) entityArticleMap[name] = [];

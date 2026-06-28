@@ -300,4 +300,32 @@ router.post('/graph-sync', protect, authorize('admin'), async (req, res) => {
   }
 });
 
+
+// POST /api/v1/admin/generate-embeddings — generate embeddings for articles without them
+router.post('/generate-embeddings', protect, authorize('admin'), async (req, res) => {
+  const { generateBatchEmbeddings } = require('../services/embeddingService');
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    const result = await generateBatchEmbeddings(limit);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+// POST /api/admin/embeddings/generate - Batch generate embeddings for articles (admin only)
+router.post('/embeddings/generate', protect, adminOnly, async (req, res) => {
+  try {
+    const { generateBatchEmbeddings } = require('../services/embeddingService');
+    const limit = parseInt(req.body.limit) || 50;
+    const result = await generateBatchEmbeddings(limit);
+    res.json({ success: true, message: 'Embedding generation completed', result });
+  } catch (err) {
+    console.error('Embedding generation error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 module.exports = router;

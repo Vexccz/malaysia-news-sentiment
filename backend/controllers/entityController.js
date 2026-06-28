@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const CustomEntity = require('../models/CustomEntity');
+async function getCustomEntities() { try { return await CustomEntity.find({ isActive: true }).select('name synonyms category').lean(); } catch(e) { return []; } }
 const isValidObjectId = (id) => id && mongoose.Types.ObjectId.isValid(id) && id !== 'guest';
 const Article = require('../models/Article');
 
@@ -91,7 +93,7 @@ const getEntityGraph = async (req, res) => {
 
     for (const article of articles) {
       const text = `${article.title} ${article.description || ''} ${article.content || ''}`;
-      const foundEntities = extractEntities(text, type);
+      const foundEntities = extractEntities(text, type, await getCustomEntities());
 
       for (const entity of foundEntities) {
         if (!entityMentions[entity.name]) {
@@ -247,7 +249,7 @@ const getEntityDetail = async (req, res) => {
     const connected = {};
     for (const article of articles) {
       const text = `${article.title} ${article.description || ''}`;
-      const found = extractEntities(text, null);
+      const found = extractEntities(text, null, await getCustomEntities());
       for (const e of found) {
         if (e.name.toLowerCase() !== name.toLowerCase()) {
           connected[e.name] = (connected[e.name] || 0) + 1;
@@ -295,7 +297,7 @@ const getTrendingEntities = async (req, res) => {
     const counts = {}; // name -> { count, pos, neg, neu, category }
     for (const art of articles) {
       const text = `${art.title || ''} ${art.description || ''} ${art.content || ''}`;
-      const entities = extractEntities(text);
+      const entities = extractEntities(text, null, await getCustomEntities());
       const sentKey = art.sentiment === 'Positive' ? 'pos' : art.sentiment === 'Negative' ? 'neg' : 'neu';
       for (const e of entities) {
         if (!counts[e.name]) counts[e.name] = { name: e.name, category: e.category, count: 0, pos: 0, neg: 0, neu: 0 };

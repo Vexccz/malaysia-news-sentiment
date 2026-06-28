@@ -1,6 +1,8 @@
 const Article = require('../models/Article');
 const graphService = require('./graphService');
 const { extractEntities } = require('./entityExtraction');
+const CustomEntity = require('../models/CustomEntity');
+async function getCustomEntities() { try { return await CustomEntity.find({ isActive: true }).select('name synonyms category').lean(); } catch(e) { return []; } }
 
 const toIso = (value) => {
   if (!value) return null;
@@ -23,7 +25,7 @@ const dedupeEntities = (entities = []) => {
 };
 
 const normaliseArticlePayload = (article = {}) => {
-  const entities = dedupeEntities(extractEntities(buildArticleText(article)));
+  const entities = dedupeEntities(extractEntities(buildArticleText(article), null, await getCustomEntities()));
   return {
     articleId: String(article._id || article.id || article.url || ''),
     title: article.title || '',

@@ -4,6 +4,8 @@
  */
 
 const Article = require('../models/Article');
+const CustomEntity = require('../models/CustomEntity');
+async function getCustomEntities() { try { return await CustomEntity.find({ isActive: true }).select('name synonyms category').lean(); } catch(e) { return []; } }
 const { extractEntities } = require('./entityExtraction');
 
 /**
@@ -22,7 +24,7 @@ async function getEntitySourceBreakdown(entityName) {
   
   articles.forEach(art => {
     const text = `${art.title || ''} ${art.description || ''}`;
-    const entities = extractEntities(text);
+    const entities = extractEntities(text, null, await getCustomEntities());
     const hasEntity = entities.some(e => e.name.toLowerCase() === entityName.toLowerCase());
     
     if (!hasEntity) return;
