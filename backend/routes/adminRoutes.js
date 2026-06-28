@@ -315,17 +315,4 @@ router.post('/generate-embeddings', protect, authorize('admin'), async (req, res
 
 
 
-// POST /api/admin/embeddings/generate - Batch generate embeddings for articles (admin only)
-router.post('/embeddings/generate', protect, adminOnly, async (req, res) => {
-  try {
-    const { generateBatchEmbeddings } = require('../services/embeddingService');
-    const limit = parseInt(req.body.limit) || 50;
-    const result = await generateBatchEmbeddings(limit);
-    res.json({ success: true, message: 'Embedding generation completed', result });
-  } catch (err) {
-    console.error('Embedding generation error:', err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
 module.exports = router;

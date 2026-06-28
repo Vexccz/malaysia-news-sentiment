@@ -70,4 +70,47 @@ function cosineSimilarity(a, b) {
   return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
-module.exports = { generateEmbedding, cosineSimilarity };
+
+/**
+ * Batch generate embeddings for articles that don't have them
+ * @param {number} limit - Max articles to process (default 50)
+ * @returns {object} - { processed, success, failed, skipped }
+ */
+async function generateBatchEmbeddings(limit = 50) {
+  const Article = require('../models/Article');
+  
+  // Find articles without embeddings
+  const articles = await Article.find({
+    $or: [
+      { embedding: { $exists: false } },
+      { embedding: { $eq: [] } },
+      { embedding: null }
+    ]
+  }).limit(limit).lean();
+
+  let processed = 0, success = 0, failed = 0, skipped = 0;
+
+  for (const article of articles) {
+    const text = `${article.title || ''} ${article.description || ''}`.trim();
+    if (!text || text.length < 10) {
+      skipped++;
+      continue;
+    }
+
+    const embedding = await generateEmbedding(text);
+    if (embedding && embedding.length > 0) {
+      await Article.updateOne(
+        { _id: article._id },
+        { $set: { embedding } }
+      );
+      success++;
+    } else {
+      failed++;
+    }
+    processed++;
+  }
+
+  return { processed, success, failed, skipped, total: articles.length };
+}
+
+module.exports = { generateEmbedding, generateBatchEmbeddings, cosineSimilarity };
