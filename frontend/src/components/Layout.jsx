@@ -71,6 +71,11 @@ const Layout = ({ children }) => {
         <path d="M16 3h5v5"/><path d="M8 3H3v5"/><path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3"/><path d="m15 9 6-6"/>
       </svg>
     )},
+    { path: '/correlation', labelKey: 'correlation', icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+      </svg>
+    )},
     { path: '/community', labelKey: 'community', icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -145,7 +150,7 @@ const Layout = ({ children }) => {
   ];
 
   const navSections = [
-    { key: 'analysis', label: 'ANALYSIS', paths: ['/dashboard', '/trending', '/feed', '/timeline', '/entities', '/cross-source', '/compare'] },
+    { key: 'analysis', label: 'ANALYSIS', paths: ['/dashboard', '/trending', '/feed', '/timeline', '/entities', '/cross-source', '/correlation', '/compare'] },
     { key: 'monitoring', label: 'MONITORING', paths: ['/heatmap', '/forecast', '/alerts', '/credibility', '/digest', '/categories'] },
     { key: 'personal', label: 'PERSONAL', paths: ['/history', '/bookmarks', '/search', '/reports', '/settings', '/community', '/insights-lab'] },
   ];

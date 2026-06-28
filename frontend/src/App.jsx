@@ -33,6 +33,7 @@ const History = lazy(() => import('./pages/History'));
 const CommunityPage = lazy(() => import('./pages/CommunityPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const CrossSourcePage = lazy(() => import('./pages/CrossSourcePage'));
+const CorrelationMatrix = lazy(() => import('./pages/CorrelationMatrix'));
 const Bookmarks = lazy(() => import('./pages/Bookmarks'));
 const Alerts = lazy(() => import('./pages/Alerts'));
 const SourceCredibility = lazy(() => import('./pages/SourceCredibility'));
@@ -509,6 +510,7 @@ const AppInner = () => (
     <Route path="/settings" element={<ProtectedRoute><Layout><SettingsPage /></Layout></ProtectedRoute>} />
     <Route path="/entities" element={<ProtectedRoute><Layout><EntityGraphPage /></Layout></ProtectedRoute>} />
     <Route path="/cross-source" element={<ProtectedRoute><Layout><CrossSourcePage /></Layout></ProtectedRoute>} />
+    <Route path="/correlation" element={<ProtectedRoute><Layout><CorrelationMatrix /></Layout></ProtectedRoute>} />
     <Route path="/feed" element={<ProtectedRoute><Layout><LiveFeed /></Layout></ProtectedRoute>} />
     <Route path="/timeline" element={<ProtectedRoute><Layout><SentimentTimeline /></Layout></ProtectedRoute>} />
     <Route path="/alerts" element={<ProtectedRoute><Layout><Alerts /></Layout></ProtectedRoute>} />
