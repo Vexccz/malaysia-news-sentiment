@@ -191,7 +191,6 @@ router.get('/meta', async (req, res) => {
   }
 });
 
-module.exports = router;
 
 // POST /bookmarks/suggest — suggest folder category for an article
 router.post('/suggest', async (req, res) => {
@@ -218,3 +217,6 @@ router.post('/auto-assign', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+module.exports = router;
+
