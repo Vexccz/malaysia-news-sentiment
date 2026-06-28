@@ -12,7 +12,7 @@ const getGraphOverview = async (req, res) => {
     const typeFilter = req.query.type;
 
     // 1) Pull top entity nodes by mention count.
-    const typeClause = typeFilter ? `WHERE e.type = $typeFilter` : '';
+    const typeClause = typeFilter ? `WHERE e.category = $typeFilter` : '';
     const nodesResult = await graphService.runRead(
       `
       MATCH (a:Article)-[:MENTIONS]->(e:Entity)
