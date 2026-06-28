@@ -1,64 +1,94 @@
 /**
  * Article Similarity Detection
- * Uses cosine similarity on 384-dim embeddings to find related articles
+ * Uses keyword overlap + entity co-occurrence (no embedding dependency)
  */
 
 const Article = require('../models/Article');
+const { extractEntities } = require('./entityExtraction');
 
 /**
- * Compute cosine similarity between two vectors
+ * Tokenize text into meaningful words
  */
-function cosineSimilarity(a, b) {
-  if (!a || !b || a.length !== b.length) return 0;
-  
-  let dotProduct = 0, normA = 0, normB = 0;
-  for (let i = 0; i < a.length; i++) {
-    dotProduct += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
-  }
-  
-  if (normA === 0 || normB === 0) return 0;
-  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+function tokenize(text) {
+  if (!text) return [];
+  return text.toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 3)
+    .filter(w => !['that', 'this', 'with', 'from', 'have', 'been', 'were', 'they', 'their', 'which', 'would', 'could', 'about', 'after', 'before', 'into', 'over', 'also', 'more', 'than', 'other', 'some', 'very', 'just'].includes(w));
 }
 
 /**
- * Find similar articles based on embedding similarity
+ * Calculate Jaccard similarity between two word sets
+ */
+function jaccardSimilarity(setA, setB) {
+  const a = new Set(setA);
+  const b = new Set(setB);
+  const intersection = new Set([...a].filter(x => b.has(x)));
+  const union = new Set([...a, ...b]);
+  return union.size > 0 ? intersection.size / union.size : 0;
+}
+
+/**
+ * Find similar articles based on keyword overlap + entity co-occurrence
  * @param {string} articleId - Source article ID
- * @param {number} threshold - Minimum similarity (0-1), default 0.75
+ * @param {number} threshold - Minimum similarity (0-1), default 0.3
  * @param {number} limit - Max results, default 3
  * @returns {Array} - [{ _id, title, source, similarity, sentiment }]
  */
-async function findSimilarArticles(articleId, threshold = 0.75, limit = 3) {
-  const article = await Article.findById(articleId).select('embedding title').lean();
-  if (!article || !article.embedding || article.embedding.length === 0) {
-    return [];
-  }
+async function findSimilarArticles(articleId, threshold = 0.3, limit = 3) {
+  const article = await Article.findById(articleId).select('title description source topic').lean();
+  if (!article) return [];
+
+  const sourceText = `${article.title || ''} ${article.description || ''}`;
+  const sourceTokens = tokenize(sourceText);
+  const sourceEntities = extractEntities(sourceText).map(e => e.name);
   
-  // Find articles with embeddings (exclude self)
+  if (sourceTokens.length < 3) return [];
+
+  // Get recent articles (exclude self)
   const candidates = await Article.find({
     _id: { $ne: articleId },
-    embedding: { $exists: true, $ne: [] },
-    publishedAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } // Last 30 days
+    publishedAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
   })
-  .select('title source sentiment publishedAt embedding')
+  .select('title description source sentiment publishedAt topic')
   .lean()
-  .limit(100); // Check top 100 candidates
-  
+  .limit(100);
+
   // Calculate similarity for each
-  const similarities = candidates.map(cand => ({
-    _id: cand._id,
-    title: cand.title,
-    source: cand.source,
-    sentiment: cand.sentiment,
-    publishedAt: cand.publishedAt,
-    similarity: cosineSimilarity(article.embedding, cand.embedding)
-  }))
+  const similarities = candidates.map(cand => {
+    const candText = `${cand.title || ''} ${cand.description || ''}`;
+    const candTokens = tokenize(candText);
+    const candEntities = extractEntities(candText).map(e => e.name);
+
+    // Keyword overlap (70% weight)
+    const keywordSim = jaccardSimilarity(sourceTokens, candTokens);
+    
+    // Entity overlap (30% weight)
+    const sourceEntitySet = new Set(sourceEntities);
+    const candEntitySet = new Set(candEntities);
+    const entityIntersection = new Set([...sourceEntitySet].filter(x => candEntitySet.has(x)));
+    const entityUnion = new Set([...sourceEntitySet, ...candEntitySet]);
+    const entitySim = entityUnion.size > 0 ? entityIntersection.size / entityUnion.size : 0;
+
+    // Combined score
+    const similarity = (keywordSim * 0.7) + (entitySim * 0.3);
+
+    return {
+      _id: cand._id,
+      title: cand.title,
+      source: cand.source,
+      sentiment: cand.sentiment,
+      publishedAt: cand.publishedAt,
+      similarity: parseFloat(similarity.toFixed(3)),
+      sharedEntities: [...entityIntersection]
+    };
+  })
   .filter(s => s.similarity >= threshold)
   .sort((a, b) => b.similarity - a.similarity)
   .slice(0, limit);
-  
+
   return similarities;
 }
 
-module.exports = { findSimilarArticles, cosineSimilarity };
+module.exports = { findSimilarArticles, jaccardSimilarity };
