@@ -83,7 +83,7 @@ async function generateBatchEmbeddings(limit = 50) {
   const articles = await Article.find({
     $or: [
       { embedding: { $exists: false } },
-      { embedding: { $eq: [] } },
+      { embedding: { $size: 0 } },
       { embedding: null }
     ]
   }).limit(limit).lean();
