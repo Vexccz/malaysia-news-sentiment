@@ -356,39 +356,33 @@ export default function EntityGraphPage() {
     const baseNodeSize = mobileGraphMode ? 14 : 22;
     const sizeRange = mobileGraphMode ? 24 : 55;
 
-    const CATEGORY_GRADIENTS = {
-      politicians: { fill: 'l(0,0,0,1)0:#4f46e5 1:#6366f1', stroke: '#4f46e5', bg: 'rgba(99,102,241,0.12)' },
-      parties: { fill: 'l(0,0,0,1)0:#7c3aed 1:#8b5cf6', stroke: '#7c3aed', bg: 'rgba(139,92,246,0.12)' },
-      organizations: { fill: 'l(0,0,0,1)0:#0891b2 1:#06b6d4', stroke: '#0891b2', bg: 'rgba(6,182,212,0.12)' },
-      locations: { fill: 'l(0,0,0,1)0:#d97706 1:#f59e0b', stroke: '#d97706', bg: 'rgba(245,158,11,0.12)' },
+    const CATEGORY_COLORS = {
+      politicians: '#6366f1',
+      parties: '#8b5cf6',
+      organizations: '#06b6d4',
+      locations: '#f59e0b',
     };
-    const DEFAULT_CAT = { fill: 'l(0,0,0,1)0:#475569 1:#64748b', stroke: '#475569', bg: 'rgba(100,116,139,0.12)' };
+    const DEFAULT_COLOR = '#64748b';
 
     const g6Data = {
       nodes: graphNodes.map(n => {
-        const cat = CATEGORY_GRADIENTS[n.category] || DEFAULT_CAT;
+        const color = CATEGORY_COLORS[n.category] || DEFAULT_COLOR;
         const nodeSize = baseNodeSize + (n.mentions / maxMentions) * sizeRange;
         const isExpanded = n._expanded;
         const isHighMention = n.mentions > maxMentions * 0.5;
-        const cardW = mobileGraphMode ? nodeSize * 2.2 : nodeSize * 2.8;
-        const cardH = mobileGraphMode ? nodeSize * 0.8 : nodeSize * 1.1;
         return {
           id: n.id,
-          type: 'rect',
-          label: isExpanded ? `${n.label}
-(EXPANDED)` : `${n.label}
-${n.mentions} mentions`,
+          label: n.label,
           data: { label: n.label, mentions: n.mentions, sentiment: n.sentiment, category: n.category },
-          size: [cardW, cardH],
+          size: nodeSize,
           style: {
-            fill: isDark ? (isExpanded ? 'rgba(99,102,241,0.15)' : cat.bg) : cat.bg,
-            stroke: isExpanded ? '#6366F1' : cat.stroke,
-            lineWidth: isExpanded ? 2.5 : (isHighMention ? 2 : 1.5),
-            radius: mobileGraphMode ? 6 : 8,
+            fill: color,
+            stroke: isExpanded ? '#6366F1' : (isDark ? '#1e293b' : '#e2e8f0'),
+            lineWidth: isExpanded ? 3 : (isHighMention ? 2.5 : 1.5),
             cursor: 'pointer',
-            shadowBlur: isHighMention ? 16 : 6,
-            shadowColor: isHighMention ? cat.stroke + '50' : (isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.08)'),
-            shadowOffsetY: isHighMention ? 4 : 2,
+            shadowBlur: isHighMention ? 18 : 8,
+            shadowColor: isHighMention ? color + '60' : (isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.1)'),
+            shadowOffsetY: isHighMention ? 3 : 1,
             lineDash: isExpanded ? [4, 2] : undefined,
           },
           labelCfg: {
@@ -397,11 +391,10 @@ ${n.mentions} mentions`,
               fontSize: mobileGraphMode ? 9 : 12,
               fontWeight: 600,
               fontFamily: "'Playfair Display', Georgia, serif",
-              lineHeight: mobileGraphMode ? 13 : 17,
-              textAlign: 'center',
+              textBaseline: 'top',
             },
-            position: 'center',
-            offset: 0,
+            position: 'bottom',
+            offset: 6,
           },
         };
       }),
@@ -419,7 +412,7 @@ ${n.mentions} mentions`,
           id: `edge-${i}`,
           source: e.source,
           target: e.target,
-          label: isStrong ? `${e.weight}×` : (e.weight > 1 ? `${e.weight}` : ''),
+          label: '',
           data: { weight: e.weight, avgSentiment: e.avgSentiment },
           labelCfg: {
             autoRotate: true,
@@ -545,7 +538,7 @@ ${n.mentions} mentions`,
           currentSize -= 1.2;
           if (currentSize <= originalSize) growing = true;
         }
-        try { graphInstance.current.updateItem(item, { size: [currentSize * 2.8, currentSize * 1.1] }); } catch { /* item may be removed */ }
+        try { graphInstance.current.updateItem(item, { size: currentSize }); } catch { /* item may be removed */ }
       }, 50);
     });
     graph.on('node:mouseleave', () => {
