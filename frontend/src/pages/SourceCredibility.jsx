@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import ExportMenu from '../components/ExportMenu';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LineChart, Line, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Scale, TrendingUp, BookOpen, ArrowUpDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 import { TableSkeleton, PageHeaderSkeleton } from '../components/Skeletons';
 
 /* Page Interactive Animations */
@@ -137,6 +138,10 @@ const SourceCredibility = () => {
   // Comparison table sort state
   const [compSortBy, setCompSortBy] = useState('reliability');
   const [compSortOrder, setCompSortOrder] = useState('desc');
+  const { theme } = useTheme();
+  const [expandedSource, setExpandedSource] = useState(null);
+  const [reliabilityData, setReliabilityData] = useState(null);
+  const [reliabilityLoading, setReliabilityLoading] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -178,6 +183,17 @@ const SourceCredibility = () => {
       setCompSortBy(field);
       setCompSortOrder('desc');
     }
+  };
+
+  const toggleReliability = async (source) => {
+    const name = source.name || source.source;
+    if (expandedSource === name) { setExpandedSource(null); setReliabilityData(null); return; }
+    setExpandedSource(name); setReliabilityLoading(true); setReliabilityData(null);
+    try {
+      const res = await api.get(`/sources/${encodeURIComponent(name)}/reliability`, { params: { days: 90 } });
+      setReliabilityData(res.data);
+    } catch { setReliabilityData(null); }
+    finally { setReliabilityLoading(false); }
   };
 
   const MALAYSIA_SOURCES = new Set([
@@ -713,7 +729,7 @@ const SourceCredibility = () => {
                       className={`cursor-pointer hover:bg-gray-50 dark:hover:bg-[#0a0a0a] transition-colors ${
                         i % 2 === 0 ? '' : 'bg-[#fafafa] dark:bg-[#0a0a0a]'
                       }`}
-                      onClick={() => setSelectedSource(selectedSource?._id === source._id ? null : source)}
+                      onClick={() => { setSelectedSource(selectedSource?._id === source._id ? null : source); toggleReliability(source); }}
                     >
                       <td className="px-5 py-4">
                         <p className="font-medium text-black dark:text-white text-sm">{source.name}</p>
@@ -819,6 +835,43 @@ const SourceCredibility = () => {
                       </div>
                     </div>
                   </div>
+                  {/* Reliability Trend Section */}
+                  {expandedSource === (selectedSource.name || selectedSource.source) && (
+                    <div className="mt-4 border border-[#e5e5e5] dark:border-[#222]">
+                      <p className="px-4 pt-3 text-[10px] uppercase tracking-[0.18em] text-gray-500 dark:text-[#999]" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>Reliability Trend</p>
+                      {reliabilityLoading && <p className="px-4 py-6 text-xs text-gray-400 dark:text-[#666] animate-pulse">Loading trend data…</p>}
+                      {reliabilityData && (
+                        <div className="p-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div style={{ height: 120 }}>
+                              <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={reliabilityData.trend || []}>
+                                  <XAxis dataKey="week" hide />
+                                  <YAxis domain={[0, 100]} hide />
+                                  <Tooltip contentStyle={{ background: theme === 'dark' ? '#111' : '#fff', border: '1px solid #222', borderRadius: 0, fontSize: 11 }} />
+                                  <Line type="monotone" dataKey="score" stroke={getSparklineColor(reliabilityData.score)} strokeWidth={2} dot={false} />
+                                </LineChart>
+                              </ResponsiveContainer>
+                            </div>
+                            <div className="space-y-2">
+                              {Object.entries(reliabilityData.breakdown || {}).map(([k, v]) => (
+                                <div key={k} className="flex items-center gap-2">
+                                  <span className="text-[10px] uppercase tracking-[0.15em] text-gray-500 dark:text-[#999] w-24 shrink-0">{k}</span>
+                                  <div className="flex-1 h-2 bg-[#e5e5e5] dark:bg-[#222] overflow-hidden">
+                                    <div className={`h-full ${getBarColor(v)}`} style={{ width: `${v}%` }} />
+                                  </div>
+                                  <span className={`text-xs font-mono font-semibold w-8 text-right ${getScoreColor(v)}`}>{v}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <p className="mt-3 text-[10px] text-gray-400 dark:text-[#666] uppercase tracking-[0.12em]">
+                            Computed from {reliabilityData.totalArticles || 0} articles over {reliabilityData.days || 90} days
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {selectedSource.url && (
                     <a
                       href={selectedSource.url}
