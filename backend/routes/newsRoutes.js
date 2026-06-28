@@ -35,6 +35,20 @@ router.post('/:id/vote',      protect, handleSentimentVote);
 router.post('/:id/bookmark',  protect, toggleBookmarkStatus);
 
 
+// Sentiment momentum indicator
+router.get('/:id/momentum', protect, async (req, res) => {
+  const Article = require('../models/Article');
+  const { getSentimentMomentum } = require('../services/sentimentMomentum');
+  try {
+    const article = await Article.findById(req.params.id).select('source topic').lean();
+    if (!article) return res.status(404).json({ error: 'Article not found' });
+    const momentum = await getSentimentMomentum(article.source, article.topic);
+    res.json(momentum);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Article similarity detection
 router.get('/:id/similar', protect, async (req, res) => {
   const { findSimilarArticles } = require('../services/articleSimilarity');
