@@ -35,6 +35,8 @@ export default function EntityGraphPage() {
   const [loading, setLoading] = useState(true);
   const [graphRendering, setGraphRendering] = useState(false);
   const [selectedNode, setSelectedNode] = useState(null);
+  const [sourceBreakdown, setSourceBreakdown] = useState([]);
+  const [loadingSources, setLoadingSources] = useState(false);
   const [focusedNode, setFocusedNode] = useState(null);
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -994,7 +996,7 @@ export default function EntityGraphPage() {
 
                   {/* Tab bar - thin underline editorial style */}
                   <div className="flex gap-0 border-b border-[#e5e5e5] dark:border-[#222]">
-                    {['overview', 'timeline', 'connected'].map(tab => (
+                    {['overview', 'timeline', 'connected', 'sources'].map(tab => (
                       <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
@@ -1150,7 +1152,33 @@ export default function EntityGraphPage() {
                     </div>
                   )}
 
-                  {activeTab === 'connected' && (
+                  {activeTab === 'sources' && (
+              <div>
+                {loadingSources ? (
+                  <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">Loading...</div>
+                ) : sourceBreakdown.length === 0 ? (
+                  <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">No source data available</div>
+                ) : (
+                  <div className="space-y-2">
+                    {sourceBreakdown.map((s, i) => (
+                      <div key={i} className="p-3 border border-[#e5e5e5] dark:border-[#222]" style={{ borderLeft: `3px solid ${s.avgSentiment > 0 ? '#4ADE80' : s.avgSentiment < 0 ? '#FB7185' : '#FBBF24'}` }}>
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="text-xs font-bold text-black dark:text-white">{s.source}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 font-semibold" style={{ background: s.avgSentiment > 0 ? '#4ADE8015' : s.avgSentiment < 0 ? '#FB718515' : '#FBBF2415', color: s.avgSentiment > 0 ? '#16a34a' : s.avgSentiment < 0 ? '#dc2626' : '#d97706' }}>
+                            {s.avgSentiment > 0 ? '+' : ''}{s.avgSentiment}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-gray-500 dark:text-gray-400">
+                          {s.total} articles · {s.positive}+ {s.negative}- {s.neutral}~
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {activeTab === 'connected' && (
                     <div>
                       <div className="text-[11px] font-semibold text-gray-900 dark:text-white mb-2">Connected Entities</div>
                       {detail.connectedEntities?.length > 0 ? (
