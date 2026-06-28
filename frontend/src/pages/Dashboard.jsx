@@ -2,6 +2,9 @@ import React, { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspens
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { Responsive, ResponsiveGridLayout, useContainerWidth } from 'react-grid-layout';
+import 'react-grid-layout/css/styles.css';
+import 'react-resizable/css/styles.css';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import SearchBarClean from '../components/SearchBarClean';
@@ -708,6 +711,26 @@ const CARD = 'border border-paper-line dark:border-paper-dark-line bg-paper-card
 // Widget layout defaults
 const DEFAULT_VISIBILITY = { kpi: true, charts: true, articles: true, ai: true, wordcloud: true, sources: true };
 const DEFAULT_WIDGET_ORDER = ['kpi', 'charts', 'ai', 'articles', 'wordcloud', 'sources'];
+
+// Grid layout defaults for react-grid-layout
+const DEFAULT_GRID_LAYOUTS = {
+  lg: [
+    { i: 'kpi',       x: 0, y: 0,  w: 12, h: 5,  minH: 3 },
+    { i: 'charts',    x: 0, y: 5,  w: 12, h: 12, minH: 6 },
+    { i: 'articles',  x: 0, y: 17, w: 8,  h: 16, minH: 8 },
+    { i: 'sidebar',   x: 8, y: 17, w: 4,  h: 16, minH: 6 },
+    { i: 'ai',        x: 0, y: 33, w: 12, h: 7,  minH: 4 },
+    { i: 'community', x: 0, y: 40, w: 12, h: 8,  minH: 4 },
+  ],
+  md: [
+    { i: 'kpi',       x: 0, y: 0,  w: 10, h: 5  },
+    { i: 'charts',    x: 0, y: 5,  w: 10, h: 12 },
+    { i: 'articles',  x: 0, y: 17, w: 10, h: 16 },
+    { i: 'sidebar',   x: 0, y: 33, w: 10, h: 12 },
+    { i: 'ai',        x: 0, y: 45, w: 10, h: 7  },
+    { i: 'community', x: 0, y: 52, w: 10, h: 8  },
+  ],
+};
 const WIDGET_ID_MAP = {
   'sentiment-overview': 'kpi',
   'recent-articles': 'articles',
@@ -787,6 +810,34 @@ const Dashboard = () => {
     } catch { return DEFAULT_WIDGET_ORDER; }
   });
   const [draggedWidget, setDraggedWidget] = useState(null);
+
+  // react-grid-layout state (persisted to localStorage)
+  const { containerRef, width: containerWidth } = useContainerWidth();
+  const [gridLayouts, setGridLayouts] = useState(() => {
+    try {
+      const saved = localStorage.getItem('dashboardLayout');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Ensure all keys present
+        const defaultKeys = DEFAULT_GRID_LAYOUTS.lg.map(l => l.i);
+        const savedKeys = (parsed.lg || []).map(l => l.i);
+        const hasAllKeys = defaultKeys.every(k => savedKeys.includes(k));
+        if (hasAllKeys) return parsed;
+      }
+    } catch {}
+    return DEFAULT_GRID_LAYOUTS;
+  });
+
+  const handleGridChange = useCallback((_layout, allLayouts) => {
+    setGridLayouts(allLayouts);
+    localStorage.setItem('dashboardLayout', JSON.stringify(allLayouts));
+  }, []);
+
+  const handleResetGridLayout = useCallback(() => {
+    setGridLayouts(DEFAULT_GRID_LAYOUTS);
+    localStorage.removeItem('dashboardLayout');
+    toast.success('Layout reset to defaults');
+  }, []);
 
   // Onboarding tour
   const { key: tourKey, startTour } = useOnboardingTour();
@@ -1220,8 +1271,10 @@ const Dashboard = () => {
   const handleResetLayout = useCallback(() => {
     setWidgetVisibility(DEFAULT_VISIBILITY);
     setLayoutOrder(DEFAULT_WIDGET_ORDER);
+    setGridLayouts(DEFAULT_GRID_LAYOUTS);
     localStorage.removeItem('dashboard-widget-visibility');
     localStorage.removeItem('dashboard-layout-order');
+    localStorage.removeItem('dashboardLayout');
   }, []);
 
   const isLoading = initLoading || searchLoading;
@@ -1258,6 +1311,17 @@ const Dashboard = () => {
       transition: { duration: 0.25, ease: [0.4, 0, 0.2, 1] }
     }
   };
+
+  // Widget header for grid items — editorial newspaper style
+  const WidgetHeader = ({ title, extra }) => (
+    <div className="widget-drag-handle flex items-center gap-2 px-4 py-2.5 border-b border-[#e5e5e5] dark:border-[#222] cursor-grab active:cursor-grabbing select-none bg-paper-card dark:bg-paper-dark-card">
+      <span className="text-[#999] dark:text-[#555] text-xs leading-none" style={{ fontFamily: 'monospace', letterSpacing: '-2px' }}>⋮⋮</span>
+      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans flex-1">
+        {title}
+      </span>
+      {extra}
+    </div>
+  );
 
   // Section header component
   const SectionHeader = ({ title, badge, widgetKey, children }) => (
@@ -1472,6 +1536,9 @@ const Dashboard = () => {
                   <div className="hidden md:flex items-center gap-1 border-l border-gray-200 dark:border-[#2a2a2a] pl-2 ml-1">
                     <button onClick={() => setShowCustomizer(true)} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="Customize">
                       <Settings2 size={14} />
+                    </button>
+                    <button onClick={handleResetGridLayout} className="px-2 py-1 text-[9px] font-bold uppercase tracking-[0.15em] text-ink-faint hover:text-ink dark:hover:text-paper transition-colors border border-[#e5e5e5] dark:border-[#222]" title="Reset widget positions">
+                      Reset
                     </button>
                     <button aria-label="Generate forecast" onClick={handleManualForecast} className="p-1.5 text-ink-faint hover:text-ink dark:hover:text-paper transition-colors" title="AI Forecast">
                       <BarChart3 size={14} />
@@ -1847,27 +1914,27 @@ const Dashboard = () => {
                 </AnimatePresence>
               </>
             ) : (
-              /* Desktop Layout */
+              /* Desktop Layout — Draggable Grid */
               <>
-                <div className="grid grid-cols-[1fr_300px] gap-8">
-                  <div className="flex flex-col gap-8">
-                    {(digest || digestLoading) && !isHistoryView && (
-                      <AiDigestCard digest={digest} loading={digestLoading} topic={currentQuery} />
-                    )}
-
-                    {/* KPI Cards - PROPER DESIGN */}
-                    {widgetVisibility.kpi && (
-                    <div
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, 'kpi')}
-                      onDragOver={handleDragOver}
-                      onDrop={(e) => handleDrop(e, 'kpi')}
-                      onDragEnd={handleDragEnd}
-                      style={{ order: layoutOrder.indexOf('kpi') }}
-                      className={`transition-opacity ${draggedWidget === 'kpi' ? 'opacity-40' : ''}`}
-                    >
-                    <div>
-                      <SectionHeader title={t("keyMetrics")} widgetKey="kpi" />
+                <div ref={containerRef}>
+                <ResponsiveGridLayout
+                  className="layout"
+                  width={containerWidth || 1200}
+                  layouts={gridLayouts}
+                  breakpoints={{ lg: 1200, md: 768 }}
+                  cols={{ lg: 12, md: 10 }}
+                  rowHeight={40}
+                  draggableHandle=".widget-drag-handle"
+                  onLayoutChange={handleGridChange}
+                  compactType="vertical"
+                  margin={[20, 20]}
+                  isResizable={true}
+                  useCSSTransforms={true}
+                >
+                  {/* KPI Widget */}
+                  <div key="kpi" className="overflow-hidden border border-[#e5e5e5] dark:border-[#222] bg-paper-card dark:bg-paper-dark-card">
+                    <WidgetHeader title={t("keyMetrics")} />
+                    <div className="p-4">
                       <Skeleton name="kpi-row" loading={isLoading}>
                         <motion.div
                           className="space-y-5"
@@ -1875,101 +1942,39 @@ const Dashboard = () => {
                           initial="hidden"
                           animate="visible"
                         >
-                          {/* Editorial Stats Grid */}
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border border-ink/10 dark:border-paper/10">
-                            {/* Total Articles — hero stat */}
-                            <motion.div
-                              className="p-5 border-r border-b border-ink/10 dark:border-paper/10 bg-paper-card dark:bg-paper-dark-card"
-                              variants={kpiItemVariants}
-                            >
-                              <div className="text-[9px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans mb-2 font-semibold">
-                                Total Analyzed
-                              </div>
-                              <div className="font-['Playfair_Display'] text-5xl font-black text-flag leading-none">
-                                {counts.total.toLocaleString()}
-                              </div>
-                              <div className="mt-1">
-                                <TrendBadge pct={periodComparison.total} />
-                              </div>
+                            <motion.div className="p-5 border-r border-b border-ink/10 dark:border-paper/10 bg-paper-card dark:bg-paper-dark-card" variants={kpiItemVariants}>
+                              <div className="text-[9px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans mb-2 font-semibold">Total Analyzed</div>
+                              <div className="font-['Playfair_Display'] text-5xl font-black text-flag leading-none">{counts.total.toLocaleString()}</div>
+                              <div className="mt-1"><TrendBadge pct={periodComparison.total} /></div>
                             </motion.div>
-
-                            {/* Positive */}
-                            <motion.div
-                              className="p-5 border-r border-b border-ink/10 dark:border-paper/10 border-l-[3px] border-l-emerald-500 cursor-pointer hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 transition-colors"
-                              variants={kpiItemVariants}
-                              onClick={() => handleKpiClick('positive')}
-                            >
-                              <div className="text-[9px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans mb-2 font-semibold">
-                                Positive
-                              </div>
-                              <div className="font-['Playfair_Display'] text-5xl font-black text-emerald-600 dark:text-emerald-500 leading-none">
-                                {counts.positive.toLocaleString()}
-                              </div>
-                              <div className="text-[10px] text-ink-muted dark:text-ink-faint mt-1.5 font-sans">
-                                {counts.total ? Math.round(counts.positive / counts.total * 100) : 0}%
-                              </div>
+                            <motion.div className="p-5 border-r border-b border-ink/10 dark:border-paper/10 border-l-[3px] border-l-emerald-500 cursor-pointer hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 transition-colors" variants={kpiItemVariants} onClick={() => handleKpiClick('positive')}>
+                              <div className="text-[9px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans mb-2 font-semibold">Positive</div>
+                              <div className="font-['Playfair_Display'] text-5xl font-black text-emerald-600 dark:text-emerald-500 leading-none">{counts.positive.toLocaleString()}</div>
+                              <div className="text-[10px] text-ink-muted dark:text-ink-faint mt-1.5 font-sans">{counts.total ? Math.round(counts.positive / counts.total * 100) : 0}%</div>
                             </motion.div>
-
-                            {/* Negative */}
-                            <motion.div
-                              className="p-5 border-r border-b border-ink/10 dark:border-paper/10 border-l-[3px] border-l-red-500 cursor-pointer hover:bg-red-50/50 dark:hover:bg-red-950/20 transition-colors"
-                              variants={kpiItemVariants}
-                              onClick={() => handleKpiClick('negative')}
-                            >
-                              <div className="text-[9px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans mb-2 font-semibold">
-                                Negative
-                              </div>
-                              <div className="font-['Playfair_Display'] text-5xl font-black text-red-600 dark:text-red-500 leading-none">
-                                {counts.negative.toLocaleString()}
-                              </div>
-                              <div className="text-[10px] text-ink-muted dark:text-ink-faint mt-1.5 font-sans">
-                                {counts.total ? Math.round(counts.negative / counts.total * 100) : 0}%
-                              </div>
+                            <motion.div className="p-5 border-r border-b border-ink/10 dark:border-paper/10 border-l-[3px] border-l-red-500 cursor-pointer hover:bg-red-50/50 dark:hover:bg-red-950/20 transition-colors" variants={kpiItemVariants} onClick={() => handleKpiClick('negative')}>
+                              <div className="text-[9px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans mb-2 font-semibold">Negative</div>
+                              <div className="font-['Playfair_Display'] text-5xl font-black text-red-600 dark:text-red-500 leading-none">{counts.negative.toLocaleString()}</div>
+                              <div className="text-[10px] text-ink-muted dark:text-ink-faint mt-1.5 font-sans">{counts.total ? Math.round(counts.negative / counts.total * 100) : 0}%</div>
                             </motion.div>
-
-                            {/* Neutral */}
-                            <motion.div
-                              className="p-5 border-l-[3px] border-l-gray-400 dark:border-l-gray-500 cursor-pointer hover:bg-gray-50/50 dark:hover:bg-gray-900/20 transition-colors"
-                              variants={kpiItemVariants}
-                              onClick={() => handleKpiClick('neutral')}
-                            >
-                              <div className="text-[9px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans mb-2 font-semibold">
-                                Neutral
-                              </div>
-                              <div className="font-['Playfair_Display'] text-5xl font-black text-gray-500 dark:text-gray-400 leading-none">
-                                {counts.neutral.toLocaleString()}
-                              </div>
-                              <div className="text-[10px] text-ink-muted dark:text-ink-faint mt-1.5 font-sans">
-                                {counts.total ? Math.round(counts.neutral / counts.total * 100) : 0}%
-                              </div>
+                            <motion.div className="p-5 border-l-[3px] border-l-gray-400 dark:border-l-gray-500 cursor-pointer hover:bg-gray-50/50 dark:hover:bg-gray-900/20 transition-colors" variants={kpiItemVariants} onClick={() => handleKpiClick('neutral')}>
+                              <div className="text-[9px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans mb-2 font-semibold">Neutral</div>
+                              <div className="font-['Playfair_Display'] text-5xl font-black text-gray-500 dark:text-gray-400 leading-none">{counts.neutral.toLocaleString()}</div>
+                              <div className="text-[10px] text-ink-muted dark:text-ink-faint mt-1.5 font-sans">{counts.total ? Math.round(counts.neutral / counts.total * 100) : 0}%</div>
                             </motion.div>
                           </div>
                         </motion.div>
                       </Skeleton>
                     </div>
-                    </div>
-                    )}
-                    {/* Charts Grid */}
-                    {widgetVisibility.charts && (
-                    <div
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, 'charts')}
-                      onDragOver={handleDragOver}
-                      onDrop={(e) => handleDrop(e, 'charts')}
-                      onDragEnd={handleDragEnd}
-                      style={{ order: layoutOrder.indexOf('charts') }}
-                      className={`transition-opacity ${draggedWidget === 'charts' ? 'opacity-40' : ''}`}
-                    >
-                    <div>
-                      <SectionHeader title={t("charts")} widgetKey="charts" />
+                  </div>
+
+                  {/* Charts Widget */}
+                  <div key="charts" className="overflow-auto border border-[#e5e5e5] dark:border-[#222] bg-paper-card dark:bg-paper-dark-card">
+                    <WidgetHeader title={t("charts")} />
+                    <div className="p-4">
                       <Skeleton name="charts-grid" loading={isLoading}>
-                        <motion.div
-                          className="space-y-0"
-                          variants={chartVariants}
-                          initial="hidden"
-                          animate="visible"
-                        >
-                          {/* Row 1: Donut + Horizontal Bar — 2-column */}
+                        <motion.div className="space-y-0" variants={chartVariants} initial="hidden" animate="visible">
                           <div className="grid grid-cols-2 gap-5">
                             <div>
                               <p className="text-[10px] uppercase tracking-[0.2em] text-[#999] dark:text-[#666] font-sans mb-1 pb-2 border-b border-[#e5e5e5] dark:border-[#222]">Sentiment Overview</p>
@@ -1990,10 +1995,7 @@ const Dashboard = () => {
                               </div>
                             </div>
                           </div>
-
                           <hr className="border-0 border-t border-[#e5e5e5] dark:border-[#222] my-4" />
-
-                          {/* Row 2: Regional Heatmap — full width */}
                           <div>
                             <p className="text-[10px] uppercase tracking-[0.2em] text-[#999] dark:text-[#666] font-sans mb-1 pb-2 border-b border-[#e5e5e5] dark:border-[#222]">Regional Sentiment</p>
                             <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] p-5 min-h-[280px] flex flex-col">
@@ -2004,10 +2006,7 @@ const Dashboard = () => {
                               </Suspense>
                             </div>
                           </div>
-
                           <hr className="border-0 border-t border-[#e5e5e5] dark:border-[#222] my-4" />
-
-                          {/* Row 3: Trend Chart — full width */}
                           <div>
                             <p className="text-[10px] uppercase tracking-[0.2em] text-[#999] dark:text-[#666] font-sans mb-1 pb-2 border-b border-[#e5e5e5] dark:border-[#222]">Trends Over Time</p>
                             <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] p-5 min-h-[280px] flex flex-col">
@@ -2018,10 +2017,7 @@ const Dashboard = () => {
                               </Suspense>
                             </div>
                           </div>
-
                           <hr className="border-0 border-t border-[#e5e5e5] dark:border-[#222] my-4" />
-
-                          {/* Row 4: Top Sources — full width */}
                           <div>
                             <p className="text-[10px] uppercase tracking-[0.2em] text-[#999] dark:text-[#666] font-sans mb-1 pb-2 border-b border-[#e5e5e5] dark:border-[#222]">Top News Sources</p>
                             <div className="border border-[#e5e5e5] dark:border-[#222] bg-[#fafafa] dark:bg-[#111] p-5">
@@ -2035,46 +2031,76 @@ const Dashboard = () => {
                         </motion.div>
                       </Skeleton>
                     </div>
-                    </div>
-                    )}
-
-                    {/* Forecast */}
-                    {widgetVisibility.ai && (
-                    <div
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, 'ai')}
-                      onDragOver={handleDragOver}
-                      onDrop={(e) => handleDrop(e, 'ai')}
-                      onDragEnd={handleDragEnd}
-                      style={{ order: layoutOrder.indexOf('ai') }}
-                      className={`transition-opacity ${draggedWidget === 'ai' ? 'opacity-40' : ''}`}
-                    >
-                      <SectionHeader title={t("aiInsights")} widgetKey="ai" />
-                      <InlineErrorBoundary name="AI Forecast">
-                        <ForecastCard forecast={forecast} loading={forecastLoading} topic={currentQuery} />
-                      </InlineErrorBoundary>
-                    </div>
-                    )}
                   </div>
-                  
-                  {/* Sidebar */}
-                  <aside className="space-y-5">
-                    <div className="sticky top-6 space-y-5">
-                      {widgetVisibility.wordcloud && (
-                      <Skeleton name="word-cloud" loading={isLoading}>
-                        <div className={`${CARD} p-5 border-l-[3px] border-l-accent`}>
-                          <InlineErrorBoundary name="Word Cloud">
-                            <WordCloud words={keywords} />
-                          </InlineErrorBoundary>
+
+                  {/* Articles Widget */}
+                  <div key="articles" className="overflow-auto border border-[#e5e5e5] dark:border-[#222] bg-paper-card dark:bg-paper-dark-card">
+                    <WidgetHeader title={t("recentArticles")} extra={
+                      <div className="flex gap-1">
+                        {FILTER_OPTIONS.map(opt => (
+                          <button key={opt.key} className={`px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] transition-colors border ${filter === opt.key ? 'border-ink dark:border-paper text-ink dark:text-paper' : 'border-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`} onClick={() => setFilter(opt.key)}>
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    } />
+                    <div className="p-4" id="analysis-results">
+                      <StaggerList>
+                        <Skeleton name="article-card" loading={isLoading || historyLoading} count={3}>
+                          {filteredArticles.length === 0 && !isLoading ? (
+                            <div className="text-center py-12 px-6 border border-dashed border-[#e5e5e5] dark:border-[#222]">
+                              <p className="font-display text-2xl text-ink dark:text-paper mb-2">No articles yet</p>
+                              <p className="text-[11px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint italic font-serif">
+                                {filter !== 'All' || sourceFilter !== ALL_SOURCES ? 'Try clearing your filters to see all stories.' : 'Stories appear here once the newsroom ingests fresh articles.'}
+                              </p>
+                            </div>
+                          ) : filteredArticles.map((article, idx) => (
+                            <React.Fragment key={article._id || article.url}>
+                              <StaggerItem>
+                                <ArticleCardCompact article={article} onBookmark={toggleBookmark} isBookmarked={user?.bookmarks?.includes(article._id || article.id)} />
+                              </StaggerItem>
+                              {idx < filteredArticles.length - 1 && (
+                                <div className="border-b border-[#e5e5e5] dark:border-[#1a1a1a]" />
+                              )}
+                            </React.Fragment>
+                          ))}
+                        </Skeleton>
+                      </StaggerList>
+                      {isHistoryView && stats.total > LIMIT && (
+                        <div className="flex items-center justify-center gap-6 mt-8 pt-6 border-t border-[#e5e5e5] dark:border-[#222]">
+                          <button disabled={page === 1 || isLoading} onClick={() => handlePageChange(page - 1)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400 disabled:opacity-30 disabled:cursor-not-allowed hover:text-gray-900 dark:hover:text-white transition-colors border border-[#e5e5e5] dark:border-[#222]">
+                            <ChevronLeft size={14} /> Previous
+                          </button>
+                          <div className="text-xs text-gray-400 dark:text-gray-500 font-sans uppercase tracking-wider">
+                            Page <strong className="text-gray-900 dark:text-white normal-case">{page}</strong> of {Math.ceil(stats.total / LIMIT)}
+                          </div>
+                          <button disabled={page >= Math.ceil(stats.total / LIMIT) || isLoading} onClick={() => handlePageChange(page + 1)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400 disabled:opacity-30 disabled:cursor-not-allowed hover:text-gray-900 dark:hover:text-white transition-colors border border-[#e5e5e5] dark:border-[#222]">
+                            Next <ChevronRight size={14} />
+                          </button>
                         </div>
-                      </Skeleton>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Sidebar Widget */}
+                  <div key="sidebar" className="overflow-auto border border-[#e5e5e5] dark:border-[#222] bg-paper-card dark:bg-paper-dark-card">
+                    <WidgetHeader title="More" />
+                    <div className="p-4 space-y-4">
+                      {widgetVisibility.wordcloud && (
+                        <Skeleton name="word-cloud" loading={isLoading}>
+                          <div className={`${CARD} p-5 border-l-[3px] border-l-accent`}>
+                            <InlineErrorBoundary name="Word Cloud">
+                              <WordCloud words={keywords} />
+                            </InlineErrorBoundary>
+                          </div>
+                        </Skeleton>
                       )}
                       {widgetVisibility.sources && (
-                      <div className={`${CARD} p-5 border-l-[3px] border-l-accent`}>
-                        <InlineErrorBoundary name="Source Credibility">
-                          <SourceCredibility />
-                        </InlineErrorBoundary>
-                      </div>
+                        <div className={`${CARD} p-5 border-l-[3px] border-l-accent`}>
+                          <InlineErrorBoundary name="Source Credibility">
+                            <SourceCredibility />
+                          </InlineErrorBoundary>
+                        </div>
                       )}
                       <div className={`${CARD} p-0 border-l-[3px] border-l-accent`}>
                         <InlineErrorBoundary name="Agent Insights">
@@ -2082,87 +2108,34 @@ const Dashboard = () => {
                         </InlineErrorBoundary>
                       </div>
                     </div>
-                  </aside>
-                </div>
+                  </div>
 
-                {/* Articles Section — Editorial */}
-                {widgetVisibility.articles && (
-                <div className="mt-10" id="analysis-results">
-                  {/* Section rule */}
-                  <div className="border-t-2 border-ink dark:border-paper mb-1" />
-                  <div className="border-t border-ink/30 dark:border-paper/30 mb-4" />
-
-                  <SectionHeader title={t("recentArticles")} badge={filteredArticles.length}>
-                    <div className="flex gap-1">
-                      {FILTER_OPTIONS.map(opt => (
-                        <button
-                          key={opt.key}
-                          className={`px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] transition-colors border ${
-                            filter === opt.key
-                              ? 'border-ink dark:border-paper text-ink dark:text-paper'
-                              : 'border-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
-                          }`}
-                          onClick={() => setFilter(opt.key)}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
+                  {/* AI Insights Widget */}
+                  <div key="ai" className="overflow-auto border border-[#e5e5e5] dark:border-[#222] bg-paper-card dark:bg-paper-dark-card">
+                    <WidgetHeader title={t("aiInsights")} />
+                    <div className="p-4 space-y-4">
+                      {(digest || digestLoading) && (
+                        <AiDigestCard digest={digest} loading={digestLoading} topic={currentQuery} />
+                      )}
+                      <InlineErrorBoundary name="AI Forecast">
+                        <ForecastCard forecast={forecast} loading={forecastLoading} topic={currentQuery} />
+                      </InlineErrorBoundary>
                     </div>
-                  </SectionHeader>
+                  </div>
 
-                  <StaggerList>
-                    <Skeleton name="article-card" loading={isLoading || historyLoading} count={3}>
-                      {filteredArticles.map((article, idx) => (
-                          <React.Fragment key={article._id || article.url}>
-                            <StaggerItem>
-                              <ArticleCardCompact
-                                article={article}
-                                onBookmark={toggleBookmark}
-                                isBookmarked={user?.bookmarks?.includes(article._id || article.id)}
-                              />
-                            </StaggerItem>
-                            {idx < filteredArticles.length - 1 && (
-                              <div className="border-b border-[#e5e5e5] dark:border-[#1a1a1a]" />
-                            )}
-                          </React.Fragment>
-                        ))}
-                    </Skeleton>
-                  </StaggerList>
-
-                  {/* Pagination — Editorial */}
-                  {isHistoryView && stats.total > LIMIT && (
-                    <div className="flex items-center justify-center gap-6 mt-8 pt-6 border-t border-[#e5e5e5] dark:border-[#222]">
-                      <button
-                        disabled={page === 1 || isLoading}
-                        onClick={() => handlePageChange(page - 1)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400 disabled:opacity-30 disabled:cursor-not-allowed hover:text-gray-900 dark:hover:text-white transition-colors border border-[#e5e5e5] dark:border-[#222]"
-                      >
-                        <ChevronLeft size={14} /> Previous
-                      </button>
-                      <div className="text-xs text-gray-400 dark:text-gray-500 font-sans uppercase tracking-wider">
-                        Page <strong className="text-gray-900 dark:text-white normal-case">{page}</strong> of {Math.ceil(stats.total / LIMIT)}
-                      </div>
-                      <button
-                        disabled={page >= Math.ceil(stats.total / LIMIT) || isLoading}
-                        onClick={() => handlePageChange(page + 1)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400 disabled:opacity-30 disabled:cursor-not-allowed hover:text-gray-900 dark:hover:text-white transition-colors border border-[#e5e5e5] dark:border-[#222]"
-                      >
-                        Next <ChevronRight size={14} />
-                      </button>
+                  {/* Community Widget */}
+                  <div key="community" className="overflow-auto border border-[#e5e5e5] dark:border-[#222] bg-paper-card dark:bg-paper-dark-card">
+                    <WidgetHeader title="Community" />
+                    <div className="p-4">
+                      <InlineErrorBoundary name="Community">
+                        <CommunityInline />
+                      </InlineErrorBoundary>
                     </div>
-                  )}
-                </div>
-                )}
-
-                {/* Community Section */}
-                <div className="mt-10">
-                  <SectionHeader title="COMMUNITY" />
-                  <InlineErrorBoundary name="Community">
-                    <CommunityInline />
-                  </InlineErrorBoundary>
+                  </div>
+                </ResponsiveGridLayout>
                 </div>
 
-                {/* Newspaper Footer */}
+                {/* Newspaper Footer — outside grid */}
                 <footer className="mt-16 mb-8">
                   <div className="border-t-2 border-ink dark:border-paper mb-1" />
                   <div className="border-t border-ink/20 dark:border-paper/20 mb-5" />

@@ -7,6 +7,7 @@ import { useLanguage } from '../context/LanguageContext';
 import ThemeToggle from './ThemeToggle';
 import NotificationsBell from './NotificationsBell';
 import BottomNav from './BottomNav';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -16,6 +17,20 @@ const Layout = ({ children }) => {
   const { t: tI18n, i18n } = useTranslation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  const [collapsedSections, setCollapsedSections] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sidebar-collapsed');
+      return saved ? JSON.parse(saved) : { analysis: false, monitoring: false, personal: false };
+    } catch { return { analysis: false, monitoring: false, personal: false }; }
+  });
+
+  const toggleSection = (key) => {
+    setCollapsedSections(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem('sidebar-collapsed', JSON.stringify(next));
+      return next;
+    });
+  };
 
   const toggleI18nLang = () => {
     const next = i18n.language === 'en' ? 'ms' : 'en';
@@ -129,6 +144,12 @@ const Layout = ({ children }) => {
     )},
   ];
 
+  const navSections = [
+    { key: 'analysis', label: 'ANALYSIS', paths: ['/dashboard', '/trending', '/feed', '/timeline', '/entities', '/cross-source', '/compare'] },
+    { key: 'monitoring', label: 'MONITORING', paths: ['/heatmap', '/forecast', '/alerts', '/credibility', '/digest', '/categories'] },
+    { key: 'personal', label: 'PERSONAL', paths: ['/history', '/bookmarks', '/search', '/reports', '/settings', '/community', '/insights-lab'] },
+  ];
+
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
     window.addEventListener('resize', handleResize);
@@ -183,51 +204,55 @@ const Layout = ({ children }) => {
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
-          <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint px-3 pb-2 pt-1 font-sans">{tI18n('nav.sections')}</p>
-          {/* Primary nav group */}
-          {navItems.slice(0, 4).map(item => {
-            const active = location.pathname === item.path;
+          {navSections.map((section, sIdx) => {
+            const sectionItems = navItems.filter(item => section.paths.includes(item.path));
+            const isCollapsed = collapsedSections[section.key];
             return (
-              <Link
-                key={item.path}
-                to={item.path}
-                data-tour={item.tourId || undefined}
-                className={`
-                  flex items-center gap-3 px-3 py-2 text-[13px] no-underline transition-colors border-l-2 font-sans
-                  ${active
-                    ? 'border-ink dark:border-paper bg-paper dark:bg-[#111] text-ink dark:text-paper font-semibold'
-                    : 'border-transparent text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper hover:border-ink/20 dark:hover:border-paper/20'
+              <div key={section.key} className={sIdx > 0 ? 'mt-1' : ''}>
+                {/* Section header - clickable to collapse */}
+                <button
+                  onClick={() => toggleSection(section.key)}
+                  className="flex items-center justify-between w-full px-3 pb-1.5 pt-1 group"
+                >
+                  <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans">
+                    {section.label}
+                  </span>
+                  {isCollapsed
+                    ? <ChevronUp size={12} className="text-ink-muted dark:text-ink-faint opacity-50 group-hover:opacity-100 transition-opacity" />
+                    : <ChevronDown size={12} className="text-ink-muted dark:text-ink-faint opacity-50 group-hover:opacity-100 transition-opacity" />
                   }
-                `}
-              >
-                <span className={active ? 'text-ink dark:text-paper' : ''}>{item.icon}</span>
-                {tI18n(`nav.${item.labelKey}`)}
-              </Link>
-            );
-          })}
-
-          {/* Section separator */}
-          <div className="my-3 mx-3 border-t border-paper-line dark:border-paper-dark-line" />
-
-          {/* Secondary nav group */}
-          {navItems.slice(4).map(item => {
-            const active = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                data-tour={item.tourId || undefined}
-                className={`
-                  flex items-center gap-3 px-3 py-2 text-[13px] no-underline transition-colors border-l-2 font-sans
-                  ${active
-                    ? 'border-ink dark:border-paper bg-paper dark:bg-[#111] text-ink dark:text-paper font-semibold'
-                    : 'border-transparent text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper hover:border-ink/20 dark:hover:border-paper/20'
-                  }
-                `}
-              >
-                <span className={active ? 'text-ink dark:text-paper' : ''}>{item.icon}</span>
-                {tI18n(`nav.${item.labelKey}`)}
-              </Link>
+                </button>
+                {/* Collapsible items */}
+                <div
+                  className="overflow-hidden transition-all duration-200 ease-out"
+                  style={{ maxHeight: isCollapsed ? 0 : sectionItems.length * 44 }}
+                >
+                  {sectionItems.map(item => {
+                    const active = location.pathname === item.path;
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        data-tour={item.tourId || undefined}
+                        className={`
+                          flex items-center gap-3 px-3 py-2 text-[13px] no-underline transition-colors border-l-2 font-sans
+                          ${active
+                            ? 'border-ink dark:border-paper bg-paper dark:bg-[#111] text-ink dark:text-paper font-semibold'
+                            : 'border-transparent text-ink-muted dark:text-ink-faint hover:text-ink dark:hover:text-paper hover:border-ink/20 dark:hover:border-paper/20'
+                          }
+                        `}
+                      >
+                        <span className={active ? 'text-ink dark:text-paper' : ''}>{item.icon}</span>
+                        {tI18n(`nav.${item.labelKey}`)}
+                      </Link>
+                    );
+                  })}
+                </div>
+                {/* Separator between sections */}
+                {sIdx < navSections.length - 1 && (
+                  <div className="my-2 mx-3 border-t border-paper-line dark:border-paper-dark-line" />
+                )}
+              </div>
             );
           })}
 

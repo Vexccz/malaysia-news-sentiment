@@ -257,7 +257,7 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
   const getFavicon = (url) => {
     try {
       const domain = new URL(url).hostname;
-      return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+      return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
     } catch { return null; }
   };
 
@@ -372,9 +372,9 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
           whileTap={isMobile ? { scale: 0.995 } : {}}
         >
           <div className="flex gap-4">
-            {/* Thumbnail — left side */}
-            {article.urlToImage && !imageError ? (
-              <div className="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 overflow-hidden">
+            {/* Thumbnail — left side, desktop only */}
+            <div className="hidden sm:block flex-shrink-0 w-20 h-20 overflow-hidden">
+              {article.urlToImage && !imageError ? (
                 <img
                   src={proxyImage(article.urlToImage)}
                   alt=""
@@ -382,22 +382,22 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
                   loading="lazy"
                   onError={() => setImageError(true)}
                 />
-              </div>
-            ) : (
-              <div className="flex-shrink-0 pt-0.5">
-                {article.url && !faviconError ? (
-                  <img
-                    src={getFavicon(article.url)}
-                    alt=""
-                    className="w-7 h-7 flex-shrink-0"
-                    loading="lazy"
-                    onError={() => setFaviconError(true)}
-                  />
-                ) : (
-                  <SourceInitial source={article.source} />
-                )}
-              </div>
-            )}
+              ) : article.url && !faviconError ? (
+                <img
+                  src={getFavicon(article.url)}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  onError={() => setFaviconError(true)}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+                  <span className="text-2xl font-bold text-gray-400 dark:text-gray-500 font-serif">
+                    {(article.source || 'U').charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
+            </div>
 
             {/* Content — right side */}
             <div className="flex-1 min-w-0">

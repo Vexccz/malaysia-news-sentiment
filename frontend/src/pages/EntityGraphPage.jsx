@@ -972,7 +972,7 @@ export default function EntityGraphPage() {
             >
               {/* Close button */}
               <button
-                onClick={() => { setSelectedNode(null); setDetail(null); setFocusedNode(null); }}
+                onClick={() => { setSelectedNode(null); setDetail(null); setFocusedNode(null); setActiveTab('overview'); }}
                 className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
               >
                 <X size={16} />
@@ -984,7 +984,7 @@ export default function EntityGraphPage() {
                 </div>
               ) : detail ? (
                 <div className="space-y-5">
-                  {/* Header */}
+                  {/* Header - always visible */}
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="text-lg font-bold text-gray-900 dark:text-white" style={{ fontFamily: "'Playfair Display', serif" }}>{detail.name}</h3>
@@ -992,144 +992,179 @@ export default function EntityGraphPage() {
                     <span className="inline-block mt-2 text-[11px] font-semibold text-blue-600 bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded capitalize">{detail.category}</span>
                   </div>
 
-                  {/* Mentions count */}
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {detail.totalMentions} <span className="text-xs font-medium text-gray-500">mentions</span>
-                  </div>
-
-                  {/* Sentiment bars */}
-                  <div className="space-y-2">
-                    <div className="text-[11px] font-semibold text-gray-900 dark:text-white">Sentiment Distribution</div>
-                    {Object.entries(detail.sentimentBreakdown || {}).map(([k, v]) => (
-                      <div key={k} className="flex items-center gap-2">
-                        <span className="text-[10px] w-14 text-gray-500 font-medium">{k}</span>
-                        <div className="flex-1 h-2 rounded-full bg-gray-100 dark:bg-white/5 overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${detail.totalMentions ? (v / detail.totalMentions * 100) : 0}%` }}
-                            transition={{ duration: 0.6, ease: 'easeOut' }}
-                            className="h-full rounded-full"
-                            style={{ background: SENTIMENT_COLORS[k] }}
-                          />
-                        </div>
-                        <span className="text-[11px] font-semibold text-gray-900 dark:text-white w-6 text-right">{v}</span>
-                      </div>
+                  {/* Tab bar - thin underline editorial style */}
+                  <div className="flex gap-0 border-b border-[#e5e5e5] dark:border-[#222]">
+                    {['overview', 'timeline', 'connected'].map(tab => (
+                      <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className="relative px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] transition-colors"
+                        style={{
+                          fontFamily: "'Playfair Display', serif",
+                          color: activeTab === tab
+                            ? (isDark ? '#fff' : '#111')
+                            : (isDark ? '#666' : '#999'),
+                          borderBottom: activeTab === tab ? '2px solid #6366f1' : '2px solid transparent',
+                          marginBottom: -1,
+                          background: 'none',
+                          border: 'none',
+                          borderBottomWidth: 2,
+                          borderBottomStyle: 'solid',
+                          borderBottomColor: activeTab === tab ? '#6366f1' : 'transparent',
+                        }}
+                      >
+                        {tab}
+                      </button>
                     ))}
                   </div>
 
-                  {/* Sentiment Evolution Timeline */}
-                  <div>
-                    <div className="text-[11px] font-semibold text-gray-900 dark:text-white mb-2">Sentiment Evolution (30 days)</div>
-                    {timeline.length > 1 ? (
-                      <div style={{ height: 180 }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={timeline} margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#333' : '#e5e7eb'} />
-                            <XAxis 
-                              dataKey="date" 
-                              tick={{ fontSize: 9, fill: isDark ? '#94a3b8' : '#6b7280' }} 
-                              axisLine={false} 
-                              tickLine={false}
-                              tickFormatter={(val) => val.slice(5)}
-                            />
-                            <YAxis 
-                              tick={{ fontSize: 9, fill: isDark ? '#94a3b8' : '#6b7280' }} 
-                              axisLine={false} 
-                              tickLine={false} 
-                              width={24}
-                            />
-                            <Tooltip
-                              contentStyle={{
-                                background: isDark ? '#1e1e1e' : '#fff',
-                                border: `1px solid ${isDark ? '#333' : '#e5e7eb'}`,
-                                borderRadius: 0,
-                                fontSize: 11,
-                                color: isDark ? '#e2e8f0' : '#1e293b',
-                              }}
-                              labelFormatter={(val) => `Date: ${val}`}
-                            />
-                            <Line type="monotone" dataKey="positive" stroke="#10b981" strokeWidth={2} dot={false} name="Positive" />
-                            <Line type="monotone" dataKey="negative" stroke="#ef4444" strokeWidth={2} dot={false} name="Negative" />
-                            <Line type="monotone" dataKey="neutral" stroke="#f59e0b" strokeWidth={2} dot={false} name="Neutral" />
-                          </LineChart>
-                        </ResponsiveContainer>
+                  {/* Tab content */}
+                  {activeTab === 'overview' && (
+                    <div className="space-y-5">
+                      {/* Mentions count */}
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {detail.totalMentions} <span className="text-xs font-medium text-gray-500">mentions</span>
                       </div>
-                    ) : (
-                      <div className="text-[11px] text-gray-500 italic py-4">No timeline data available</div>
-                    )}
-                  </div>
 
-                  {/* Focus Neighborhood Button */}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setFocusedNode(focusedNode === selectedNode ? null : selectedNode)}
-                      className={`flex-1 py-2 text-[11px] font-semibold border transition-colors ${
-                        focusedNode === selectedNode
-                          ? 'bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 border-indigo-200 dark:border-indigo-500/30'
-                          : 'bg-white dark:bg-[#1a1a1a] text-gray-600 dark:text-gray-300 border-[#e5e5e5] dark:border-[#333] hover:border-indigo-300 dark:hover:border-indigo-500/40'
-                      }`}
-                    >
-                      {focusedNode === selectedNode ? '✓ Focused' : 'Focus Neighborhood'}
-                    </button>
-                    {focusedNode && (
-                      <button
-                        onClick={() => setFocusedNode(null)}
-                        className="px-3 py-2 text-[11px] font-semibold text-gray-500 dark:text-gray-400 border border-[#e5e5e5] dark:border-[#333] hover:border-red-300 dark:hover:border-red-500/40 hover:text-red-500 transition-colors"
-                      >
-                        Reset View
-                      </button>
-                    )}
-                  </div>
+                      {/* Sentiment bars */}
+                      <div className="space-y-2">
+                        <div className="text-[11px] font-semibold text-gray-900 dark:text-white">Sentiment Distribution</div>
+                        {Object.entries(detail.sentimentBreakdown || {}).map(([k, v]) => (
+                          <div key={k} className="flex items-center gap-2">
+                            <span className="text-[10px] w-14 text-gray-500 font-medium">{k}</span>
+                            <div className="flex-1 h-2 rounded-full bg-gray-100 dark:bg-white/5 overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${detail.totalMentions ? (v / detail.totalMentions * 100) : 0}%` }}
+                                transition={{ duration: 0.6, ease: 'easeOut' }}
+                                className="h-full rounded-full"
+                                style={{ background: SENTIMENT_COLORS[k] }}
+                              />
+                            </div>
+                            <span className="text-[11px] font-semibold text-gray-900 dark:text-white w-6 text-right">{v}</span>
+                          </div>
+                        ))}
+                      </div>
 
-                  {/* Connected Entities */}
-                  {detail.connectedEntities?.length > 0 && (
+                      {/* Focus Neighborhood Button */}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setFocusedNode(focusedNode === selectedNode ? null : selectedNode)}
+                          className={`flex-1 py-2 text-[11px] font-semibold border transition-colors ${
+                            focusedNode === selectedNode
+                              ? 'bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 border-indigo-200 dark:border-indigo-500/30'
+                              : 'bg-white dark:bg-[#1a1a1a] text-gray-600 dark:text-gray-300 border-[#e5e5e5] dark:border-[#333] hover:border-indigo-300 dark:hover:border-indigo-500/40'
+                          }`}
+                        >
+                          {focusedNode === selectedNode ? '✓ Focused' : 'Focus Neighborhood'}
+                        </button>
+                        {focusedNode && (
+                          <button
+                            onClick={() => setFocusedNode(null)}
+                            className="px-3 py-2 text-[11px] font-semibold text-gray-500 dark:text-gray-400 border border-[#e5e5e5] dark:border-[#333] hover:border-red-300 dark:hover:border-red-500/40 hover:text-red-500 transition-colors"
+                          >
+                            Reset View
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Articles */}
+                      {detail.articles?.length > 0 && (
+                        <div>
+                          <div className="text-[11px] font-semibold text-gray-900 dark:text-white mb-2">Recent Articles</div>
+                          <div className="space-y-2">
+                            {detail.articles.slice(0, 8).map((a, i) => (
+                              <div key={i} className="py-2 border-b border-[#e5e5e5] dark:border-[#222] last:border-0">
+                                <div className="text-[11px] font-medium text-gray-900 dark:text-white leading-snug">{a.title?.slice(0, 60)}{a.title?.length > 60 ? '...' : ''}</div>
+                                <div className="flex gap-2 mt-1">
+                                  <span className="text-[10px] font-semibold" style={{ color: SENTIMENT_COLORS[a.sentiment] }}>{a.sentiment}</span>
+                                  <span className="text-[10px] text-gray-400">{a.source}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Trend */}
+                      {detail.trend?.length > 1 && (
+                        <div>
+                          <div className="text-[11px] font-semibold text-gray-900 dark:text-white mb-2">Trend</div>
+                          <div className="flex items-end gap-0.5 h-12">
+                            {detail.trend.slice(-14).map((d, i) => {
+                              const total = d.Positive + d.Negative + d.Neutral;
+                              return (
+                                <div key={i} className="flex-1 flex flex-col gap-px h-full justify-end">
+                                  <div className="rounded-sm" style={{ background: SENTIMENT_COLORS.Positive, height: `${total ? (d.Positive / total * 100) : 0}%`, minHeight: d.Positive ? 2 : 0 }} />
+                                  <div className="rounded-sm" style={{ background: SENTIMENT_COLORS.Neutral, height: `${total ? (d.Neutral / total * 100) : 0}%`, minHeight: d.Neutral ? 2 : 0 }} />
+                                  <div className="rounded-sm" style={{ background: SENTIMENT_COLORS.Negative, height: `${total ? (d.Negative / total * 100) : 0}%`, minHeight: d.Negative ? 2 : 0 }} />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {activeTab === 'timeline' && (
+                    <div>
+                      <div className="text-[11px] font-semibold text-gray-900 dark:text-white mb-2">Sentiment Evolution (30 days)</div>
+                      {timeline.length > 1 ? (
+                        <div style={{ height: 180 }}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={timeline} margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#333' : '#e5e7eb'} />
+                              <XAxis 
+                                dataKey="date" 
+                                tick={{ fontSize: 9, fill: isDark ? '#94a3b8' : '#6b7280' }} 
+                                axisLine={false} 
+                                tickLine={false}
+                                tickFormatter={(val) => val.slice(5)}
+                              />
+                              <YAxis 
+                                tick={{ fontSize: 9, fill: isDark ? '#94a3b8' : '#6b7280' }} 
+                                axisLine={false} 
+                                tickLine={false} 
+                                width={24}
+                              />
+                              <Tooltip
+                                contentStyle={{
+                                  background: isDark ? '#1e1e1e' : '#fff',
+                                  border: `1px solid ${isDark ? '#333' : '#e5e7eb'}`,
+                                  borderRadius: 0,
+                                  fontSize: 11,
+                                  color: isDark ? '#e2e8f0' : '#1e293b',
+                                }}
+                                labelFormatter={(val) => `Date: ${val}`}
+                              />
+                              <Line type="monotone" dataKey="positive" stroke="#10b981" strokeWidth={2} dot={false} name="Positive" />
+                              <Line type="monotone" dataKey="negative" stroke="#ef4444" strokeWidth={2} dot={false} name="Negative" />
+                              <Line type="monotone" dataKey="neutral" stroke="#f59e0b" strokeWidth={2} dot={false} name="Neutral" />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      ) : (
+                        <div className="text-[11px] text-gray-500 italic py-4">No timeline data available</div>
+                      )}
+                    </div>
+                  )}
+
+                  {activeTab === 'connected' && (
                     <div>
                       <div className="text-[11px] font-semibold text-gray-900 dark:text-white mb-2">Connected Entities</div>
-                      <div className="space-y-1">
-                        {detail.connectedEntities.slice(0, 8).map(c => (
-                          <div key={c.name} className="flex justify-between py-1.5 text-[11px] border-b border-[#e5e5e5] dark:border-[#222] last:border-0">
-                            <span className="text-blue-600 cursor-pointer hover:underline" onClick={() => handleNodeClick(c.name)}>{c.name}</span>
-                            <span className="text-gray-400">{c.coOccurrences}x</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Articles */}
-                  {detail.articles?.length > 0 && (
-                    <div>
-                      <div className="text-[11px] font-semibold text-gray-900 dark:text-white mb-2">Recent Articles</div>
-                      <div className="space-y-2">
-                        {detail.articles.slice(0, 8).map((a, i) => (
-                          <div key={i} className="py-2 border-b border-[#e5e5e5] dark:border-[#222] last:border-0">
-                            <div className="text-[11px] font-medium text-gray-900 dark:text-white leading-snug">{a.title?.slice(0, 60)}{a.title?.length > 60 ? '...' : ''}</div>
-                            <div className="flex gap-2 mt-1">
-                              <span className="text-[10px] font-semibold" style={{ color: SENTIMENT_COLORS[a.sentiment] }}>{a.sentiment}</span>
-                              <span className="text-[10px] text-gray-400">{a.source}</span>
+                      {detail.connectedEntities?.length > 0 ? (
+                        <div className="space-y-1">
+                          {detail.connectedEntities.slice(0, 12).map(c => (
+                            <div key={c.name} className="flex justify-between py-1.5 text-[11px] border-b border-[#e5e5e5] dark:border-[#222] last:border-0">
+                              <span className="text-blue-600 cursor-pointer hover:underline" onClick={() => handleNodeClick(c.name)}>{c.name}</span>
+                              <span className="text-gray-400">{c.coOccurrences}x</span>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Trend */}
-                  {detail.trend?.length > 1 && (
-                    <div>
-                      <div className="text-[11px] font-semibold text-gray-900 dark:text-white mb-2">Trend</div>
-                      <div className="flex items-end gap-0.5 h-12">
-                        {detail.trend.slice(-14).map((d, i) => {
-                          const total = d.Positive + d.Negative + d.Neutral;
-                          return (
-                            <div key={i} className="flex-1 flex flex-col gap-px h-full justify-end">
-                              <div className="rounded-sm" style={{ background: SENTIMENT_COLORS.Positive, height: `${total ? (d.Positive / total * 100) : 0}%`, minHeight: d.Positive ? 2 : 0 }} />
-                              <div className="rounded-sm" style={{ background: SENTIMENT_COLORS.Neutral, height: `${total ? (d.Neutral / total * 100) : 0}%`, minHeight: d.Neutral ? 2 : 0 }} />
-                              <div className="rounded-sm" style={{ background: SENTIMENT_COLORS.Negative, height: `${total ? (d.Negative / total * 100) : 0}%`, minHeight: d.Negative ? 2 : 0 }} />
-                            </div>
-                          );
-                        })}
-                      </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-[11px] text-gray-500 italic py-4">No connected entities</div>
+                      )}
                     </div>
                   )}
                 </div>

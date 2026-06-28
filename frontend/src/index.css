@@ -316,3 +316,71 @@ html.dark.no-transitions * { transition: none !important; }
 .dark .bg-pos-muted { background-color: rgba(74,222,128,0.08); border-color: rgba(74,222,128,0.15); }
 .dark .bg-neg-muted { background-color: rgba(251,113,133,0.08); border-color: rgba(251,113,133,0.15); }
 .dark .bg-neu-muted { background-color: rgba(251,191,36,0.08); border-color: rgba(251,191,36,0.15); }
+
+/* react-grid-layout editorial overrides */
+.react-grid-layout {
+  position: relative;
+  transition: height 200ms ease;
+}
+
+.react-grid-item {
+  transition: all 200ms ease;
+  transition-property: left, top;
+}
+
+.react-grid-item.cssTransforms {
+  transition-property: transform;
+}
+
+.react-grid-item.resizing {
+  z-index: 1;
+  will-change: width, height;
+}
+
+.react-grid-item.react-draggable-dragging {
+  transition: none;
+  z-index: 3;
+  will-change: transform;
+  opacity: 0.9;
+}
+
+.react-grid-item > .react-resizable-handle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+  background: none;
+}
+
+.react-grid-item > .react-resizable-handle::after {
+  content: '';
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid rgba(128, 128, 128, 0.3);
+  border-bottom: 2px solid rgba(128, 128, 128, 0.3);
+}
+
+.react-grid-placeholder {
+  background: #e5e5e5 !important;
+  opacity: 0.3 !important;
+  border-radius: 0 !important;
+  border: 1px dashed #999 !important;
+}
+
+.dark .react-grid-placeholder {
+  background: #333 !important;
+  border-color: #555 !important;
+}
+
+.widget-drag-handle:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.dark .widget-drag-handle:hover {
+  background-color: rgba(255, 255, 255, 0.02);
+}
