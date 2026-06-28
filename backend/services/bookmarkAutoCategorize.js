@@ -49,7 +49,7 @@ async function autoAssignFolder(userId, articleId, UserModel) {
   let folder = user.bookmarkFolders?.find(f => f.name === folderName);
   if (!folder) {
     if (!user.bookmarkFolders) user.bookmarkFolders = [];
-    user.bookmarkFolders.push({ name: folderName, color: '#6B7280' });
+    user.bookmarkFolders.push({ id: folderName.toLowerCase().replace(/\s+/g, '-'), name: folderName, createdAt: new Date().toISOString() });
     folder = user.bookmarkFolders[user.bookmarkFolders.length - 1];
   }
   

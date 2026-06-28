@@ -34,4 +34,32 @@ router.post('/:id/view',      protect, trackNewsView);
 router.post('/:id/vote',      protect, handleSentimentVote);
 router.post('/:id/bookmark',  protect, toggleBookmarkStatus);
 
+
+// Markdown export
+router.get('/:id/markdown', protect, async (req, res) => {
+  const Article = require('../models/Article');
+  try {
+    const article = await Article.findById(req.params.id).lean();
+    if (!article) return res.status(404).json({ error: 'Article not found' });
+    
+    const md = '# ' + article.title + '\n\n' +
+      '**Source:** ' + article.source + ' | **Published:** ' + new Date(article.publishedAt).toLocaleDateString() + '\n' +
+      '**Sentiment:** ' + article.sentiment + ' (' + Math.round((article.confidence || 0) * 100) + '% confidence)\n\n' +
+      '## Summary\n' + (article.description || 'No description.') + '\n\n' +
+      '## Content\n' + (article.content || article.description || 'Full content not available.') + '\n\n' +
+      '## Metadata\n| Field | Value |\n|-------|-------|\n' +
+      '| Topic | ' + (article.topic || 'General') + ' |\n' +
+      '| State | ' + (article.stateLocation || 'N/A') + ' |\n' +
+      '| Views | ' + (article.viewCount || 0) + ' |\n\n' +
+      '## Reader Sentiment\n- Positive: ' + (article.feedback?.Positive || 0) + '\n- Neutral: ' + (article.feedback?.Neutral || 0) + '\n- Negative: ' + (article.feedback?.Negative || 0) + '\n\n' +
+      '---\n*Exported from Malaysia News Sentiment Dashboard*\n';
+    
+    res.setHeader('Content-Type', 'text/markdown');
+    res.setHeader('Content-Disposition', 'attachment; filename="article.md"');
+    res.send(md);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

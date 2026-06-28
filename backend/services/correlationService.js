@@ -1,127 +1,107 @@
 /**
  * Sentiment Correlation Matrix Service
- * Analyzes how entity sentiments move together over time
+ * Uses entityExtraction to find entities in article text
  */
 const Article = require('../models/Article');
+const { extractEntities } = require('./entityExtraction');
 
-async function getCorrelationMatrix(days = 30, minMentions = 5) {
+async function getCorrelationMatrix(days = 30, minMentions = 2) {
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
 
-  // Get all entities mentioned in articles within timeframe
-  const entities = await Article.aggregate([
-    { $match: { publishedAt: { $gte: startDate }, entities: { $exists: true, $ne: [] } } },
-    { $unwind: '$entities' },
-    { $group: { _id: '$entities', count: { $sum: 1 } } },
-    { $match: { count: { $gte: minMentions } } },
-    { $sort: { count: -1 } },
-    { $limit: 30 }, // Top 30 entities
-  ]);
+  const articles = await Article.find({ publishedAt: { $gte: startDate } }).lean();
 
-  const entityNames = entities.map(e => e._id);
-
-  // Get daily sentiment scores per entity
-  const dailySentiments = await Article.aggregate([
-    { 
-      $match: { 
-        publishedAt: { $gte: startDate },
-        entities: { $exists: true, $ne: [] }
-      }
-    },
-    { $unwind: '$entities' },
-    { $match: { entities: { $in: entityNames } } },
-    {
-      $group: {
-        _id: {
-          entity: '$entities',
-          date: { $dateToString: { format: '%Y-%m-%d', date: '$publishedAt' } }
-        },
-        positive: { $sum: { $cond: [{ $eq: ['$sentiment', 'Positive'] }, 1, 0] } },
-        negative: { $sum: { $cond: [{ $eq: ['$sentiment', 'Negative'] }, 1, 0] } },
-        neutral: { $sum: { $cond: [{ $eq: ['$sentiment', 'Neutral'] }, 1, 0] } },
-        total: { $sum: 1 }
-      }
-    },
-    {
-      $project: {
-        _id: 1,
-        score: {
-          $cond: [
-            { $eq: ['$total', 0] },
-            0,
-            { $divide: [{ $subtract: ['$positive', '$negative'] }, '$total'] }
-          ]
-        }
-      }
-    }
-  ]);
-
-  // Build entity -> { date -> score } map
-  const entityScores = {};
-  dailySentiments.forEach(d => {
-    const entity = d._id.entity;
-    const date = d._id.date;
-    if (!entityScores[entity]) entityScores[entity] = {};
-    entityScores[entity][date] = d.score;
+  // Extract entities per article
+  const entityArticleMap = {}; // entity -> [{date, sentiment}]
+  articles.forEach(art => {
+    const text = (art.title || '') + ' ' + (art.description || '');
+    const entities = extractEntities(text);
+    const unique = [...new Set(entities.map(e => e.name))];
+    unique.forEach(name => {
+      if (!entityArticleMap[name]) entityArticleMap[name] = [];
+      const score = art.sentiment === 'Positive' ? 1 : art.sentiment === 'Negative' ? -1 : 0;
+      entityArticleMap[name].push({ date: art.publishedAt, sentiment: score });
+    });
   });
 
-  // Get all dates
-  const allDates = new Set();
-  Object.values(entityScores).forEach(scores => {
-    Object.keys(scores).forEach(date => allDates.add(date));
+  // Filter by minMentions
+  const qualifiedEntities = Object.entries(entityArticleMap)
+    .filter(([_, data]) => data.length >= minMentions)
+    .sort((a, b) => b[1].length - a[1].length)
+    .slice(0, 20)
+    .map(([name]) => name);
+
+  if (qualifiedEntities.length < 2) {
+    return { entities: qualifiedEntities, correlations: [], days, minMentions };
+  }
+
+  // Build daily average sentiment per entity
+  const dailyAvg = {};
+  qualifiedEntities.forEach(name => {
+    const dayMap = {};
+    entityArticleMap[name].forEach(({ date, sentiment }) => {
+      const day = new Date(date).toISOString().slice(0, 10);
+      if (!dayMap[day]) dayMap[day] = [];
+      dayMap[day].push(sentiment);
+    });
+    dailyAvg[name] = {};
+    Object.entries(dayMap).forEach(([day, scores]) => {
+      dailyAvg[name][day] = scores.reduce((a, b) => a + b, 0) / scores.length;
+    });
   });
-  const dates = Array.from(allDates).sort();
 
   // Calculate Pearson correlation between each entity pair
   const correlations = [];
-  for (let i = 0; i < entityNames.length; i++) {
-    for (let j = i; j < entityNames.length; j++) {
-      const e1 = entityNames[i];
-      const e2 = entityNames[j];
+  const allDays = [...new Set(Object.values(dailyAvg).flatMap(d => Object.keys(d)))].sort();
+
+  for (let i = 0; i < qualifiedEntities.length; i++) {
+    for (let j = i + 1; j < qualifiedEntities.length; j++) {
+      const a = qualifiedEntities[i];
+      const b = qualifiedEntities[j];
       
-      const scores1 = [];
-      const scores2 = [];
-      
-      dates.forEach(date => {
-        const s1 = entityScores[e1]?.[date] || 0;
-        const s2 = entityScores[e2]?.[date] || 0;
-        scores1.push(s1);
-        scores2.push(s2);
+      const xVals = [], yVals = [];
+      allDays.forEach(day => {
+        if (dailyAvg[a][day] !== undefined && dailyAvg[b][day] !== undefined) {
+          xVals.push(dailyAvg[a][day]);
+          yVals.push(dailyAvg[b][day]);
+        }
       });
 
-      const corr = pearsonCorrelation(scores1, scores2);
+      if (xVals.length < 3) continue;
+
+      const meanX = xVals.reduce((s, v) => s + v, 0) / xVals.length;
+      const meanY = yVals.reduce((s, v) => s + v, 0) / yVals.length;
       
-      correlations.push({
-        entity1: e1,
-        entity2: e2,
-        correlation: isNaN(corr) ? 0 : parseFloat(corr.toFixed(3)),
-        days: dates.length
-      });
+      let num = 0, denX = 0, denY = 0;
+      for (let k = 0; k < xVals.length; k++) {
+        const dx = xVals[k] - meanX;
+        const dy = yVals[k] - meanY;
+        num += dx * dy;
+        denX += dx * dx;
+        denY += dy * dy;
+      }
+
+      const corr = denX > 0 && denY > 0 ? num / Math.sqrt(denX * denY) : 0;
+      
+      if (Math.abs(corr) > 0.1) {
+        correlations.push({
+          entityA: a,
+          entityB: b,
+          correlation: parseFloat(corr.toFixed(3)),
+          coOccurrence: xVals.length
+        });
+      }
     }
   }
 
+  correlations.sort((a, b) => Math.abs(b.correlation) - Math.abs(a.correlation));
+
   return {
-    entities: entityNames,
-    correlations,
+    entities: qualifiedEntities,
+    correlations: correlations.slice(0, 50),
     days,
     minMentions
   };
-}
-
-function pearsonCorrelation(x, y) {
-  const n = x.length;
-  if (n === 0) return 0;
-
-  const sumX = x.reduce((a, b) => a + b, 0);
-  const sumY = y.reduce((a, b) => a + b, 0);
-  const sumXY = x.reduce((a, b, i) => a + b * y[i], 0);
-  const sumX2 = x.reduce((a, b) => a + b * b, 0);
-  const sumY2 = y.reduce((a, b) => a + b * b, 0);
-
-  const numerator = n * sumXY - sumX * sumY;
-  const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
-
-  return denominator === 0 ? 0 : numerator / denominator;
 }
 
 module.exports = { getCorrelationMatrix };
