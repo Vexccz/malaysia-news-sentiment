@@ -346,7 +346,7 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
     // Fetch similar articles on mount
     const fetchSimilar = async () => {
       try {
-        const res = await fetch(`/api/v1/news/${article._id || article.id}/similar?threshold=0.75&limit=2`, {
+        const res = await fetch(`/api/v1/news/${article._id || article.id}/similar?threshold=0.05&limit=2`, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
         const data = await res.json();

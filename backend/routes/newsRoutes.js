@@ -53,7 +53,7 @@ router.get('/:id/momentum', protect, async (req, res) => {
 router.get('/:id/similar', protect, async (req, res) => {
   const { findSimilarArticles } = require('../services/articleSimilarity');
   try {
-    const threshold = parseFloat(req.query.threshold) || 0.75;
+    const threshold = parseFloat(req.query.threshold) || 0.05;
     const limit = parseInt(req.query.limit) || 3;
     const similar = await findSimilarArticles(req.params.id, threshold, limit);
     res.json({ similar });
