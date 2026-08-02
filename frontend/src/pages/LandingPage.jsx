@@ -746,34 +746,6 @@ const LandingPage = () => {
         </div>
       </AnimatedSection>
 
-      {/* ─── CTA ─── */}
-      <AnimatedSection className="py-12 px-6" variants={scaleIn}>
-        <div className="max-w-3xl mx-auto text-center">
-          <motion.div
-            className="border-2 border-ink dark:border-paper p-12"
-            whileInView={{ opacity: 1, scale: 1 }}
-            initial={{ opacity: 0, scale: 0.95 }}
-            viewport={{ once: true }}
-          >
-            <p className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-4">Get Started</p>
-            <h2 className="font-['Playfair_Display'] text-3xl font-bold text-ink dark:text-paper mb-4">Start analyzing Malaysian news today</h2>
-            <div className="max-w-xs mx-auto flex flex-col items-center gap-1 mb-6">
-              <div className="w-full h-[2px] bg-ink/20 dark:bg-paper/20" />
-              <div className="w-full h-px bg-ink/10 dark:bg-paper/10" />
-            </div>
-            <p className="text-ink-muted dark:text-ink-faint mb-8 font-sans text-sm">Free to get started. No credit card required.</p>
-            <motion.button
-              onClick={() => navigate('/register')}
-              className="px-8 py-3.5 text-sm font-semibold tracking-wider uppercase text-paper bg-ink dark:bg-paper dark:text-ink hover:bg-accent dark:hover:bg-accent dark:hover:text-paper transition-colors"
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-            >
-              Get Started Free <ArrowRight className="inline w-4 h-4 ml-1" />
-            </motion.button>
-          </motion.div>
-        </div>
-      </AnimatedSection>
-
       <Footer />
       </div>{/* end relative z-10 */}
 
