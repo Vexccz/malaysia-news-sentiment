@@ -27,6 +27,26 @@ const sourceStories = [
   { source: 'MALAYSIAKINI', tone: 'NEGATIVE', score: '−41', headline: 'Fresh concerns emerge over economic policy impact', mark: 'concerns', color: '#c72f35' },
 ];
 
+const tickerItems = [
+  ['RINGGIT', '+32', 'up'], ['COST OF LIVING', '−21', 'down'],
+  ['AI MALAYSIA', '+46', 'up'], ['PUBLIC TRANSPORT', '+14', 'up'],
+  ['ECONOMY', '+18', 'up'], ['POLICY', '−06', 'down'],
+];
+
+const SignalTicker = () => (
+  <div className="relative overflow-hidden border-y border-ink/15 dark:border-paper/15 bg-paper-card dark:bg-paper-dark-card" aria-label="Live sentiment signals">
+    <div className="absolute left-0 inset-y-0 z-10 flex items-center px-4 sm:px-6 bg-accent text-white text-[9px] font-bold tracking-[.2em]">LIVE</div>
+    <Motion.div className="flex w-max py-3 pl-24" animate={{ x: ['0%', '-50%'] }} transition={{ duration: 28, repeat: Infinity, ease: 'linear' }}>
+      {[...tickerItems, ...tickerItems].map(([topic, score, direction], i) => (
+        <span key={`${topic}-${i}`} className="flex items-center gap-3 px-6 sm:px-10 border-r border-ink/15 dark:border-paper/15 text-[10px] tracking-[.16em] whitespace-nowrap">
+          <span className="font-bold">{topic}</span>
+          <span className={direction === 'up' ? 'text-[#16855b]' : 'text-accent'}>{score} {direction === 'up' ? '↑' : '↓'}</span>
+        </span>
+      ))}
+    </Motion.div>
+  </div>
+);
+
 const sectionHead = (eyebrow, title, copy) => (
   <div className="mb-10 md:mb-14">
     <div className="flex items-center gap-3 mb-4">
@@ -48,7 +68,7 @@ const Sparkline = ({ values, positive = true, className = '' }) => {
   const points = values.map((v, i) => `${(i / (values.length - 1)) * 100},${36 - ((v - Math.min(...values)) / Math.max(1, Math.max(...values) - Math.min(...values))) * 30}`).join(' ');
   return (
     <svg viewBox="0 0 100 40" className={className} preserveAspectRatio="none" aria-hidden="true">
-      <polyline points={points} fill="none" stroke={positive ? '#16855b' : '#c72f35'} strokeWidth="2" vectorEffect="non-scaling-stroke" />
+      <Motion.polyline points={points} fill="none" stroke={positive ? '#16855b' : '#c72f35'} strokeWidth="2" vectorEffect="non-scaling-stroke" initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 1 }} transition={{ duration: 1.2, ease: EASE }} />
     </svg>
   );
 };
@@ -83,7 +103,8 @@ const MalaysiaPulse = ({ articleCount }) => {
   const [active, setActive] = useState(0);
   useEffect(() => { const timer = setInterval(() => setActive(v => (v + 1) % pulseTopics.length), 2600); return () => clearInterval(timer); }, []);
   return (
-    <Motion.div id="pulse" variants={fadeUp} className="relative text-left border border-ink/20 dark:border-paper/20 bg-paper-card dark:bg-paper-dark-card shadow-[10px_10px_0_rgba(199,47,53,.12)] overflow-hidden">
+    <Motion.div id="pulse" variants={fadeUp} whileHover={{ y: -4 }} transition={{ duration: .35, ease: EASE }} className="relative text-left border border-ink/20 dark:border-paper/20 bg-paper-card dark:bg-paper-dark-card shadow-[10px_10px_0_rgba(199,47,53,.12)] overflow-hidden">
+      <Motion.div className="absolute inset-x-0 h-16 pointer-events-none z-10 bg-gradient-to-b from-transparent via-accent/[.08] to-transparent" animate={{ y: [-70, 470] }} transition={{ duration: 4.5, repeat: Infinity, ease: 'linear', repeatDelay: 1.2 }} />
       <div className="flex items-center justify-between px-5 py-3 border-b border-ink/15 dark:border-paper/15 bg-ink/[.025] dark:bg-paper/[.025]">
         <div className="flex items-center gap-2"><Motion.span animate={{ opacity: [1,.3,1] }} transition={{ repeat: Infinity, duration: 1.4 }} className="w-2 h-2 rounded-full bg-accent"/><span className="text-[10px] font-bold tracking-[.22em]">MALAYSIA PULSE · LIVE PREVIEW</span></div>
         <span className="text-[9px] text-ink-faint uppercase tracking-widest">KUL · MYT</span>
@@ -99,9 +120,10 @@ const MalaysiaPulse = ({ articleCount }) => {
         <div>
           <div className="px-5 py-3 border-b border-ink/10 dark:border-paper/10 flex justify-between text-[9px] uppercase tracking-[.18em] text-ink-faint"><span>Trending now</span><span>Signal</span></div>
           {pulseTopics.map((item, i) => (
-            <button key={item.topic} onClick={() => setActive(i)} className={`w-full grid grid-cols-[30px_1fr_70px_50px] items-center gap-2 px-5 py-3.5 text-left border-b border-ink/[.07] dark:border-paper/[.07] transition-colors ${active === i ? 'bg-accent/[.06]' : 'hover:bg-ink/[.025] dark:hover:bg-paper/[.025]'}`}>
+            <Motion.button layout key={item.topic} onClick={() => setActive(i)} animate={{ x: active === i ? 4 : 0 }} className={`relative w-full grid grid-cols-[30px_1fr_70px_50px] items-center gap-2 px-5 py-3.5 text-left border-b border-ink/[.07] dark:border-paper/[.07] transition-colors ${active === i ? 'bg-accent/[.06]' : 'hover:bg-ink/[.025] dark:hover:bg-paper/[.025]'}`}>
+              {active === i && <Motion.span layoutId="pulse-active" className="absolute left-0 inset-y-0 w-0.5 bg-accent" />}
               <span className="font-display text-xs text-ink-faint">{String(i+1).padStart(2,'0')}</span><span className="text-sm font-semibold">{item.topic}</span><Sparkline values={item.spark} positive={item.score > 0} className="w-full h-7"/><span className={`text-right text-xs font-bold ${item.score > 0 ? 'text-[#16855b]' : 'text-accent'}`}>{item.score > 0 ? '+' : ''}{item.score}</span>
-            </button>
+            </Motion.button>
           ))}
           <div className="px-5 py-3 text-[9px] uppercase tracking-widest text-ink-faint flex justify-between"><span>{articleCount.toLocaleString()} indexed articles</span><span>15 sources</span></div>
         </div>
@@ -173,7 +195,9 @@ const LandingPage = () => {
     <Navbar isDark={isDark} toggleTheme={()=>setTheme(isDark?'light':'dark')} navigate={navigate}/>
 
     <header className="relative pt-28 sm:pt-32 pb-20 px-5 sm:px-6 overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none opacity-[.045] dark:opacity-[.07]" style={{backgroundImage:'linear-gradient(#000 1px,transparent 1px),linear-gradient(90deg,#000 1px,transparent 1px)',backgroundSize:'38px 38px'}}/>
+      <Motion.div className="absolute -top-48 -left-48 w-[34rem] h-[34rem] rounded-full bg-accent/[.08] blur-3xl pointer-events-none" animate={{ x: [0, 90, 0], y: [0, 55, 0], scale: [1, 1.16, 1] }} transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut' }} />
+      <Motion.div className="absolute -bottom-64 right-[-8rem] w-[38rem] h-[38rem] rounded-full bg-[#16855b]/[.06] blur-3xl pointer-events-none" animate={{ x: [0, -70, 0], y: [0, -40, 0], scale: [1.1, .94, 1.1] }} transition={{ duration: 17, repeat: Infinity, ease: 'easeInOut' }} />
+      <Motion.div className="absolute inset-0 pointer-events-none opacity-[.045] dark:opacity-[.07]" animate={{ backgroundPosition: ['0px 0px', '38px 38px'] }} transition={{ duration: 9, repeat: Infinity, ease: 'linear' }} style={{backgroundImage:'linear-gradient(#000 1px,transparent 1px),linear-gradient(90deg,#000 1px,transparent 1px)',backgroundSize:'38px 38px'}}/>
       <Motion.div initial="hidden" animate="visible" variants={stagger} className="relative max-w-7xl mx-auto">
         <Motion.div variants={fadeUp} className="flex items-center justify-between border-y border-ink/20 dark:border-paper/20 py-2 mb-10 text-[9px] sm:text-[10px] tracking-[.2em] text-ink-muted dark:text-ink-faint"><span>VOL. I · NO. 01</span><span>KUALA LUMPUR · MALAYSIA</span><span className="hidden sm:block">AI MEDIA INTELLIGENCE</span></Motion.div>
         <div className="grid lg:grid-cols-[.86fr_1.14fr] gap-12 lg:gap-16 items-center">
@@ -181,7 +205,7 @@ const LandingPage = () => {
             <Motion.p variants={fadeUp} className="text-[10px] uppercase tracking-[.24em] text-accent font-bold mb-5">The national narrative, decoded</Motion.p>
             <Motion.h1 variants={fadeUp} className="font-display text-5xl sm:text-6xl xl:text-7xl font-bold leading-[.98] tracking-tight">Know what Malaysia is <i className="text-accent">feeling.</i><br/>Before it shifts.</Motion.h1>
             <Motion.p variants={fadeUp} className="mt-7 max-w-xl text-base sm:text-lg leading-8 text-ink-muted dark:text-ink-faint font-serif">Real-time AI intelligence across Malaysian news—sentiment, source framing, entities and emerging narratives in one editorial command centre.</Motion.p>
-            <Motion.div variants={fadeUp} className="mt-8 flex flex-col sm:flex-row gap-3"><button onClick={()=>navigate('/dashboard')} className="px-6 py-3.5 bg-ink dark:bg-paper text-paper dark:text-ink text-xs font-bold tracking-[.14em] uppercase hover:bg-accent dark:hover:bg-accent dark:hover:text-paper">Explore live dashboard <ArrowRight className="inline w-4 h-4 ml-1"/></button><a href="#analyzer" className="px-6 py-3.5 border-2 border-ink dark:border-paper text-xs font-bold tracking-[.14em] uppercase text-center hover:border-accent hover:text-accent">Analyze a headline <Sparkles className="inline w-4 h-4 ml-1"/></a></Motion.div>
+            <Motion.div variants={fadeUp} className="mt-8 flex flex-col sm:flex-row gap-3"><Motion.button whileHover="hover" whileTap={{scale:.97}} onClick={()=>navigate('/dashboard')} className="group whitespace-nowrap px-5 py-3.5 bg-ink dark:bg-paper text-paper dark:text-ink text-[11px] font-bold tracking-[.1em] uppercase hover:bg-accent dark:hover:bg-accent dark:hover:text-paper">Explore live dashboard <Motion.span variants={{hover:{x:5}}} className="inline-block"><ArrowRight className="inline w-4 h-4 ml-1"/></Motion.span></Motion.button><Motion.a whileHover={{y:-2}} href="#analyzer" className="whitespace-nowrap px-5 py-3.5 border-2 border-ink dark:border-paper text-[11px] font-bold tracking-[.1em] uppercase text-center hover:border-accent hover:text-accent">Analyze a headline <Motion.span animate={{rotate:[0,8,-8,0]}} transition={{duration:2.5,repeat:Infinity,repeatDelay:1.5}} className="inline-block"><Sparkles className="inline w-4 h-4 ml-1"/></Motion.span></Motion.a></Motion.div>
             <Motion.p variants={fadeUp} className="mt-4 text-[10px] uppercase tracking-widest text-ink-faint"><Check className="inline w-3 h-3 text-[#16855b] mr-1"/> No account required to explore</Motion.p>
           </div>
           <MalaysiaPulse articleCount={articleCount}/>
@@ -189,15 +213,17 @@ const LandingPage = () => {
       </Motion.div>
     </header>
 
+    <SignalTicker />
+
     <section className="border-y border-ink/15 dark:border-paper/15 bg-ink dark:bg-paper text-paper dark:text-ink"><div className="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 divide-x divide-paper/15 dark:divide-ink/15">
-      {[[articleCount,'ARTICLES INDEXED'],[15,'NEWS SOURCES'],[92,'MODEL ACCURACY'],['24/7','MEDIA MONITORING']].map(([n,l],i)=><div key={l} className="p-5 sm:p-7"><p className="font-display text-2xl sm:text-4xl font-bold">{typeof n==='number'?n.toLocaleString():n}{i===0?'+':i===2?'%':''}</p><p className="text-[8px] sm:text-[9px] tracking-[.18em] opacity-60 mt-1">{l}</p>{i===0&&<p className="text-[8px] mt-2 text-[#75d6ad]">● {statsLive?'LIVE DATABASE':'VERIFIED BASELINE'}</p>}</div>)}
+      {[[articleCount,'ARTICLES INDEXED'],[15,'NEWS SOURCES'],[92,'MODEL ACCURACY'],['24/7','MEDIA MONITORING']].map(([n,l],i)=><Motion.div whileHover={{y:-4,backgroundColor:'rgba(199,47,53,.12)'}} transition={{duration:.25}} key={l} className="p-5 sm:p-7"><p className="font-display text-2xl sm:text-4xl font-bold">{typeof n==='number'?n.toLocaleString():n}{i===0?'+':i===2?'%':''}</p><p className="text-[8px] sm:text-[9px] tracking-[.18em] opacity-60 mt-1">{l}</p>{i===0&&<p className="text-[8px] mt-2 text-[#75d6ad]">● {statsLive?'LIVE DATABASE':'VERIFIED BASELINE'}</p>}</Motion.div>)}
     </div></section>
 
     <AnimatedSection id="analyzer" className="max-w-7xl mx-auto px-5 sm:px-6 py-20 sm:py-28"><Motion.div variants={fadeUp}>{sectionHead('01 / Try the intelligence','Put any headline under the lens.','Test how language changes a story’s emotional signal. The full dashboard adds transformer analysis, summaries and entity context.')}</Motion.div><Motion.div variants={fadeUp}><HeadlineAnalyzer/></Motion.div></AnimatedSection>
 
-    <AnimatedSection id="narratives" className="border-y border-ink/15 dark:border-paper/15 py-20 sm:py-28 px-5 sm:px-6 bg-ink/[.025] dark:bg-paper/[.025]"><div className="max-w-7xl mx-auto"><Motion.div variants={fadeUp}>{sectionHead('02 / Narrative comparison','One story. Three narratives.','Sentiment is not only what happened—it is how each newsroom frames what happened.')}</Motion.div><div className="grid lg:grid-cols-3 border-t border-l border-ink/20 dark:border-paper/20">{sourceStories.map((s)=><Motion.article variants={fadeUp} key={s.source} className="p-6 sm:p-8 min-h-72 border-r border-b border-ink/20 dark:border-paper/20 group hover:bg-paper dark:hover:bg-paper-dark transition-colors"><div className="flex justify-between items-center"><span className="text-[10px] font-bold tracking-[.2em]">{s.source}</span><span className="text-[10px] font-bold" style={{color:s.color}}>{s.score} · {s.tone}</span></div><p className="font-display text-2xl sm:text-3xl font-bold leading-tight mt-12">{s.headline.split(new RegExp(`(${s.mark})`,'i')).map((part,k)=>part.toLowerCase()===s.mark.toLowerCase()?<mark key={k} className="bg-accent/15 text-accent px-1">{part}</mark>:part)}</p><div className="mt-10 flex items-center gap-2 text-[9px] uppercase tracking-widest text-ink-faint"><CircleDot className="w-3 h-3"/> Framing cue detected</div></Motion.article>)}</div><Motion.div variants={fadeUp} className="mt-5 text-xs text-ink-faint flex items-center gap-2"><Brain className="w-4 h-4 text-accent"/> Same event. Different lexical choices → different audience perception.</Motion.div></div></AnimatedSection>
+    <AnimatedSection id="narratives" className="border-y border-ink/15 dark:border-paper/15 py-20 sm:py-28 px-5 sm:px-6 bg-ink/[.025] dark:bg-paper/[.025]"><div className="max-w-7xl mx-auto"><Motion.div variants={fadeUp}>{sectionHead('02 / Narrative comparison','One story. Three narratives.','Sentiment is not only what happened—it is how each newsroom frames what happened.')}</Motion.div><div className="grid lg:grid-cols-3 border-t border-l border-ink/20 dark:border-paper/20">{sourceStories.map((s)=><Motion.article variants={fadeUp} whileHover={{y:-7,boxShadow:'0 14px 0 rgba(199,47,53,.10)'}} transition={{duration:.3,ease:EASE}} key={s.source} className="p-6 sm:p-8 min-h-72 border-r border-b border-ink/20 dark:border-paper/20 group hover:bg-paper dark:hover:bg-paper-dark transition-colors"><div className="flex justify-between items-center"><span className="text-[10px] font-bold tracking-[.2em]">{s.source}</span><span className="text-[10px] font-bold" style={{color:s.color}}>{s.score} · {s.tone}</span></div><p className="font-display text-2xl sm:text-3xl font-bold leading-tight mt-12">{s.headline.split(new RegExp(`(${s.mark})`,'i')).map((part,k)=>part.toLowerCase()===s.mark.toLowerCase()?<Motion.mark key={k} initial={{opacity:.2}} whileInView={{opacity:1}} transition={{duration:.7}} className="px-1" style={{color:s.color,backgroundColor:`${s.color}20`}}>{part}</Motion.mark>:part)}</p><div className="mt-10 flex items-center gap-2 text-[9px] uppercase tracking-widest text-ink-faint"><CircleDot className="w-3 h-3"/> Framing cue detected</div></Motion.article>)}</div><Motion.div variants={fadeUp} className="mt-5 text-xs text-ink-faint flex items-center gap-2"><Brain className="w-4 h-4 text-accent"/> Same event. Different lexical choices → different audience perception.</Motion.div></div></AnimatedSection>
 
-    <AnimatedSection id="features" className="max-w-7xl mx-auto px-5 sm:px-6 py-20 sm:py-28"><Motion.div variants={fadeUp}>{sectionHead('03 / Intelligence modules','Not feature cards. Working instruments.','Every module surfaces a different layer of Malaysia’s media narrative.')}</Motion.div><div className="grid sm:grid-cols-2 lg:grid-cols-3 border-t border-l border-ink/15 dark:border-paper/15">{features.map(([Icon,title,desc],i)=><Motion.div variants={fadeUp} key={title} className="group border-r border-b border-ink/15 dark:border-paper/15 p-6 sm:p-7 hover:bg-ink/[.025] dark:hover:bg-paper/[.025]"><div className="h-24 mb-6 p-4 bg-ink/[.025] dark:bg-paper/[.04] overflow-hidden"><FeaturePreview type={i}/></div><div className="flex items-center justify-between"><span className="text-[9px] text-accent font-bold tracking-widest">0{i+1}</span>{React.createElement(Icon, { className: 'w-5 h-5 text-accent', strokeWidth: 1.5 })}</div><h3 className="font-display text-xl font-bold mt-3">{title}</h3><p className="text-sm leading-6 text-ink-muted dark:text-ink-faint mt-2">{desc}</p></Motion.div>)}</div></AnimatedSection>
+    <AnimatedSection id="features" className="max-w-7xl mx-auto px-5 sm:px-6 py-20 sm:py-28"><Motion.div variants={fadeUp}>{sectionHead('03 / Intelligence modules','Not feature cards. Working instruments.','Every module surfaces a different layer of Malaysia’s media narrative.')}</Motion.div><div className="grid sm:grid-cols-2 lg:grid-cols-3 border-t border-l border-ink/15 dark:border-paper/15">{features.map(([Icon,title,desc],i)=><Motion.div variants={fadeUp} whileHover={{y:-6,scale:1.012}} transition={{duration:.28,ease:EASE}} key={title} className="group border-r border-b border-ink/15 dark:border-paper/15 p-6 sm:p-7 hover:bg-ink/[.025] dark:hover:bg-paper/[.025]"><Motion.div whileHover={{scale:1.035}} className="h-24 mb-6 p-4 bg-ink/[.025] dark:bg-paper/[.04] overflow-hidden"><FeaturePreview type={i}/></Motion.div><div className="flex items-center justify-between"><span className="text-[9px] text-accent font-bold tracking-widest">0{i+1}</span>{React.createElement(Icon, { className: 'w-5 h-5 text-accent transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110', strokeWidth: 1.5 })}</div><h3 className="font-display text-xl font-bold mt-3">{title}</h3><p className="text-sm leading-6 text-ink-muted dark:text-ink-faint mt-2">{desc}</p></Motion.div>)}</div></AnimatedSection>
 
     <AnimatedSection className="border-y border-ink/15 dark:border-paper/15 py-20 sm:py-28 px-5 sm:px-6"><div className="max-w-7xl mx-auto"><Motion.div variants={fadeUp}>{sectionHead('04 / Intelligence pipeline','From news cycle to decision signal.','A transparent path from multi-source ingestion to evidence you can inspect and export.')}</Motion.div><div className="grid md:grid-cols-4">{[[Globe2,'Ingest','Malaysian publishers'],[Brain,'Understand','Tone + entities'],[LineChart,'Compare','Trends + framing'],[FileDown,'Act','Briefs + reports']].map(([Icon,t,d],i)=><Motion.div variants={fadeUp} key={t} className="relative border border-ink/15 dark:border-paper/15 p-7 md:-ml-px first:ml-0"><span className="font-display text-5xl text-ink/[.07] dark:text-paper/[.07] font-bold">0{i+1}</span>{React.createElement(Icon, { className: 'w-6 h-6 text-accent mt-5' })}<h3 className="font-display text-xl font-bold mt-4">{t}</h3><p className="text-xs text-ink-faint mt-2 uppercase tracking-wider">{d}</p>{i<3&&<ChevronRight className="hidden md:block absolute -right-3 top-1/2 z-10 w-6 h-6 p-1 bg-paper dark:bg-paper-dark border border-ink/15 dark:border-paper/15 text-accent"/>}</Motion.div>)}</div></div></AnimatedSection>
 
