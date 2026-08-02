@@ -75,7 +75,7 @@ const extractEntities = (text, typeFilter) => {
  * GET /api/entities/graph?query=&timeframe=24h|7d|30d&type=politicians|parties|organizations|locations
  */
 const getEntityGraph = async (req, res) => {
-  const customEnts = customEnts;
+  const customEnts = await getCustomEntities();
   try {
     const { query, timeframe, type } = req.query;
     const userId = req.user?.id;
@@ -219,7 +219,7 @@ const searchEntities = async (req, res) => {
  * GET /api/entities/:name
  */
 const getEntityDetail = async (req, res) => {
-  const customEnts = customEnts;
+  const customEnts = await getCustomEntities();
   try {
     const { name } = req.params;
     const userId = req.user?.id;
@@ -296,7 +296,7 @@ const getEntityDetail = async (req, res) => {
  * Used by the Dashboard ticker (O).
  */
 const getTrendingEntities = async (req, res) => {
-  const customEnts = customEnts;
+  const customEnts = await getCustomEntities();
   try {
     const hours = Math.min(parseInt(req.query.hours) || 24, 168);
     const limit = Math.min(parseInt(req.query.limit) || 10, 30);
