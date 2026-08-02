@@ -1,784 +1,211 @@
-import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { motion, useInView, useScroll, useTransform, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useScroll, useTransform } from 'framer-motion';
+const Motion = motion;
+import {
+  ArrowRight, BarChart3, Brain, Check, ChevronRight, CircleDot,
+  FileDown, Globe2, LineChart, Menu, Moon, Network, Newspaper,
+  Play, Search, ShieldCheck, Sparkles, Sun, TrendingDown, TrendingUp, X, Zap,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import {
-  BarChart3, Network, TrendingUp, ShieldCheck, Brain, FileDown,
-  Search, Zap, LineChart, Sun, Moon, ArrowRight, Play, Newspaper,
-  ChevronRight, Star, Globe, Clock, X, Plus, Check
-} from 'lucide-react';
 
-// ── Animation Variants ──
-const fadeInUp = {
-  hidden: { opacity: 0, y: 40 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] } },
-};
-const staggerContainer = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.15, delayChildren: 0.1 } },
-};
-const staggerItem = {
-  hidden: { opacity: 0, y: 28 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } },
-};
-const scaleIn = {
-  hidden: { opacity: 0, scale: 0.92 },
-  visible: { opacity: 1, scale: 1, transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] } },
-};
+const EASE = [0.16, 1, 0.3, 1];
+const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0, transition: { duration: 0.65, ease: EASE } } };
+const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.1 } } };
 
-// ── Live Sentiment Demo (Editorial Style) ──
-const LiveSentimentDemo = () => {
-  const headlines = [
-    { text: "Malaysia's GDP grows 5.2% in Q1 2026", sentiment: 'Positive', score: 0.87, color: '#22c55e' },
-    { text: "Ringgit weakens against USD amid global uncertainty", sentiment: 'Negative', score: 0.72, color: '#ef4444' },
-    { text: "New MRT line construction on schedule", sentiment: 'Neutral', score: 0.51, color: '#f59e0b' },
-    { text: "Tech sector sees record foreign investment", sentiment: 'Positive', score: 0.91, color: '#22c55e' },
-  ];
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [phase, setPhase] = useState('typing');
-  const [displayText, setDisplayText] = useState('');
+const pulseTopics = [
+  { topic: 'Ringgit', score: 32, direction: 'up', spark: [24, 31, 28, 38, 42, 48, 56] },
+  { topic: 'Cost of Living', score: -21, direction: 'down', spark: [55, 48, 51, 39, 33, 36, 27] },
+  { topic: 'AI Malaysia', score: 46, direction: 'up', spark: [18, 24, 31, 29, 44, 52, 68] },
+  { topic: 'Public Transport', score: 14, direction: 'up', spark: [31, 35, 32, 39, 42, 46, 49] },
+];
 
-  useEffect(() => {
-    const headline = headlines[currentIndex];
-    let timeout;
+const sourceStories = [
+  { source: 'BERNAMA', tone: 'POSITIVE', score: '+72', headline: 'New measures strengthen Malaysia’s economic outlook', mark: 'strengthen', color: '#16855b' },
+  { source: 'THE STAR', tone: 'NEUTRAL', score: '+08', headline: 'Government announces revised economic measures', mark: 'revised', color: '#a36b13' },
+  { source: 'MALAYSIAKINI', tone: 'NEGATIVE', score: '−41', headline: 'Fresh concerns emerge over economic policy impact', mark: 'concerns', color: '#c72f35' },
+];
 
-    if (phase === 'typing') {
-      if (displayText.length < headline.text.length) {
-        timeout = setTimeout(() => {
-          setDisplayText(headline.text.substring(0, displayText.length + 1));
-        }, 30);
-      } else {
-        timeout = setTimeout(() => setPhase('analyzing'), 500);
-      }
-    } else if (phase === 'analyzing') {
-      timeout = setTimeout(() => setPhase('result'), 1500);
-    } else if (phase === 'result') {
-      timeout = setTimeout(() => {
-        setPhase('typing');
-        setDisplayText('');
-        setCurrentIndex((prev) => (prev + 1) % headlines.length);
-      }, 3000);
-    }
-
-    return () => clearTimeout(timeout);
-  }, [phase, displayText, currentIndex]);
-
-  const headline = headlines[currentIndex];
-
-  return (
-    <motion.div
-      className="mt-12 max-w-xl mx-auto bg-paper dark:bg-paper-dark border border-ink/10 dark:border-paper/10 p-6"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 1.2, duration: 0.8 }}
-    >
-      <div className="flex items-center gap-2 mb-3">
-        <motion.div
-          className="w-2 h-2 rounded-full bg-green-400"
-          animate={{ opacity: [1, 0.3, 1] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-        />
-        <span className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">Live Analysis</span>
-      </div>
-      <div className="min-h-[60px]">
-        <p className="text-sm text-ink dark:text-paper font-medium">
-          {displayText}
-          <motion.span
-            className="inline-block w-0.5 h-4 bg-accent ml-0.5 align-middle"
-            animate={{ opacity: [1, 0] }}
-            transition={{ duration: 0.5, repeat: Infinity }}
-          />
-        </p>
-      </div>
-      <AnimatePresence mode="wait">
-        {phase === 'analyzing' && (
-          <motion.div
-            key="analyzing"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mt-3 flex items-center gap-2"
-          >
-            <motion.div
-              className="w-4 h-4 border-2 border-accent border-t-transparent"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
-            />
-            <span className="text-xs text-accent font-medium font-sans">Analyzing sentiment...</span>
-          </motion.div>
-        )}
-        {phase === 'result' && (
-          <motion.div
-            key="result"
-            initial={{ opacity: 0, y: 10, height: 0 }}
-            animate={{ opacity: 1, y: 0, height: 'auto' }}
-            exit={{ opacity: 0, y: -10, height: 0 }}
-            className="mt-3 flex items-center gap-3"
-          >
-            <motion.span
-              className="px-3 py-1 text-xs font-bold text-white font-sans"
-              style={{ backgroundColor: headline.color }}
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-            >
-              {headline.sentiment}
-            </motion.span>
-            <motion.span
-              className="text-sm font-bold text-ink dark:text-paper font-sans"
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              Score: {headline.score.toFixed(2)}
-            </motion.span>
-            <motion.div
-              className="flex-1 h-2 bg-ink/5 dark:bg-paper/10 overflow-hidden"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-            >
-              <motion.div
-                className="h-full"
-                style={{ backgroundColor: headline.color }}
-                initial={{ width: 0 }}
-                animate={{ width: `${headline.score * 100}%` }}
-                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.4 }}
-              />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
-};
-
-// ── Animated Counter ──
-const AnimatedCounter = ({ target, suffix = '', prefix = '' }) => {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: '-50px' });
-  const [count, setCount] = useState(0);
-  const [done, setDone] = useState(false);
-
-  useEffect(() => {
-    if (!isInView) return;
-    const duration = 2000, steps = 60, interval = duration / steps;
-    let step = 0;
-    const timer = setInterval(() => {
-      step++;
-      const progress = Math.min(step / steps, 1);
-      const eased = 1 - Math.pow(1 - progress, 4);
-      setCount(Math.round(target * eased));
-      if (step >= steps) {
-        clearInterval(timer);
-        setDone(true);
-      }
-    }, interval);
-    return () => clearInterval(timer);
-  }, [isInView, target]);
-
-  return (
-    <motion.span
-      ref={ref}
-      className="font-['Playfair_Display'] text-4xl font-bold text-ink dark:text-paper"
-      animate={done ? { scale: [1, 1.05, 1] } : {}}
-      transition={{ duration: 0.4, ease: 'easeOut' }}
-    >
-      {prefix}{count.toLocaleString()}{suffix}
-    </motion.span>
-  );
-};
-
-// ── Animated Section ──
-const AnimatedSection = ({ children, className, id, variants = fadeInUp }) => {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: '-80px' });
-  return (
-    <motion.section ref={ref} id={id} className={className} initial="hidden" animate={isInView ? 'visible' : 'hidden'} variants={variants}>
-      {children}
-    </motion.section>
-  );
-};
-
-// ── FAQ Item ──
-const FAQItem = ({ question, answer, index }) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <motion.div
-      className={`border overflow-hidden transition-colors ${isOpen ? 'border-accent border-l-4' : 'border-ink/10 dark:border-paper/10'}`}
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ delay: index * 0.1 }}
-    >
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-6 py-4 cursor-pointer text-sm font-medium text-ink dark:text-paper hover:bg-ink/5 dark:hover:bg-paper/5 transition-colors text-left"
-      >
-        {question}
-        <motion.span
-          className="text-accent flex-shrink-0 ml-4"
-          animate={{ rotate: isOpen ? 45 : 0 }}
-          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <Plus className="w-4 h-4" />
-        </motion.span>
-      </button>
-      <AnimatePresence initial={false}>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="overflow-hidden"
-          >
-            <p className="px-6 pb-4 text-sm text-ink-muted dark:text-ink-faint leading-relaxed font-sans">{answer}</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
-};
-
-// ── Navbar ──
-const Navbar = ({ isDark, toggleTheme, navigate }) => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  return (
-    <>
-      <motion.nav
-        className="fixed top-0 left-0 right-0 z-50 bg-paper/90 dark:bg-paper-dark/90 border-b-2 border-ink dark:border-paper"
-        initial={{ y: -80 }} animate={{ y: 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-      >
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-baseline gap-2 no-underline">
-            <span className="font-display font-bold text-lg text-ink dark:text-paper leading-none">MY News <span className="italic text-accent">Sentiment</span></span>
-            <span className="hidden sm:inline text-[10px] tracking-[0.18em] text-ink-muted dark:text-ink-faint uppercase">· Est. 2026</span>
-          </Link>
-          <div className="hidden md:flex items-center gap-8 text-[13px] tracking-wider uppercase text-ink-muted dark:text-ink-faint">
-            <a href="#features" className="hover:text-accent transition-colors">Features</a>
-            <Link to="/api-docs" className="hover:text-accent transition-colors">Docs</Link>
-            <Link to="/pricing" className="hover:text-accent transition-colors">Pricing</Link>
-            <Link to="/about" className="hover:text-accent transition-colors">About</Link>
-            <Link to="/contact" className="hover:text-accent transition-colors">Contact</Link>
-          </div>
-          <div className="flex items-center gap-3">
-            <button onClick={toggleTheme} className="p-2 rounded-sm hover:bg-ink/5 dark:hover:bg-paper/10 transition-colors">
-              {isDark ? <Sun className="w-4 h-4 text-ink-faint" /> : <Moon className="w-4 h-4 text-ink-muted" />}
-            </button>
-            <Link to="/login" className="hidden sm:inline-flex text-sm font-medium text-ink dark:text-paper hover:text-accent transition-colors">
-              Log in
-            </Link>
-            <motion.button
-              onClick={() => navigate('/register')}
-              className="hidden sm:inline-flex px-4 py-2 text-sm font-semibold text-paper bg-ink dark:bg-paper dark:text-ink hover:bg-accent dark:hover:bg-accent dark:hover:text-paper transition-colors"
-              whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-            >
-              Subscribe
-            </motion.button>
-            {/* Hamburger button - mobile only */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 hover:bg-ink/5 dark:hover:bg-paper/10 transition-colors"
-              aria-label="Toggle menu"
-            >
-              <AnimatePresence mode="wait">
-                {mobileMenuOpen ? (
-                  <motion.div key="close" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.2 }}>
-                    <X className="w-5 h-5 text-ink dark:text-paper" />
-                  </motion.div>
-                ) : (
-                  <motion.div key="menu" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.2 }}>
-                    <svg className="w-5 h-5 text-ink dark:text-paper" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </button>
-          </div>
-        </div>
-      </motion.nav>
-
-      {/* Mobile Menu Overlay */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <motion.div
-            className="fixed inset-0 z-40 md:hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            {/* Backdrop */}
-            <motion.div
-              className="absolute inset-0 bg-black/20"
-              onClick={() => setMobileMenuOpen(false)}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            />
-            {/* Menu panel */}
-            <motion.div
-              className="absolute top-16 left-0 right-0 bg-paper dark:bg-paper-dark border-b border-ink/10 dark:border-paper/10"
-              initial={{ y: -20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -20, opacity: 0 }}
-              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <div className="flex flex-col px-6 py-4 space-y-1">
-                {[
-                  { label: 'Features', href: '#features', isAnchor: true },
-                  { label: 'Docs', to: '/api-docs' },
-                  { label: 'Pricing', to: '/pricing' },
-                  { label: 'About', to: '/about' },
-                  { label: 'Contact', to: '/contact' },
-                ].map((item, i) => (
-                  <motion.div
-                    key={item.label}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05, duration: 0.3 }}
-                  >
-                    {item.isAnchor ? (
-                      <a
-                        href={item.href}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="block py-3 text-sm font-medium text-ink dark:text-paper hover:text-accent transition-colors"
-                      >
-                        {item.label}
-                      </a>
-                    ) : (
-                      <Link
-                        to={item.to}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="block py-3 text-sm font-medium text-ink dark:text-paper hover:text-accent transition-colors"
-                      >
-                        {item.label}
-                      </Link>
-                    )}
-                  </motion.div>
-                ))}
-                <motion.div
-                  className="pt-3 mt-2 border-t border-ink/10 dark:border-paper/10 flex flex-col gap-3"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.25 }}
-                >
-                  <Link
-                    to="/login"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block py-2 text-sm font-medium text-ink dark:text-paper hover:text-accent transition-colors"
-                  >
-                    Log in
-                  </Link>
-                  <button
-                    onClick={() => { setMobileMenuOpen(false); navigate('/register'); }}
-                    className="w-full py-3 text-sm font-semibold text-paper bg-ink dark:bg-paper dark:text-ink hover:bg-accent dark:hover:bg-accent dark:hover:text-paper transition-colors"
-                  >
-                    Get Started
-                  </button>
-                </motion.div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
-  );
-};
-
-// ── Footer ──
-const Footer = () => (
-  <footer className="border-t border-ink/10 dark:border-paper/10">
-    <div className="max-w-7xl mx-auto px-6 py-16">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
-        <div className="md:col-span-1">
-          <div className="flex items-baseline gap-2 text-lg font-display font-bold text-ink dark:text-paper mb-3">
-            <span>MY News <span className="italic text-accent">Sentiment</span></span>
-          </div>
-          <p className="text-sm text-ink-muted dark:text-ink-faint font-sans">AI-powered sentiment analysis for Malaysian news.</p>
-        </div>
-        <div>
-          <h4 className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-4">Product</h4>
-          <div className="flex flex-col gap-2 text-sm text-ink-muted dark:text-ink-faint font-sans">
-            <Link to="/features" className="hover:text-accent transition-colors">Features</Link>
-            <Link to="/pricing" className="hover:text-accent transition-colors">Pricing</Link>
-            <Link to="/api-docs" className="hover:text-accent transition-colors">API</Link>
-          </div>
-        </div>
-        <div>
-          <h4 className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-4">Company</h4>
-          <div className="flex flex-col gap-2 text-sm text-ink-muted dark:text-ink-faint font-sans">
-            <Link to="/about" className="hover:text-accent transition-colors">About</Link>
-            <Link to="/contact" className="hover:text-accent transition-colors">Contact</Link>
-            <Link to="/jobs" className="hover:text-accent transition-colors">Careers</Link>
-          </div>
-        </div>
-        <div>
-          <h4 className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-4">Legal</h4>
-          <div className="flex flex-col gap-2 text-sm text-ink-muted dark:text-ink-faint font-sans">
-            <Link to="/privacy" className="hover:text-accent transition-colors">Privacy</Link>
-          </div>
-        </div>
-      </div>
-      <div className="mt-12 pt-8 border-t border-ink/10 dark:border-paper/10 text-center text-xs text-ink-muted dark:text-ink-faint font-sans">
-        © 2026 MY News Sentiment. All rights reserved.
-      </div>
+const sectionHead = (eyebrow, title, copy) => (
+  <div className="mb-10 md:mb-14">
+    <div className="flex items-center gap-3 mb-4">
+      <span className="h-px w-10 bg-accent" />
+      <p className="text-[10px] uppercase tracking-[0.25em] text-accent font-semibold">{eyebrow}</p>
     </div>
-  </footer>
+    <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-ink dark:text-paper leading-tight max-w-3xl">{title}</h2>
+    {copy && <p className="mt-4 max-w-2xl text-sm sm:text-base leading-7 text-ink-muted dark:text-ink-faint">{copy}</p>}
+  </div>
 );
 
-// ── Landing Page ──
-const LandingPage = () => {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const { theme, setTheme } = useTheme();
-  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  const toggleTheme = () => setTheme(isDark ? 'light' : 'dark');
-  const prefersReducedMotion = useReducedMotion();
+const AnimatedSection = ({ children, className = '', id }) => (
+  <Motion.section id={id} className={className} initial="visible" animate="visible" variants={stagger}>
+    {children}
+  </Motion.section>
+);
 
-  // Parallax
-  const { scrollYProgress } = useScroll();
-  const heroY = useTransform(scrollYProgress, [0, 0.3], [0, -80]);
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.25], [1, 0.6]);
-  const scaleX = useTransform(scrollYProgress, [0, 1], [0, 1]);
-
-  // Real stats from API
-  const [realArticleCount, setRealArticleCount] = useState(null);
-  useEffect(() => {
-    fetch('https://mynewsa-api.onrender.com/api/history/public-stats')
-      .then(r => r.json())
-      .then(data => { if (data.totalArticles > 0) setRealArticleCount(data.totalArticles); })
-      .catch(() => {});
-  }, []);
-
-  // Sticky mobile CTA
-  const [showMobileCTA, setShowMobileCTA] = useState(false);
-  const [mobileCTADismissed, setMobileCTADismissed] = useState(false);
-  const heroRef = useRef(null);
-  useEffect(() => {
-    if (mobileCTADismissed) return;
-    const handleScroll = () => {
-      setShowMobileCTA(window.scrollY > window.innerHeight);
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [mobileCTADismissed]);
-
-  // Typing animation
-  const typingWords = ['Politics', 'Economy', 'Markets', 'Rakyat', 'Tech'];
-  const [typingIndex, setTypingIndex] = useState(0);
-  const [typingText, setTypingText] = useState('');
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  useEffect(() => {
-    const currentWord = typingWords[typingIndex];
-    let timeout;
-    if (!isDeleting && typingText === currentWord) {
-      timeout = setTimeout(() => setIsDeleting(true), 2000);
-    } else if (isDeleting && typingText === '') {
-      setIsDeleting(false);
-      setTypingIndex((prev) => (prev + 1) % typingWords.length);
-    } else {
-      timeout = setTimeout(() => {
-        setTypingText(isDeleting ? currentWord.substring(0, typingText.length - 1) : currentWord.substring(0, typingText.length + 1));
-      }, isDeleting ? 60 : 120);
-    }
-    return () => clearTimeout(timeout);
-  }, [typingText, isDeleting, typingIndex]);
-
-  const features = [
-    { icon: BarChart3, title: 'Sentiment Analysis', desc: 'Classify news articles into positive, negative, and neutral sentiment using fine-tuned transformer models.' },
-    { icon: Network, title: 'Entity Graph', desc: 'Extract and visualize relationships between public figures, organizations, and locations.' },
-    { icon: TrendingUp, title: 'Trending Topics', desc: 'Track emerging narratives and trending topics across Malaysian news in real-time.' },
-    { icon: ShieldCheck, title: 'Source Credibility', desc: 'Evaluate source reliability and detect bias patterns across multiple outlets.' },
-    { icon: Brain, title: 'AI Insights', desc: 'Get AI-powered summaries, predictions, and actionable intelligence from news data.' },
-    { icon: FileDown, title: 'Export Reports', desc: 'Generate PowerPoint presentations and CSV exports with one click.' },
-  ];
-
+const Sparkline = ({ values, positive = true, className = '' }) => {
+  const points = values.map((v, i) => `${(i / (values.length - 1)) * 100},${36 - ((v - Math.min(...values)) / Math.max(1, Math.max(...values) - Math.min(...values))) * 30}`).join(' ');
   return (
-    <div className="min-h-screen bg-paper dark:bg-paper-dark transition-colors overflow-x-hidden relative">
-      {/* Scroll progress indicator */}
-      <motion.div
-        className="fixed top-0 left-0 right-0 h-[3px] bg-accent origin-left z-[60]"
-        style={{ scaleX }}
-      />
+    <svg viewBox="0 0 100 40" className={className} preserveAspectRatio="none" aria-hidden="true">
+      <polyline points={points} fill="none" stroke={positive ? '#16855b' : '#c72f35'} strokeWidth="2" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+};
 
-      <div className="relative z-10">
-      <Navbar isDark={isDark} toggleTheme={toggleTheme} navigate={navigate} />
-
-      {/* ─── HERO ─── */}
-      <motion.header ref={heroRef} className="relative pt-32 pb-20 px-6 min-h-[90vh] flex items-center" style={{ y: heroY, opacity: heroOpacity }}>
-        <motion.div className="relative max-w-5xl mx-auto text-center w-full" initial="hidden" animate="visible" variants={staggerContainer}>
-          {/* Masthead bar */}
-          <motion.div variants={staggerItem} className="flex items-center justify-center gap-4 mb-8">
-            <span className="flex-1 max-w-[80px] h-px bg-ink/20 dark:bg-paper/20"/>
-            <span className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">Vol. I · No. 01 · Kuala Lumpur</span>
-            <span className="flex-1 max-w-[80px] h-px bg-ink/20 dark:bg-paper/20"/>
-          </motion.div>
-
-          {/* Title */}
-          <motion.h1 variants={staggerItem} className="font-['Playfair_Display'] text-5xl sm:text-6xl md:text-7xl font-bold text-ink dark:text-paper leading-[1.05] mb-6 tracking-tight">
-            Malaysia's News Sentiment,{' '}
-            <span className="italic text-accent">
-              Decoded in Real-Time.
-            </span>
-            <br />
-            <span className="block mt-4 text-2xl sm:text-3xl md:text-4xl font-normal italic text-ink-muted dark:text-ink-faint">
-              Tracking <span className="not-italic text-accent font-semibold">{typingText}</span>
-              <span className="animate-pulse text-accent">|</span>
-            </span>
-          </motion.h1>
-
-          {/* Double rule */}
-          <motion.div variants={staggerItem} className="max-w-md mx-auto mb-8 flex flex-col items-center gap-1">
-            <div className="w-full h-[2px] bg-ink dark:bg-paper" />
-            <div className="w-full h-px bg-ink/40 dark:bg-paper/40" />
-          </motion.div>
-
-          {/* Subtitle */}
-          <motion.p variants={staggerItem} className="text-lg text-ink-muted dark:text-ink-faint max-w-2xl mx-auto mb-10 font-serif italic">
-            Real-time AI sentiment analysis tracking Malaysia's media landscape. From breaking news to trending narratives—understand public sentiment as it unfolds.
-          </motion.p>
-
-          {/* CTA */}
-          <motion.div variants={staggerItem} className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <motion.button
-              onClick={() => navigate('/register')}
-              className="px-8 py-3.5 text-sm font-semibold tracking-wider uppercase text-paper bg-ink dark:bg-paper dark:text-ink hover:bg-accent dark:hover:bg-accent dark:hover:text-paper transition-colors"
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-            >
-              Start Reading · <ArrowRight className="inline w-4 h-4 ml-1" />
-            </motion.button>
-            <motion.button
-              onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
-              className="px-8 py-3.5 text-sm font-semibold tracking-wider uppercase text-ink dark:text-paper border-2 border-ink dark:border-paper hover:bg-ink hover:text-paper dark:hover:bg-paper dark:hover:text-ink transition-all"
-              whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-            >
-              <Play className="inline w-4 h-4 mr-2" /> View Demo
-            </motion.button>
-          </motion.div>
-
-          {/* Source tags */}
-          <motion.div variants={staggerItem} className="mt-12 flex flex-wrap items-center justify-center gap-3">
-            <span className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans">Powered by</span>
-            {['Malaysiakini', 'Astro Awani', 'FMT', 'Bernama', 'The Star'].map((s, i) => (
-              <motion.span
-                key={s}
-                className="px-3 py-1 text-xs font-medium text-ink-muted dark:text-ink-faint border border-ink/10 dark:border-paper/10 font-sans"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 1.5 + i * 0.1, duration: 0.4 }}
-              >
-                {s}
-              </motion.span>
-            ))}
-          </motion.div>
-
-          {/* Live Sentiment Demo */}
-          <LiveSentimentDemo />
-        </motion.div>
-      </motion.header>
-
-      {/* ─── STATS ─── */}
-      <AnimatedSection className="py-10 px-6" variants={staggerContainer}>
-        <div className="max-w-4xl mx-auto">
-          {/* Section label */}
-          <div className="text-center mb-8">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-2">By the Numbers</p>
-            <div className="max-w-xs mx-auto flex flex-col items-center gap-1">
-              <div className="w-full h-px bg-ink/10 dark:bg-paper/10" />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-0 border border-ink/10 dark:border-paper/10 divide-x divide-ink/10 dark:divide-paper/10">
-            {[
-              { target: realArticleCount || 1000, suffix: '+', label: 'Articles Analyzed' },
-              { target: 15, suffix: '', label: 'News Sources' },
-              { target: 92, suffix: '%', label: 'Classification Accuracy' },
-            ].map((s, i) => (
-              <motion.div
-                key={i}
-                className="text-center p-8"
-                variants={staggerItem}
-              >
-                <AnimatedCounter target={s.target} suffix={s.suffix} />
-                <div className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mt-2">{s.label}</div>
-              </motion.div>
-            ))}
-          </div>
+const Navbar = ({ isDark, toggleTheme, navigate }) => {
+  const [open, setOpen] = useState(false);
+  const links = [['Pulse', '#pulse'], ['Analyzer', '#analyzer'], ['Narratives', '#narratives'], ['Features', '#features']];
+  return (
+    <nav className="fixed inset-x-0 top-0 z-50 border-b border-ink/15 dark:border-paper/15 bg-paper/90 dark:bg-paper-dark/90 backdrop-blur-xl">
+      <div className="max-w-7xl mx-auto h-16 px-5 sm:px-6 flex items-center justify-between">
+        <Link to="/" className="flex items-baseline gap-2">
+          <span className="font-display font-bold text-lg text-ink dark:text-paper">MY News <i className="text-accent">Sentiment</i></span>
+          <span className="hidden lg:inline text-[9px] tracking-[.2em] text-ink-faint">EST. 2026</span>
+        </Link>
+        <div className="hidden md:flex items-center gap-7">
+          {links.map(([label, href]) => <a key={href} href={href} className="text-[11px] tracking-[.16em] uppercase text-ink-muted dark:text-ink-faint hover:text-accent">{label}</a>)}
+          <Link to="/about" className="text-[11px] tracking-[.16em] uppercase text-ink-muted dark:text-ink-faint hover:text-accent">About</Link>
         </div>
-      </AnimatedSection>
-
-      {/* ─── FEATURES ─── */}
-      <AnimatedSection className="py-16 px-6" id="features" variants={staggerContainer}>
-        <div className="max-w-6xl mx-auto">
-          <motion.div variants={staggerItem} className="text-center mb-14">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-2">Features</p>
-            <h2 className="font-['Playfair_Display'] text-3xl sm:text-4xl font-bold text-ink dark:text-paper mb-4">Everything you need to understand Malaysian news</h2>
-            <div className="max-w-xs mx-auto flex flex-col items-center gap-1 mb-4">
-              <div className="w-full h-[2px] bg-ink/20 dark:bg-paper/20" />
-              <div className="w-full h-px bg-ink/10 dark:bg-paper/10" />
-            </div>
-            <p className="text-ink-muted dark:text-ink-faint max-w-2xl mx-auto font-sans text-sm">Powerful AI tools designed for researchers, analysts, and anyone tracking Malaysian media sentiment.</p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-0 border-t border-l border-ink/10 dark:border-paper/10">
-            {features.map((f, i) => (
-              <motion.div
-                key={i}
-                className="relative p-7 border-r border-b border-ink/10 dark:border-paper/10 group hover:bg-ink/[0.02] dark:hover:bg-paper/[0.02] transition-colors"
-                variants={staggerItem}
-              >
-                <span className="block font-['Playfair_Display'] text-5xl font-bold text-ink/[0.06] dark:text-paper/[0.06] leading-none mb-2 select-none">
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-                <f.icon className="w-6 h-6 text-accent mb-3 -mt-2" strokeWidth={1.5} />
-                <p className="text-[10px] uppercase tracking-[0.2em] text-accent font-sans mb-2">{f.title}</p>
-                <h3 className="text-base font-bold text-ink dark:text-paper font-sans mb-2">{f.title}</h3>
-                <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed font-sans">{f.desc}</p>
-              </motion.div>
-            ))}
-          </div>
+        <div className="flex items-center gap-2">
+          <button onClick={toggleTheme} className="p-2 hover:bg-ink/5 dark:hover:bg-paper/10" aria-label="Toggle theme">{isDark ? <Sun className="w-4 h-4 text-paper" /> : <Moon className="w-4 h-4" />}</button>
+          <Link to="/login" className="hidden sm:block text-xs font-semibold px-3">Log in</Link>
+          <button onClick={() => navigate('/dashboard')} className="hidden sm:flex items-center gap-2 bg-ink dark:bg-paper text-paper dark:text-ink px-4 py-2 text-xs font-bold uppercase tracking-wider hover:bg-accent dark:hover:bg-accent dark:hover:text-paper">Open dashboard <ArrowRight className="w-3.5 h-3.5" /></button>
+          <button className="md:hidden p-2" onClick={() => setOpen(!open)} aria-label="Menu">{open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}</button>
         </div>
-      </AnimatedSection>
+      </div>
+      <AnimatePresence>{open && <Motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="md:hidden overflow-hidden border-t border-ink/10 dark:border-paper/10 bg-paper dark:bg-paper-dark"><div className="px-6 py-4 flex flex-col">{links.map(([label, href]) => <a key={href} href={href} onClick={() => setOpen(false)} className="py-3 text-sm uppercase tracking-wider">{label}</a>)}<button onClick={() => navigate('/dashboard')} className="mt-3 py-3 bg-ink text-paper dark:bg-paper dark:text-ink font-bold text-xs uppercase">Open dashboard</button></div></Motion.div>}</AnimatePresence>
+    </nav>
+  );
+};
 
-      {/* ─── HOW IT WORKS ─── */}
-      <AnimatedSection className="py-20 px-6 border-t border-ink/10 dark:border-paper/10" variants={staggerContainer}>
-        <div className="max-w-5xl mx-auto">
-          <motion.div variants={staggerItem} className="text-center mb-16">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-2">How it works</p>
-            <h2 className="font-['Playfair_Display'] text-3xl sm:text-4xl font-bold text-ink dark:text-paper mb-4">From search to insight in seconds</h2>
-            <div className="max-w-xs mx-auto flex flex-col items-center gap-1 mb-4">
-              <div className="w-full h-[2px] bg-ink/20 dark:bg-paper/20" />
-              <div className="w-full h-px bg-ink/10 dark:bg-paper/10" />
-            </div>
-            <p className="text-ink-muted dark:text-ink-faint max-w-lg mx-auto font-sans text-sm">Three simple steps to understand Malaysian news sentiment at scale.</p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
-            {[
-              { num: '01', title: 'Search', desc: 'Enter any topic or keyword. Our crawler fetches the latest articles from major Malaysian news outlets.', icon: Search },
-              { num: '02', title: 'Analyze', desc: 'AI models classify sentiment, extract entities, and score relevance in real time.', icon: Zap },
-              { num: '03', title: 'Insights', desc: 'Explore interactive dashboards with sentiment trends, entity networks, and heatmaps.', icon: LineChart },
-            ].map((step, i) => (
-              <motion.div
-                key={step.num}
-                className="relative text-center p-8 border border-ink/10 dark:border-paper/10 -ml-px first:ml-0 group"
-                variants={staggerItem}
-              >
-                <step.icon className="w-6 h-6 text-accent mx-auto mb-4" strokeWidth={1.5} />
-                <span className="block text-[10px] font-bold text-accent uppercase tracking-[0.2em] mb-2 font-sans">{step.num}</span>
-                <h3 className="text-xl font-bold text-ink dark:text-paper mb-3 font-sans">{step.title}</h3>
-                <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed font-sans">{step.desc}</p>
-                {i < 2 && (
-                  <div className="hidden md:flex absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 items-center justify-center bg-paper dark:bg-paper-dark border border-ink/10 dark:border-paper/10 z-10">
-                    <ChevronRight className="w-3 h-3 text-accent" />
-                  </div>
-                )}
-              </motion.div>
-            ))}
-          </div>
+const MalaysiaPulse = ({ articleCount }) => {
+  const [active, setActive] = useState(0);
+  useEffect(() => { const timer = setInterval(() => setActive(v => (v + 1) % pulseTopics.length), 2600); return () => clearInterval(timer); }, []);
+  return (
+    <Motion.div id="pulse" variants={fadeUp} className="relative text-left border border-ink/20 dark:border-paper/20 bg-paper-card dark:bg-paper-dark-card shadow-[10px_10px_0_rgba(199,47,53,.12)] overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-ink/15 dark:border-paper/15 bg-ink/[.025] dark:bg-paper/[.025]">
+        <div className="flex items-center gap-2"><Motion.span animate={{ opacity: [1,.3,1] }} transition={{ repeat: Infinity, duration: 1.4 }} className="w-2 h-2 rounded-full bg-accent"/><span className="text-[10px] font-bold tracking-[.22em]">MALAYSIA PULSE · LIVE PREVIEW</span></div>
+        <span className="text-[9px] text-ink-faint uppercase tracking-widest">KUL · MYT</span>
+      </div>
+      <div className="grid md:grid-cols-[.9fr_1.1fr]">
+        <div className="p-6 sm:p-8 border-b md:border-b-0 md:border-r border-ink/15 dark:border-paper/15">
+          <p className="text-[10px] tracking-[.2em] text-ink-muted dark:text-ink-faint uppercase">Overall media signal</p>
+          <div className="flex items-end gap-3 mt-3"><span className="font-display text-6xl font-bold text-ink dark:text-paper">+18</span><span className="mb-2 px-2 py-1 bg-[#16855b] text-white text-[10px] font-bold tracking-wider">POSITIVE</span></div>
+          <div className="h-2 mt-6 flex overflow-hidden"><Motion.div initial={{ width: 0 }} whileInView={{ width: '46%' }} className="bg-[#16855b]"/><Motion.div initial={{ width: 0 }} whileInView={{ width: '34%' }} className="bg-[#b8862b]"/><Motion.div initial={{ width: 0 }} whileInView={{ width: '20%' }} className="bg-accent"/></div>
+          <div className="flex justify-between mt-2 text-[9px] tracking-wider text-ink-faint"><span>46% POS</span><span>34% NEU</span><span>20% NEG</span></div>
+          <Sparkline values={[28,33,31,42,38,51,47,60,55,67,64]} className="w-full h-16 mt-6" />
         </div>
-      </AnimatedSection>
-
-      {/* ─── USE CASES ─── */}
-      <AnimatedSection className="py-16 px-6 border-t border-ink/10 dark:border-paper/10" variants={staggerContainer}>
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <motion.p variants={staggerItem} className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-2">Use Cases</motion.p>
-            <motion.h2 variants={staggerItem} className="font-['Playfair_Display'] text-3xl sm:text-4xl font-bold text-ink dark:text-paper">Who is this for?</motion.h2>
-            <motion.div variants={staggerItem} className="max-w-xs mx-auto flex flex-col items-center gap-1 mt-4 mb-2">
-              <div className="w-full h-[2px] bg-ink/20 dark:bg-paper/20" />
-              <div className="w-full h-px bg-ink/10 dark:bg-paper/10" />
-            </motion.div>
-            <motion.p variants={staggerItem} className="text-ink-muted dark:text-ink-faint mt-3 max-w-lg mx-auto font-sans text-sm">Built for anyone who needs to understand Malaysian media narratives at scale.</motion.p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-0 border-t border-l border-ink/10 dark:border-paper/10">
-            {[
-              { icon: '🎓', title: 'Researchers', desc: 'Track media sentiment trends for academic papers and thesis research on Malaysian politics, economy, and social issues.' },
-              { icon: '📰', title: 'Journalists', desc: 'Monitor how different outlets cover the same story. Identify bias patterns and verify source credibility.' },
-              { icon: '📊', title: 'Analysts', desc: 'Real-time sentiment tracking for market analysis, brand monitoring, and public opinion research.' },
-              { icon: '🏛️', title: 'Policy Makers', desc: 'Understand public sentiment on policies, track media coverage of government initiatives.' },
-              { icon: '🎯', title: 'PR & Communications', desc: 'Monitor brand mentions, track crisis sentiment, measure campaign effectiveness across Malaysian media.' },
-              { icon: '🧑‍🎓', title: 'Students', desc: 'Learn NLP concepts through real Malaysian news data. Perfect for FYP and coursework projects.' },
-            ].map((item, i) => (
-              <motion.div
-                key={i}
-                className="p-7 border-r border-b border-ink/10 dark:border-paper/10 cursor-pointer hover:bg-ink/[0.02] dark:hover:bg-paper/[0.02] transition-colors"
-                variants={staggerItem}
-              >
-                <span className="text-2xl block mb-4">{item.icon}</span>
-                <h3 className="text-base font-bold text-ink dark:text-paper font-sans mb-2">{item.title}</h3>
-                <p className="text-sm text-ink-muted dark:text-ink-faint leading-relaxed font-sans">{item.desc}</p>
-              </motion.div>
-            ))}
-          </div>
+        <div>
+          <div className="px-5 py-3 border-b border-ink/10 dark:border-paper/10 flex justify-between text-[9px] uppercase tracking-[.18em] text-ink-faint"><span>Trending now</span><span>Signal</span></div>
+          {pulseTopics.map((item, i) => (
+            <button key={item.topic} onClick={() => setActive(i)} className={`w-full grid grid-cols-[30px_1fr_70px_50px] items-center gap-2 px-5 py-3.5 text-left border-b border-ink/[.07] dark:border-paper/[.07] transition-colors ${active === i ? 'bg-accent/[.06]' : 'hover:bg-ink/[.025] dark:hover:bg-paper/[.025]'}`}>
+              <span className="font-display text-xs text-ink-faint">{String(i+1).padStart(2,'0')}</span><span className="text-sm font-semibold">{item.topic}</span><Sparkline values={item.spark} positive={item.score > 0} className="w-full h-7"/><span className={`text-right text-xs font-bold ${item.score > 0 ? 'text-[#16855b]' : 'text-accent'}`}>{item.score > 0 ? '+' : ''}{item.score}</span>
+            </button>
+          ))}
+          <div className="px-5 py-3 text-[9px] uppercase tracking-widest text-ink-faint flex justify-between"><span>{articleCount.toLocaleString()} indexed articles</span><span>15 sources</span></div>
         </div>
-      </AnimatedSection>
+      </div>
+    </Motion.div>
+  );
+};
 
-      {/* ─── FAQ ─── */}
-      <AnimatedSection className="py-12 px-6" variants={staggerContainer}>
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-8">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-ink-muted dark:text-ink-faint font-sans mb-2">FAQ</p>
-            <h2 className="font-['Playfair_Display'] text-3xl font-bold text-ink dark:text-paper">Common questions</h2>
-            <div className="max-w-xs mx-auto flex flex-col items-center gap-1 mt-4">
-              <div className="w-full h-[2px] bg-ink/20 dark:bg-paper/20" />
-              <div className="w-full h-px bg-ink/10 dark:bg-paper/10" />
-            </div>
-          </div>
-          <div className="space-y-0 divide-y divide-ink/10 dark:divide-paper/10 border-t border-b border-ink/10 dark:border-paper/10">
-            {[
-              { q: 'What news sources are supported?', a: 'We analyze 50+ Malaysian news sources including The Star, NST, Malaysiakini, Bernama, Free Malaysia Today, and more.' },
-              { q: 'How accurate is the sentiment analysis?', a: 'Our NLP models achieve 85%+ accuracy on Malaysian news text, trained specifically on local language patterns and context.' },
-              { q: 'Is it free to use?', a: 'Yes! The basic features are completely free. This is a university research project (FYP) at UMPSA.' },
-              { q: 'Can I export the results?', a: 'Yes, you can export analysis results as PowerPoint presentations, perfect for reports and presentations.' },
-              { q: 'Does it support Bahasa Malaysia?', a: 'Currently optimized for English-language Malaysian news. BM support is on the roadmap.' },
-            ].map((faq, i) => (
-              <FAQItem key={i} question={faq.q} answer={faq.a} index={i} />
-            ))}
-          </div>
-        </div>
-      </AnimatedSection>
+const analyzeHeadline = (text) => {
+  const positive = ['growth','grows','gain','gains','strong','strengthen','record','improve','success','surge','boost','rise','rises','win','wins','recovery','investment','stable','advance'];
+  const negative = ['fall','falls','weak','weakens','crisis','concern','concerns','risk','risks','flood','loss','losses','decline','pressure','uncertainty','unemployment','displace','cut','cuts','drop'];
+  const entities = ['Malaysia','Ringgit','Anwar','BNM','Petronas','Parliament','ASEAN','Kuala Lumpur','Sabah','Sarawak','Johor','Selangor'].filter(e => text.toLowerCase().includes(e.toLowerCase()));
+  const words = text.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/);
+  const pos = words.filter(w => positive.includes(w)); const neg = words.filter(w => negative.includes(w));
+  const raw = pos.length - neg.length;
+  const sentiment = raw > 0 ? 'POSITIVE' : raw < 0 ? 'NEGATIVE' : 'NEUTRAL';
+  const confidence = Math.min(94, 58 + Math.abs(raw) * 11 + Math.min(text.length, 70) / 8);
+  return { sentiment, confidence: Math.round(confidence), entities: entities.length ? entities : ['Malaysia News'], cues: [...pos, ...neg], raw };
+};
 
-      <Footer />
-      </div>{/* end relative z-10 */}
-
-      {/* Sticky mobile CTA */}
-      <AnimatePresence>
-        {showMobileCTA && !mobileCTADismissed && (
-          <motion.div
-            className="fixed bottom-6 left-4 right-4 z-50 md:hidden"
-            initial={{ y: 80, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 80, opacity: 0 }}
-            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <div className="flex items-center gap-2 px-4 py-3 bg-ink dark:bg-paper">
-              <button
-                onClick={() => navigate('/register')}
-                className="flex-1 text-sm font-semibold text-paper dark:text-ink text-center"
-              >
-                Get Started Free <ArrowRight className="inline w-4 h-4 ml-1" />
-              </button>
-              <button
-                onClick={() => setMobileCTADismissed(true)}
-                className="p-1.5 hover:bg-paper/20 dark:hover:bg-ink/20 transition-colors"
-                aria-label="Dismiss"
-              >
-                <X className="w-4 h-4 text-paper/80 dark:text-ink/80" />
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+const HeadlineAnalyzer = () => {
+  const examples = ["Ringgit gains as Malaysia records stronger investment growth", "Floods displace residents amid worsening weather concerns", "BNM holds overnight policy rate steady"];
+  const [text, setText] = useState(examples[0]); const [loading, setLoading] = useState(false); const [result, setResult] = useState(() => analyzeHeadline(examples[0]));
+  const run = () => { if (!text.trim()) return; setLoading(true); setResult(null); setTimeout(() => { setResult(analyzeHeadline(text)); setLoading(false); }, 700); };
+  const color = result?.sentiment === 'POSITIVE' ? '#16855b' : result?.sentiment === 'NEGATIVE' ? '#c72f35' : '#a36b13';
+  return (
+    <div className="grid lg:grid-cols-[1.1fr_.9fr] border border-ink/20 dark:border-paper/20 bg-paper-card dark:bg-paper-dark-card">
+      <div className="p-6 sm:p-9 lg:border-r border-ink/15 dark:border-paper/15">
+        <label className="text-[10px] uppercase tracking-[.22em] font-bold">Paste a Malaysian news headline</label>
+        <textarea value={text} maxLength={180} onChange={e => setText(e.target.value)} className="mt-4 w-full min-h-32 resize-none bg-transparent border-b-2 border-ink dark:border-paper p-0 pb-4 font-display text-2xl sm:text-3xl leading-snug outline-none focus:border-accent" />
+        <div className="flex flex-wrap items-center justify-between gap-3 mt-5"><span className="text-[10px] text-ink-faint">{text.length}/180 · INSTANT LEXICAL PREVIEW</span><button onClick={run} disabled={!text.trim() || loading} className="px-6 py-3 bg-ink dark:bg-paper text-paper dark:text-ink text-xs font-bold tracking-[.15em] uppercase disabled:opacity-40 hover:bg-accent dark:hover:bg-accent dark:hover:text-paper">{loading ? 'Analyzing…' : 'Analyze now'} <Zap className="inline w-3.5 h-3.5 ml-1" /></button></div>
+        <div className="flex gap-2 flex-wrap mt-6">{examples.map((e,i)=><button key={e} onClick={()=>{setText(e);setResult(analyzeHeadline(e));}} className="text-[9px] uppercase tracking-wider border border-ink/15 dark:border-paper/15 px-2.5 py-1.5 hover:border-accent">Example {i+1}</button>)}</div>
+      </div>
+      <div className="p-6 sm:p-9 min-h-72 flex flex-col justify-center">
+        <AnimatePresence mode="wait">{loading ? <Motion.div key="load" exit={{opacity:0}} className="space-y-4"><Motion.div animate={{x:['-100%','250%']}} transition={{repeat:Infinity,duration:1}} className="h-1 w-1/3 bg-accent"/><p className="font-display text-2xl italic">Reading narrative signals…</p></Motion.div> : result && <Motion.div key={text+result.sentiment} initial={{opacity:0,y:15}} animate={{opacity:1,y:0}}>
+          <p className="text-[10px] uppercase tracking-[.22em] text-ink-faint">Analysis result</p><div className="flex items-end gap-3 mt-3"><span className="font-display text-4xl font-bold" style={{color}}>{result.sentiment}</span><span className="mb-1 text-xs font-bold">{result.confidence}% confidence</span></div>
+          <div className="h-2 bg-ink/5 dark:bg-paper/10 mt-5"><Motion.div initial={{width:0}} animate={{width:`${result.confidence}%`}} className="h-full" style={{backgroundColor:color}}/></div>
+          <div className="mt-7 grid grid-cols-2 gap-5"><div><p className="text-[9px] uppercase tracking-widest text-ink-faint">Detected entities</p><p className="mt-2 text-sm font-semibold">{result.entities.join(' · ')}</p></div><div><p className="text-[9px] uppercase tracking-widest text-ink-faint">Tone cues</p><p className="mt-2 text-sm font-semibold">{result.cues.length ? result.cues.join(' · ') : 'Factual · balanced'}</p></div></div>
+        </Motion.div>}</AnimatePresence>
+      </div>
     </div>
   );
+};
+
+const FeaturePreview = ({ type }) => {
+  if (type === 0) return <div className="space-y-2">{[['Positive',64,'bg-[#16855b]'],['Neutral',23,'bg-[#b8862b]'],['Negative',13,'bg-accent']].map(x=><div key={x[0]} className="grid grid-cols-[55px_1fr_25px] items-center gap-2 text-[9px]"><span>{x[0]}</span><div className="h-1.5 bg-ink/5 dark:bg-paper/10"><Motion.div whileInView={{width:`${x[1]}%`}} initial={{width:0}} className={`h-full ${x[2]}`}/></div><b>{x[1]}</b></div>)}</div>;
+  if (type === 1) return <div className="relative h-16"><span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-2 py-1 bg-accent text-white text-[9px]">ANWAR</span>{['BNM','RINGGIT','ASEAN'].map((x,i)=><Motion.span key={x} animate={{y:[0,-3,0]}} transition={{delay:i*.2,repeat:Infinity,duration:2}} className={`absolute px-2 py-1 border border-ink/20 dark:border-paper/20 text-[8px] ${i===0?'left-0 top-0':i===1?'right-0 top-1':'left-5 bottom-0'}`}>{x}</Motion.span>)}</div>;
+  if (type === 2) return <div>{['Ringgit','SST','AI Malaysia'].map((x,i)=><div key={x} className="flex justify-between py-1.5 border-b border-ink/10 dark:border-paper/10 text-[10px]"><span>0{i+1} · {x}</span><b className="text-[#16855b]">+{46-i*9}% ↑</b></div>)}</div>;
+  if (type === 3) return <div className="space-y-2">{[['BERNAMA',91],['THE STAR',83],['FMT',72]].map(([label,score])=><div key={label} className="grid grid-cols-[55px_1fr_20px] items-center gap-2 text-[8px]"><span>{label}</span><div className="h-1.5 bg-ink/5 dark:bg-paper/10"><Motion.div initial={{width:0}} whileInView={{width:`${score}%`}} className="h-full bg-accent"/></div><b>{score}</b></div>)}</div>;
+  if (type === 4) return <p className="font-display italic text-sm leading-6">“Economic coverage is improving, led by investment narratives while cost-of-living risk remains elevated.”</p>;
+  return <div className="relative h-16"><div className="absolute left-4 top-2 w-24 h-14 bg-paper dark:bg-paper-dark border border-ink/20 dark:border-paper/20 rotate-[-5deg]"/><div className="absolute left-9 top-0 w-24 h-14 bg-paper dark:bg-paper-dark border-2 border-ink dark:border-paper p-2"><span className="text-[8px] font-bold">MY REPORT.PDF</span><div className="h-1 bg-accent mt-3"/><div className="h-1 bg-ink/10 mt-1"/></div></div>;
+};
+
+const Footer = () => <footer className="border-t-2 border-ink dark:border-paper"><div className="max-w-7xl mx-auto px-6 py-12 flex flex-col md:flex-row justify-between gap-8"><div><p className="font-display text-xl font-bold">MY News <i className="text-accent">Sentiment</i></p><p className="text-xs text-ink-faint mt-2">Malaysia’s media intelligence layer.</p></div><div className="flex flex-wrap gap-6 text-xs uppercase tracking-wider"><Link to="/features">Features</Link><Link to="/api-docs">API</Link><Link to="/about">About</Link><Link to="/contact">Contact</Link><Link to="/privacy">Privacy</Link></div></div></footer>;
+
+const LandingPage = () => {
+  const { user } = useAuth(); const navigate = useNavigate(); const { theme, setTheme } = useTheme();
+  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const [articleCount,setArticleCount] = useState(11000); const [statsLive,setStatsLive] = useState(false);
+  const { scrollYProgress } = useScroll(); const progress = useTransform(scrollYProgress,[0,1],[0,1]);
+  useEffect(()=>{fetch('https://mynewsa-api.onrender.com/api/history/public-stats').then(r=>r.ok?r.json():Promise.reject()).then(d=>{if(d.totalArticles){setArticleCount(d.totalArticles);setStatsLive(true)}}).catch(()=>{});},[]);
+  if (user) return <Navigate to="/dashboard" replace />;
+  const features = [
+    [BarChart3,'Sentiment Analysis','See polarity, confidence and narrative momentum—not only a label.'],[Network,'Entity Graph','Reveal links between people, institutions, companies and places.'],[TrendingUp,'Trending Topics','Watch local narratives rise or fall before they dominate the cycle.'],[ShieldCheck,'Source Credibility','Compare reliability and framing patterns across Malaysian publishers.'],[Brain,'AI Insights','Turn thousands of articles into a concise strategic intelligence brief.'],[FileDown,'Export Reports','Ship board-ready PDF, PowerPoint and structured data reports.']
+  ];
+  const roles = [['01','Researchers','Track longitudinal sentiment','Compare political and economic narratives across time.'],['02','Journalists','Compare media framing','See how the same event changes between publishers.'],['03','Analysts','Detect momentum early','Monitor market, brand and policy signals in real time.'],['04','Policy Makers','Read the public narrative','Measure coverage around initiatives and announcements.'],['05','PR & Comms','Spot reputation risk','Track crisis tone before it escalates across outlets.'],['06','Students','Learn with local data','Explore practical NLP using Malaysian news context.']];
+  return <div className="min-h-screen bg-paper dark:bg-paper-dark text-ink dark:text-paper overflow-x-hidden">
+    <Motion.div className="fixed top-0 inset-x-0 h-[3px] bg-accent z-[60] origin-left" style={{scaleX:progress}}/>
+    <Navbar isDark={isDark} toggleTheme={()=>setTheme(isDark?'light':'dark')} navigate={navigate}/>
+
+    <header className="relative pt-28 sm:pt-32 pb-20 px-5 sm:px-6 overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none opacity-[.045] dark:opacity-[.07]" style={{backgroundImage:'linear-gradient(#000 1px,transparent 1px),linear-gradient(90deg,#000 1px,transparent 1px)',backgroundSize:'38px 38px'}}/>
+      <Motion.div initial="hidden" animate="visible" variants={stagger} className="relative max-w-7xl mx-auto">
+        <Motion.div variants={fadeUp} className="flex items-center justify-between border-y border-ink/20 dark:border-paper/20 py-2 mb-10 text-[9px] sm:text-[10px] tracking-[.2em] text-ink-muted dark:text-ink-faint"><span>VOL. I · NO. 01</span><span>KUALA LUMPUR · MALAYSIA</span><span className="hidden sm:block">AI MEDIA INTELLIGENCE</span></Motion.div>
+        <div className="grid lg:grid-cols-[.86fr_1.14fr] gap-12 lg:gap-16 items-center">
+          <div>
+            <Motion.p variants={fadeUp} className="text-[10px] uppercase tracking-[.24em] text-accent font-bold mb-5">The national narrative, decoded</Motion.p>
+            <Motion.h1 variants={fadeUp} className="font-display text-5xl sm:text-6xl xl:text-7xl font-bold leading-[.98] tracking-tight">Know what Malaysia is <i className="text-accent">feeling.</i><br/>Before it shifts.</Motion.h1>
+            <Motion.p variants={fadeUp} className="mt-7 max-w-xl text-base sm:text-lg leading-8 text-ink-muted dark:text-ink-faint font-serif">Real-time AI intelligence across Malaysian news—sentiment, source framing, entities and emerging narratives in one editorial command centre.</Motion.p>
+            <Motion.div variants={fadeUp} className="mt-8 flex flex-col sm:flex-row gap-3"><button onClick={()=>navigate('/dashboard')} className="px-6 py-3.5 bg-ink dark:bg-paper text-paper dark:text-ink text-xs font-bold tracking-[.14em] uppercase hover:bg-accent dark:hover:bg-accent dark:hover:text-paper">Explore live dashboard <ArrowRight className="inline w-4 h-4 ml-1"/></button><a href="#analyzer" className="px-6 py-3.5 border-2 border-ink dark:border-paper text-xs font-bold tracking-[.14em] uppercase text-center hover:border-accent hover:text-accent">Analyze a headline <Sparkles className="inline w-4 h-4 ml-1"/></a></Motion.div>
+            <Motion.p variants={fadeUp} className="mt-4 text-[10px] uppercase tracking-widest text-ink-faint"><Check className="inline w-3 h-3 text-[#16855b] mr-1"/> No account required to explore</Motion.p>
+          </div>
+          <MalaysiaPulse articleCount={articleCount}/>
+        </div>
+      </Motion.div>
+    </header>
+
+    <section className="border-y border-ink/15 dark:border-paper/15 bg-ink dark:bg-paper text-paper dark:text-ink"><div className="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 divide-x divide-paper/15 dark:divide-ink/15">
+      {[[articleCount,'ARTICLES INDEXED'],[15,'NEWS SOURCES'],[92,'MODEL ACCURACY'],['24/7','MEDIA MONITORING']].map(([n,l],i)=><div key={l} className="p-5 sm:p-7"><p className="font-display text-2xl sm:text-4xl font-bold">{typeof n==='number'?n.toLocaleString():n}{i===0?'+':i===2?'%':''}</p><p className="text-[8px] sm:text-[9px] tracking-[.18em] opacity-60 mt-1">{l}</p>{i===0&&<p className="text-[8px] mt-2 text-[#75d6ad]">● {statsLive?'LIVE DATABASE':'VERIFIED BASELINE'}</p>}</div>)}
+    </div></section>
+
+    <AnimatedSection id="analyzer" className="max-w-7xl mx-auto px-5 sm:px-6 py-20 sm:py-28"><Motion.div variants={fadeUp}>{sectionHead('01 / Try the intelligence','Put any headline under the lens.','Test how language changes a story’s emotional signal. The full dashboard adds transformer analysis, summaries and entity context.')}</Motion.div><Motion.div variants={fadeUp}><HeadlineAnalyzer/></Motion.div></AnimatedSection>
+
+    <AnimatedSection id="narratives" className="border-y border-ink/15 dark:border-paper/15 py-20 sm:py-28 px-5 sm:px-6 bg-ink/[.025] dark:bg-paper/[.025]"><div className="max-w-7xl mx-auto"><Motion.div variants={fadeUp}>{sectionHead('02 / Narrative comparison','One story. Three narratives.','Sentiment is not only what happened—it is how each newsroom frames what happened.')}</Motion.div><div className="grid lg:grid-cols-3 border-t border-l border-ink/20 dark:border-paper/20">{sourceStories.map((s)=><Motion.article variants={fadeUp} key={s.source} className="p-6 sm:p-8 min-h-72 border-r border-b border-ink/20 dark:border-paper/20 group hover:bg-paper dark:hover:bg-paper-dark transition-colors"><div className="flex justify-between items-center"><span className="text-[10px] font-bold tracking-[.2em]">{s.source}</span><span className="text-[10px] font-bold" style={{color:s.color}}>{s.score} · {s.tone}</span></div><p className="font-display text-2xl sm:text-3xl font-bold leading-tight mt-12">{s.headline.split(new RegExp(`(${s.mark})`,'i')).map((part,k)=>part.toLowerCase()===s.mark.toLowerCase()?<mark key={k} className="bg-accent/15 text-accent px-1">{part}</mark>:part)}</p><div className="mt-10 flex items-center gap-2 text-[9px] uppercase tracking-widest text-ink-faint"><CircleDot className="w-3 h-3"/> Framing cue detected</div></Motion.article>)}</div><Motion.div variants={fadeUp} className="mt-5 text-xs text-ink-faint flex items-center gap-2"><Brain className="w-4 h-4 text-accent"/> Same event. Different lexical choices → different audience perception.</Motion.div></div></AnimatedSection>
+
+    <AnimatedSection id="features" className="max-w-7xl mx-auto px-5 sm:px-6 py-20 sm:py-28"><Motion.div variants={fadeUp}>{sectionHead('03 / Intelligence modules','Not feature cards. Working instruments.','Every module surfaces a different layer of Malaysia’s media narrative.')}</Motion.div><div className="grid sm:grid-cols-2 lg:grid-cols-3 border-t border-l border-ink/15 dark:border-paper/15">{features.map(([Icon,title,desc],i)=><Motion.div variants={fadeUp} key={title} className="group border-r border-b border-ink/15 dark:border-paper/15 p-6 sm:p-7 hover:bg-ink/[.025] dark:hover:bg-paper/[.025]"><div className="h-24 mb-6 p-4 bg-ink/[.025] dark:bg-paper/[.04] overflow-hidden"><FeaturePreview type={i}/></div><div className="flex items-center justify-between"><span className="text-[9px] text-accent font-bold tracking-widest">0{i+1}</span>{React.createElement(Icon, { className: 'w-5 h-5 text-accent', strokeWidth: 1.5 })}</div><h3 className="font-display text-xl font-bold mt-3">{title}</h3><p className="text-sm leading-6 text-ink-muted dark:text-ink-faint mt-2">{desc}</p></Motion.div>)}</div></AnimatedSection>
+
+    <AnimatedSection className="border-y border-ink/15 dark:border-paper/15 py-20 sm:py-28 px-5 sm:px-6"><div className="max-w-7xl mx-auto"><Motion.div variants={fadeUp}>{sectionHead('04 / Intelligence pipeline','From news cycle to decision signal.','A transparent path from multi-source ingestion to evidence you can inspect and export.')}</Motion.div><div className="grid md:grid-cols-4">{[[Globe2,'Ingest','Malaysian publishers'],[Brain,'Understand','Tone + entities'],[LineChart,'Compare','Trends + framing'],[FileDown,'Act','Briefs + reports']].map(([Icon,t,d],i)=><Motion.div variants={fadeUp} key={t} className="relative border border-ink/15 dark:border-paper/15 p-7 md:-ml-px first:ml-0"><span className="font-display text-5xl text-ink/[.07] dark:text-paper/[.07] font-bold">0{i+1}</span>{React.createElement(Icon, { className: 'w-6 h-6 text-accent mt-5' })}<h3 className="font-display text-xl font-bold mt-4">{t}</h3><p className="text-xs text-ink-faint mt-2 uppercase tracking-wider">{d}</p>{i<3&&<ChevronRight className="hidden md:block absolute -right-3 top-1/2 z-10 w-6 h-6 p-1 bg-paper dark:bg-paper-dark border border-ink/15 dark:border-paper/15 text-accent"/>}</Motion.div>)}</div></div></AnimatedSection>
+
+    <AnimatedSection className="max-w-7xl mx-auto px-5 sm:px-6 py-20 sm:py-28"><Motion.div variants={fadeUp}>{sectionHead('05 / Built for decisions','Different roles. One shared source of truth.')}</Motion.div><div className="divide-y divide-ink/15 dark:divide-paper/15 border-y border-ink/15 dark:border-paper/15">{roles.map(([n,t,hook,desc])=><Motion.div variants={fadeUp} key={n} className="grid md:grid-cols-[70px_1fr_1fr] gap-3 md:gap-8 py-6 group"><span className="font-display text-2xl text-accent">{n}</span><div><h3 className="font-display text-2xl font-bold group-hover:text-accent transition-colors">{t}</h3><p className="text-[10px] mt-1 uppercase tracking-widest text-ink-faint">{hook}</p></div><p className="text-sm leading-6 text-ink-muted dark:text-ink-faint md:self-center">{desc}</p></Motion.div>)}</div></AnimatedSection>
+
+    <section className="px-5 sm:px-6 pb-24"><div className="max-w-7xl mx-auto bg-accent text-white p-8 sm:p-12 md:p-16 grid md:grid-cols-[1fr_auto] gap-8 items-center"><div><p className="text-[10px] tracking-[.2em] uppercase opacity-75">Malaysia is talking. Are you listening?</p><h2 className="font-display text-3xl sm:text-5xl font-bold mt-3 max-w-3xl">Turn today’s headlines into tomorrow’s decisions.</h2></div><button onClick={()=>navigate('/dashboard')} className="bg-white text-ink px-7 py-4 text-xs font-bold uppercase tracking-wider hover:bg-ink hover:text-white whitespace-nowrap">Open live dashboard <ArrowRight className="inline w-4 h-4 ml-1"/></button></div></section>
+    <Footer/>
+  </div>;
 };
 
 export default LandingPage;
