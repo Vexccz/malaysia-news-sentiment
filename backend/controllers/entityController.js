@@ -19,6 +19,7 @@ const entityPatterns = {
     'Gabungan Parti Sarawak', 'Warisan', 'MUDA', 'Pejuang',
   ],
   organizations: [
+    'Malaysia', 'Malaysian Government', 'Prime Minister’s Office',
     'MACC', 'SPR', 'Bank Negara', 'Petronas', 'Khazanah',
     'EPF', 'KWSP', 'Bursa Malaysia', 'TNB', 'Proton', 'Maybank',
     'PDRM', 'ATM', 'KKM', 'MOH', 'MOF', 'AGC',
@@ -30,6 +31,28 @@ const entityPatterns = {
     'Penang', 'Selangor', 'Perak', 'Kedah', 'Kelantan',
     'Terengganu', 'Pahang', 'Melaka', 'Negeri Sembilan', 'Perlis',
   ],
+};
+
+// Common newsroom variants mapped to one canonical graph node.
+const entityAliases = {
+  'Anwar Ibrahim': ['Anwar', 'PM Anwar', 'Datuk Seri Anwar'],
+  'Muhyiddin Yassin': ['Muhyiddin', 'Tan Sri Muhyiddin'],
+  'Najib Razak': ['Najib', 'Datuk Seri Najib'],
+  'Mahathir': ['Mahathir Mohamad', 'Dr Mahathir', 'Tun M'],
+  'Ahmad Zahid': ['Zahid Hamidi', 'Ahmad Zahid Hamidi'],
+  'Bank Negara': ['Bank Negara Malaysia', 'BNM'],
+  'MACC': ['Malaysian Anti-Corruption Commission', 'SPRM'],
+  'SPR': ['Election Commission'],
+  'EPF': ['Employees Provident Fund', 'KWSP'],
+  'Malaysian Government': ['government', 'federal government', 'Putrajaya administration'],
+  'Prime Minister’s Office': ["Prime Minister's Office", 'PMO'],
+  'Kuala Lumpur': ['KL'],
+  'Penang': ['Pulau Pinang'],
+};
+
+const containsTerm = (text, term) => {
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, 'i').test(text);
 };
 
 const getTimeFilter = (timeframe) => {
@@ -51,7 +74,8 @@ const extractEntities = (text, typeFilter) => {
   for (const [category, entities] of Object.entries(patterns)) {
     if (!entities) continue;
     for (const entity of entities) {
-      if (text.toLowerCase().includes(entity.toLowerCase())) {
+      const variants = [entity, ...(entityAliases[entity] || [])];
+      if (variants.some(variant => containsTerm(text, variant))) {
         found.push({ name: entity, category });
       }
     }
@@ -65,10 +89,11 @@ const extractEntities = (text, typeFilter) => {
 const getEntityGraph = async (req, res) => {
   try {
     const { query, timeframe, type } = req.query;
-    const userId = req.user?.id;
+    const userId = req.userId;
 
     const filter = { ...getTimeFilter(timeframe) };
-    if (isValidObjectId(userId)) filter.userId = userId;
+    // Admin graph is system-wide; regular users retain workspace isolation.
+    if (req.userRole !== 'admin' && isValidObjectId(userId)) filter.userId = userId;
     if (query) {
       filter.$or = [
         { title: { $regex: query, $options: 'i' } },
@@ -79,7 +104,7 @@ const getEntityGraph = async (req, res) => {
 
     const articles = await Article.find(filter)
       .sort({ createdAt: -1 })
-      .limit(200)
+      .limit(req.userRole === 'admin' ? 1000 : 500)
       .select('title description sentiment source content createdAt')
       .lean();
 
@@ -125,10 +150,12 @@ const getEntityGraph = async (req, res) => {
       }
     }
 
-    const significantEntities = Object.entries(entityMentions)
-      .filter(([_, data]) => data.count >= 2)
+    const rankedEntities = Object.entries(entityMentions)
       .sort((a, b) => b[1].count - a[1].count)
       .slice(0, 40);
+    // Prefer repeated mentions, but keep sparse workspaces useful.
+    const repeatedEntities = rankedEntities.filter(([_, data]) => data.count >= 2);
+    const significantEntities = repeatedEntities.length >= 2 ? repeatedEntities : rankedEntities;
 
     const entityNames = new Set(significantEntities.map(([name]) => name));
 
@@ -208,10 +235,10 @@ const searchEntities = async (req, res) => {
 const getEntityDetail = async (req, res) => {
   try {
     const { name } = req.params;
-    const userId = req.user?.id;
+    const userId = req.userId;
 
     const filter = {};
-    if (isValidObjectId(userId)) filter.userId = userId;
+    if (req.userRole !== 'admin' && isValidObjectId(userId)) filter.userId = userId;
     filter.$or = [
       { title: { $regex: name, $options: 'i' } },
       { description: { $regex: name, $options: 'i' } },

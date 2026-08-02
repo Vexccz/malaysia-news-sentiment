@@ -31,6 +31,7 @@ export default function EntityGraphPage() {
 
   const [data, setData] = useState({ nodes: [], edges: [] });
   const [loading, setLoading] = useState(true);
+  const [graphError, setGraphError] = useState('');
   const [graphRendering, setGraphRendering] = useState(false);
   const [selectedNode, setSelectedNode] = useState(null);
   const [detail, setDetail] = useState(null);
@@ -93,6 +94,7 @@ export default function EntityGraphPage() {
 
   const fetchGraph = useCallback(async () => {
     setLoading(true);
+    setGraphError('');
     try {
       const token = localStorage.getItem('token');
       const API = import.meta.env.VITE_API_BASE || 'http://localhost:5001/api/v1';
@@ -101,9 +103,15 @@ export default function EntityGraphPage() {
       if (timeframe) params.set('timeframe', timeframe);
       if (typeFilter) params.set('type', typeFilter);
       const res = await fetch(`${API}/entities/graph?${params}`, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) throw new Error('Failed');
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Entity API failed (${res.status})`);
+      }
       setData(await res.json());
-    } catch { setData({ nodes: [], edges: [] }); }
+    } catch (error) {
+      setData({ nodes: [], edges: [] });
+      setGraphError(error.message || 'Could not load entity data');
+    }
     finally { setLoading(false); }
   }, [search, timeframe, typeFilter]);
 
@@ -848,11 +856,19 @@ export default function EntityGraphPage() {
                 <GraphSkeleton />
               </div>
             )}
-            {!loading && !graphRendering && !data.nodes.length && (
+            {!loading && !graphRendering && graphError && (
+              <div className="flex flex-col items-center justify-center h-full text-red-500 gap-3 px-6 text-center">
+                <Network size={48} strokeWidth={1.2} className="opacity-40" />
+                <p className="text-sm font-semibold">Entity graph could not load</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 max-w-md">{graphError}</p>
+                <button onClick={fetchGraph} className="mt-2 px-4 py-2 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">Retry</button>
+              </div>
+            )}
+            {!loading && !graphRendering && !graphError && !data.nodes.length && (
               <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500 gap-4">
                 <Network size={56} strokeWidth={1.2} className="opacity-30" />
                 <p className="text-sm font-medium">No entity data yet</p>
-                <p className="text-xs opacity-70">Analyze some articles to see the relationship graph</p>
+                <p className="text-xs opacity-70">No repeated entities matched the current filters</p>
               </div>
             )}
           </div>
