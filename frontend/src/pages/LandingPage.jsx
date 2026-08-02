@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import malaysiaStates from '../data/malaysiaMap';
 
 const EASE = [0.16, 1, 0.3, 1];
 const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0, transition: { duration: 0.65, ease: EASE } } };
@@ -73,6 +74,66 @@ const Sparkline = ({ values, positive = true, className = '' }) => {
   );
 };
 
+const MalaysiaSignalMap = () => {
+  const project = ([longitude, latitude]) => [
+    (longitude - 99) * 23.2,
+    (7.6 - latitude) * 22.5,
+  ];
+  const statePath = (polygons) => polygons.map((polygon) => {
+    const points = polygon.map(project);
+    return `M${points.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ')}Z`;
+  }).join(' ');
+  const peninsulaStates = malaysiaStates.filter((state) => !['Sabah', 'Sarawak', 'W.P. Labuan'].includes(state.name));
+  const eastStates = malaysiaStates.filter((state) => ['Sabah', 'Sarawak', 'W.P. Labuan'].includes(state.name));
+  const nodes = [
+    { name: 'Kuala Lumpur', x: 87, y: 89, signal: '+24', color: '#16855b' },
+    { name: 'Penang', x: 43, y: 37, signal: '+11', color: '#16855b' },
+    { name: 'Johor', x: 154, y: 139, signal: '−08', color: '#c72f35' },
+    { name: 'Kuching', x: 282, y: 126, signal: '+17', color: '#16855b' },
+    { name: 'Kota Kinabalu', x: 428, y: 59, signal: '+06', color: '#b8862b' },
+  ];
+  return (
+    <div className="relative mt-5 border-t border-ink/10 dark:border-paper/10 pt-4">
+      <div className="flex justify-between items-center mb-1 text-[8px] uppercase tracking-[.18em] text-ink-faint">
+        <span>Regional signal map</span><span>5 live nodes</span>
+      </div>
+      <svg viewBox="0 0 500 160" className="w-full h-[130px] sm:h-[145px] overflow-visible" role="img" aria-label="Animated Malaysia regional sentiment map">
+        <defs>
+          <linearGradient id="malaysia-map-fill" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#16855b" stopOpacity=".17" />
+            <stop offset=".55" stopColor="#b8862b" stopOpacity=".11" />
+            <stop offset="1" stopColor="#c72f35" stopOpacity=".15" />
+          </linearGradient>
+          <filter id="node-glow" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <g transform="translate(0,-22) scale(1.4)">
+          {peninsulaStates.map((state, i) => <Motion.path key={state.name} d={statePath(state.polygons)} fill={i % 5 === 0 ? '#c72f3524' : i % 3 === 0 ? '#b8862b20' : '#16855b20'} stroke="currentColor" strokeOpacity=".55" strokeWidth=".65" initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 1 }} transition={{ duration: 1.1, delay: i * .035, ease: EASE }} />)}
+        </g>
+        <g transform="translate(0,-7) scale(1.04)">
+          {eastStates.map((state, i) => <Motion.path key={state.name} d={statePath(state.polygons)} fill={i % 2 ? '#16855b20' : '#b8862b20'} stroke="currentColor" strokeOpacity=".55" strokeWidth=".85" initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 1 }} transition={{ duration: 1.2, delay: .25 + i * .06, ease: EASE }} />)}
+        </g>
+        <path d="M87 89 Q180 35 282 126 M87 89 Q270 138 428 59" fill="none" stroke="#c72f35" strokeOpacity=".22" strokeWidth="1" strokeDasharray="4 5" />
+        <Motion.path d="M87 89 Q180 35 282 126" fill="none" stroke="#c72f35" strokeOpacity=".65" strokeWidth="1.4" strokeDasharray="7 80" animate={{ strokeDashoffset: [0, -87] }} transition={{ duration: 2.7, repeat: Infinity, ease: 'linear' }} />
+        <Motion.path d="M87 89 Q270 138 428 59" fill="none" stroke="#16855b" strokeOpacity=".65" strokeWidth="1.4" strokeDasharray="7 100" animate={{ strokeDashoffset: [0, -107] }} transition={{ duration: 3.2, repeat: Infinity, ease: 'linear' }} />
+        {nodes.map((node, i) => (
+          <g key={node.name} className="group cursor-default">
+            <Motion.circle cx={node.x} cy={node.y} r="8" fill={node.color} opacity=".12" animate={{ r: [6, 13, 6], opacity: [.22, 0, .22] }} transition={{ duration: 2.4, delay: i * .35, repeat: Infinity }} />
+            <circle cx={node.x} cy={node.y} r="3.3" fill={node.color} filter="url(#node-glow)" />
+            <g className="opacity-0 group-hover:opacity-100 transition-opacity">
+              <rect x={node.x - 31} y={node.y - 25} width="62" height="16" rx="1" fill="#1A1A1A" />
+              <text x={node.x} y={node.y - 14} textAnchor="middle" fill="#fff" fontSize="7" fontWeight="700">{node.name} · {node.signal}</text>
+            </g>
+          </g>
+        ))}
+        <text x="45" y="157" fill="currentColor" opacity=".45" fontSize="7" letterSpacing="1.4">SEMENANJUNG</text>
+        <text x="365" y="148" fill="currentColor" opacity=".45" fontSize="7" letterSpacing="1.4">SABAH · SARAWAK</text>
+      </svg>
+    </div>
+  );
+};
+
 const Navbar = ({ isDark, toggleTheme, navigate }) => {
   const [open, setOpen] = useState(false);
   const links = [['Pulse', '#pulse'], ['Analyzer', '#analyzer'], ['Narratives', '#narratives'], ['Features', '#features']];
@@ -115,7 +176,7 @@ const MalaysiaPulse = ({ articleCount }) => {
           <div className="flex items-end gap-3 mt-3"><span className="font-display text-6xl font-bold text-ink dark:text-paper">+18</span><span className="mb-2 px-2 py-1 bg-[#16855b] text-white text-[10px] font-bold tracking-wider">POSITIVE</span></div>
           <div className="h-2 mt-6 flex overflow-hidden"><Motion.div initial={{ width: 0 }} whileInView={{ width: '46%' }} className="bg-[#16855b]"/><Motion.div initial={{ width: 0 }} whileInView={{ width: '34%' }} className="bg-[#b8862b]"/><Motion.div initial={{ width: 0 }} whileInView={{ width: '20%' }} className="bg-accent"/></div>
           <div className="flex justify-between mt-2 text-[9px] tracking-wider text-ink-faint"><span>46% POS</span><span>34% NEU</span><span>20% NEG</span></div>
-          <Sparkline values={[28,33,31,42,38,51,47,60,55,67,64]} className="w-full h-16 mt-6" />
+          <MalaysiaSignalMap />
         </div>
         <div>
           <div className="px-5 py-3 border-b border-ink/10 dark:border-paper/10 flex justify-between text-[9px] uppercase tracking-[.18em] text-ink-faint"><span>Trending now</span><span>Signal</span></div>
