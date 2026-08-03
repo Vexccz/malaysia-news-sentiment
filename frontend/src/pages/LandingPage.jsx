@@ -160,7 +160,7 @@ const Navbar = ({ isDark, toggleTheme, navigate }) => {
   );
 };
 
-const MalaysiaPulse = ({ articleCount }) => {
+const MalaysiaPulse = ({ articleCount, sourceCount }) => {
   const [active, setActive] = useState(0);
   useEffect(() => { const timer = setInterval(() => setActive(v => (v + 1) % pulseTopics.length), 2600); return () => clearInterval(timer); }, []);
   return (
@@ -186,7 +186,7 @@ const MalaysiaPulse = ({ articleCount }) => {
               <span className="font-display text-xs text-ink-faint">{String(i+1).padStart(2,'0')}</span><span className="text-sm font-semibold">{item.topic}</span><Sparkline values={item.spark} positive={item.score > 0} className="w-full h-7"/><span className={`text-right text-xs font-bold ${item.score > 0 ? 'text-[#16855b]' : 'text-accent'}`}>{item.score > 0 ? '+' : ''}{item.score}</span>
             </Motion.button>
           ))}
-          <div className="px-5 py-3 text-[9px] uppercase tracking-widest text-ink-faint flex justify-between"><span>{articleCount.toLocaleString()} indexed articles</span><span>15 sources</span></div>
+          <div className="px-5 py-3 text-[9px] uppercase tracking-widest text-ink-faint flex justify-between"><span>{articleCount.toLocaleString()} indexed articles</span><span>{sourceCount} active sources</span></div>
         </div>
       </div>
     </Motion.div>
@@ -243,9 +243,10 @@ const Footer = () => <footer className="border-t-2 border-ink dark:border-paper"
 const LandingPage = () => {
   const { user } = useAuth(); const navigate = useNavigate(); const { theme, setTheme } = useTheme();
   const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  const [articleCount,setArticleCount] = useState(11000); const [statsLive,setStatsLive] = useState(false);
+  const [articleCount,setArticleCount] = useState(11000); const [sourceCount,setSourceCount] = useState(3); const [statsLive,setStatsLive] = useState(false);
   const { scrollYProgress } = useScroll(); const progress = useTransform(scrollYProgress,[0,1],[0,1]);
   useEffect(()=>{fetch('https://mynewsa-api.onrender.com/api/history/public-stats').then(r=>r.ok?r.json():Promise.reject()).then(d=>{if(d.totalArticles){setArticleCount(d.totalArticles);setStatsLive(true)}}).catch(()=>{});},[]);
+  useEffect(()=>{fetch('https://mynewsa-api.onrender.com/api/v1/public/sources').then(r=>r.ok?r.json():Promise.reject()).then(d=>{const cutoff=Date.now()-7*24*60*60*1000;const active=(d.sources||[]).filter(s=>new Date(s.lastArticle).getTime()>cutoff && s.name!=='Unknown');if(active.length)setSourceCount(active.length)}).catch(()=>{});},[]);
   if (user) return <Navigate to="/dashboard" replace />;
   const features = [
     [BarChart3,'Sentiment Analysis','See polarity, confidence and narrative momentum—not only a label.'],[Network,'Entity Graph','Reveal links between people, institutions, companies and places.'],[TrendingUp,'Trending Topics','Watch local narratives rise or fall before they dominate the cycle.'],[ShieldCheck,'Source Credibility','Compare reliability and framing patterns across Malaysian publishers.'],[Brain,'AI Insights','Turn thousands of articles into a concise strategic intelligence brief.'],[FileDown,'Export Reports','Ship board-ready PDF, PowerPoint and structured data reports.']
@@ -269,7 +270,7 @@ const LandingPage = () => {
             <Motion.div variants={fadeUp} className="mt-8 flex flex-col sm:flex-row gap-3"><Motion.button whileHover="hover" whileTap={{scale:.97}} onClick={()=>navigate('/dashboard')} className="group whitespace-nowrap px-5 py-3.5 bg-ink dark:bg-paper text-paper dark:text-ink text-[11px] font-bold tracking-[.1em] uppercase hover:bg-accent dark:hover:bg-accent dark:hover:text-paper">Explore live dashboard <Motion.span variants={{hover:{x:5}}} className="inline-block"><ArrowRight className="inline w-4 h-4 ml-1"/></Motion.span></Motion.button><Motion.a whileHover={{y:-2}} href="#analyzer" className="whitespace-nowrap px-5 py-3.5 border-2 border-ink dark:border-paper text-[11px] font-bold tracking-[.1em] uppercase text-center hover:border-accent hover:text-accent">Analyze a headline <Motion.span animate={{rotate:[0,8,-8,0]}} transition={{duration:2.5,repeat:Infinity,repeatDelay:1.5}} className="inline-block"><Sparkles className="inline w-4 h-4 ml-1"/></Motion.span></Motion.a></Motion.div>
             <Motion.p variants={fadeUp} className="mt-4 text-[10px] uppercase tracking-widest text-ink-faint"><Check className="inline w-3 h-3 text-[#16855b] mr-1"/> No account required to explore</Motion.p>
           </div>
-          <MalaysiaPulse articleCount={articleCount}/>
+          <MalaysiaPulse articleCount={articleCount} sourceCount={sourceCount}/>
         </div>
       </Motion.div>
     </header>
@@ -277,7 +278,7 @@ const LandingPage = () => {
     <SignalTicker />
 
     <section className="border-y border-ink/15 dark:border-paper/15 bg-ink dark:bg-paper text-paper dark:text-ink"><div className="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 divide-x divide-paper/15 dark:divide-ink/15">
-      {[[articleCount,'ARTICLES INDEXED'],[15,'NEWS SOURCES'],[92,'MODEL ACCURACY'],['24/7','MEDIA MONITORING']].map(([n,l],i)=><Motion.div whileHover={{y:-4,backgroundColor:'rgba(199,47,53,.12)'}} transition={{duration:.25}} key={l} className="p-5 sm:p-7"><p className="font-display text-2xl sm:text-4xl font-bold">{typeof n==='number'?n.toLocaleString():n}{i===0?'+':i===2?'%':''}</p><p className="text-[8px] sm:text-[9px] tracking-[.18em] opacity-60 mt-1">{l}</p>{i===0&&<p className="text-[8px] mt-2 text-[#75d6ad]">● {statsLive?'LIVE DATABASE':'VERIFIED BASELINE'}</p>}</Motion.div>)}
+      {[[articleCount,'ARTICLES INDEXED'],[sourceCount,'ACTIVE SOURCES'],['WHY','EXPLAINABLE RESULTS'],['24/7','MEDIA MONITORING']].map(([n,l],i)=><Motion.div whileHover={{y:-4,backgroundColor:'rgba(199,47,53,.12)'}} transition={{duration:.25}} key={l} className="p-5 sm:p-7"><p className="font-display text-2xl sm:text-4xl font-bold">{typeof n==='number'?n.toLocaleString():n}{i===0?'+':''}</p><p className="text-[8px] sm:text-[9px] tracking-[.18em] opacity-60 mt-1">{l}</p>{i===0&&<p className="text-[8px] mt-2 text-[#75d6ad]">● {statsLive?'LIVE DATABASE':'VERIFIED BASELINE'}</p>}</Motion.div>)}
     </div></section>
 
     <AnimatedSection id="analyzer" className="max-w-7xl mx-auto px-5 sm:px-6 py-20 sm:py-28"><Motion.div variants={fadeUp}>{sectionHead('01 / Try the intelligence','Put any headline under the lens.','Test how language changes a story’s emotional signal. The full dashboard adds transformer analysis, summaries and entity context.')}</Motion.div><Motion.div variants={fadeUp}><HeadlineAnalyzer/></Motion.div></AnimatedSection>

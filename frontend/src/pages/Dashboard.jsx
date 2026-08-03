@@ -1160,6 +1160,9 @@ const Dashboard = () => {
             MY News <span className="italic">Sentiment</span>
           </h1>
           <div className="flex items-center justify-center gap-4 mt-2">
+            <span className="px-2 py-0.5 border border-accent/25 bg-accent/10 text-accent text-[9px] font-bold uppercase tracking-[0.18em]">
+              {dashboardData?.scope?.label || 'My Workspace'} · {dashboardData?.scope?.articleCount ?? stats.total} articles
+            </span>
             <span className="text-[10px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans">Vol 1</span>
             <span className="text-ink/20 dark:text-paper/20">•</span>
             <span className="text-[10px] uppercase tracking-[0.3em] text-ink-muted dark:text-ink-faint font-sans">Kuala Lumpur</span>

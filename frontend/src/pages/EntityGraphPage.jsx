@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Graph, Minimap } from '@antv/g6';
+
 import { useTheme } from '../context/ThemeContext';
 import { Search, List, Network, X, TrendingUp, BarChart3, FileText, Share2, PieChart } from 'lucide-react';
 import { LineChart, Line, PieChart as RechartsPie, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
@@ -32,6 +32,7 @@ export default function EntityGraphPage() {
   const [data, setData] = useState({ nodes: [], edges: [] });
   const [loading, setLoading] = useState(true);
   const [graphError, setGraphError] = useState('');
+  const [g6Module, setG6Module] = useState(null);
   const [graphRendering, setGraphRendering] = useState(false);
   const [selectedNode, setSelectedNode] = useState(null);
   const [detail, setDetail] = useState(null);
@@ -116,6 +117,13 @@ export default function EntityGraphPage() {
   }, [search, timeframe, typeFilter]);
 
   useEffect(() => { fetchGraph(); }, [fetchGraph]);
+
+  useEffect(() => {
+    if (!data.nodes.length || g6Module) return;
+    let active = true;
+    import('@antv/g6').then(module => { if (active) setG6Module(module); }).catch(error => setGraphError(error.message));
+    return () => { active = false; };
+  }, [data.nodes.length, g6Module]);
 
   const fetchDetail = async (name) => {
     setDetailLoading(true);
@@ -263,7 +271,7 @@ export default function EntityGraphPage() {
 
   // Initialize/update G6 graph with performance optimizations
   useEffect(() => {
-    if (loading || !data.nodes.length || !graphRef.current) return;
+    if (loading || !data.nodes.length || !graphRef.current || !g6Module) return;
     if (isMobile && viewMode === 'list') {
       if (graphInstance.current) {
         graphInstance.current.destroy();
@@ -376,7 +384,7 @@ export default function EntityGraphPage() {
       }),
     };
 
-    const graph = new Graph({
+    const graph = new g6Module.Graph({
       container,
       width,
       height,
@@ -404,7 +412,7 @@ export default function EntityGraphPage() {
         ],
       },
       plugins: [
-        new Minimap({
+        new g6Module.Minimap({
           size: [150, 100],
           className: 'g6-minimap',
         }),
@@ -501,7 +509,7 @@ export default function EntityGraphPage() {
         graphInstance.current = null;
       }
     };
-  }, [data, loading, isDark, viewMode, isMobile, getFilteredData, calculateEdgeSentiments, linkDistance, nodeStrength, highlightedPath, timelineValue, graphDataExtra, pathMode]);
+  }, [data, loading, isDark, viewMode, isMobile, getFilteredData, calculateEdgeSentiments, linkDistance, nodeStrength, highlightedPath, timelineValue, graphDataExtra, pathMode, g6Module]);
 
   // Handle resize
   useEffect(() => {
@@ -554,11 +562,14 @@ export default function EntityGraphPage() {
       `}</style>
       {/* Header */}
       <div className="mb-4">
-        <div className="flex items-baseline gap-3 mb-1">
+        <div className="flex flex-wrap items-baseline gap-3 mb-1">
           <h1 className="text-3xl font-bold text-ink dark:text-paper tracking-tight font-display flex items-center gap-2">
             <Network size={24} className="text-blue-600" />
             Entity Graph
           </h1>
+          <span className="px-2.5 py-1 text-[9px] font-bold tracking-[.14em] uppercase border border-blue-500/20 bg-blue-500/10 text-blue-600">
+            {(data.scope || 'workspace') === 'global' ? 'Global Intelligence' : 'My Workspace'} · {data.totalArticles || 0} articles
+          </span>
         </div>
         <p className="text-xs text-ink-muted dark:text-ink-faint tracking-wide uppercase font-sans">
           Explore relationships between entities in the news

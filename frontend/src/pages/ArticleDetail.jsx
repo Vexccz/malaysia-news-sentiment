@@ -158,6 +158,7 @@ const ArticleDetail = () => {
     title, description, content, source, url,
     publishedAt, sentiment, confidence, reason, categories,
     topic, viewCount, bookmarksCount, feedback, impactScore,
+    analysis_source, modelVersion, language, evidencePhrases = [], entities = [],
   } = article;
 
   const sourceLabel = deriveSourceLabel(source, url);
@@ -227,10 +228,21 @@ const ArticleDetail = () => {
 
           {reason && (
             <div className="border border-ink/8 p-5">
-              <p className="text-[10px] uppercase tracking-widest text-ink/40 font-semibold mb-3">AI Assessment</p>
+              <p className="text-[10px] uppercase tracking-widest text-ink/40 font-semibold mb-3">Why this sentiment?</p>
               <p className="text-sm text-ink/70 leading-relaxed italic">&ldquo;{reason}&rdquo;</p>
+              {evidencePhrases.length > 0 && <div className="flex flex-wrap gap-1.5 mt-3">{evidencePhrases.map(phrase => <mark key={phrase} className="px-2 py-1 bg-accent/10 text-accent text-[10px]">{phrase}</mark>)}</div>}
             </div>
           )}
+
+          <div className="border border-ink/8 p-5">
+            <p className="text-[10px] uppercase tracking-widest text-ink/40 font-semibold mb-3">Analysis Provenance</p>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div><span className="block text-ink/35 uppercase tracking-wider text-[9px]">Engine</span><strong>{modelVersion || analysis_source || 'Legacy model'}</strong></div>
+              <div><span className="block text-ink/35 uppercase tracking-wider text-[9px]">Language</span><strong>{String(language || 'en').toUpperCase()}</strong></div>
+              <div><span className="block text-ink/35 uppercase tracking-wider text-[9px]">Confidence</span><strong>{Math.round((confidence || 0) * 100)}%</strong></div>
+              <div><span className="block text-ink/35 uppercase tracking-wider text-[9px]">Entities</span><strong>{entities.length || 'Legacy'}</strong></div>
+            </div>
+          </div>
 
           {credibility && (
             <div className="border border-ink/8 p-5">
