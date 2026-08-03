@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion';
 import { ExternalLink, Bookmark, BookmarkCheck, Share2, Copy, X } from 'lucide-react';
+import { PushButton } from './kinetics';
 import SentimentBadge from './SentimentBadge';
 import { useArticleAnalysis } from '../context/ArticleAnalysisContext';
 
@@ -437,12 +438,13 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2">
                   {/* Bookmark */}
-                  <button
+                  <PushButton
+                    depth={3}
                     onClick={handleBookmark}
-                    className={`p-2 rounded-lg transition-colors ${
+                    className={`!p-2 !rounded-lg transition-colors ${
                       isBookmarked
-                        ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
-                        : 'hover:bg-slate-100 dark:hover:bg-[#252525] text-slate-600 dark:text-slate-300'
+                        ? '!bg-amber-100 !text-amber-600 dark:!bg-amber-900/30 dark:!text-amber-400'
+                        : '!bg-transparent hover:!bg-slate-100 dark:hover:!bg-[#252525] !text-slate-600 dark:!text-slate-300'
                     }`}
                     title={isBookmarked ? 'Remove bookmark' : 'Bookmark'}
                   >
@@ -451,28 +453,35 @@ const ArticleCardCompact = ({ article, onClick, onBookmark, isBookmarked }) => {
                     ) : (
                       <Bookmark className="w-4 h-4" />
                     )}
-                  </button>
+                  </PushButton>
 
                   {/* View Details */}
-                  <Link
-                    to={'/articles/' + (article._id || article.id)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-[#252525] text-slate-600 dark:text-slate-300 transition-colors"
+                  <PushButton
+                    depth={3}
+                    onClick={(e) => { e.stopPropagation(); }}
+                    className="!p-2 !rounded-lg !bg-transparent hover:!bg-slate-100 dark:hover:!bg-[#252525] !text-slate-600 dark:!text-slate-300"
                     title="View full analysis"
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-                    </svg>
-                  </Link>
+                    <Link
+                      to={'/articles/' + (article._id || article.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                      </svg>
+                    </Link>
+                  </PushButton>
 
                   {/* Open External */}
-                  <button
+                  <PushButton
+                    depth={3}
                     onClick={handleOpenExternal}
-                    className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-[#252525] text-slate-600 dark:text-slate-300 transition-colors"
+                    className="!p-2 !rounded-lg !bg-transparent hover:!bg-slate-100 dark:hover:!bg-[#252525] !text-slate-600 dark:!text-slate-300"
                     title="Open article"
                   >
                     <ExternalLink className="w-4 h-4" />
-                  </button>
+                  </PushButton>
                 </div>
               </div>
             </div>

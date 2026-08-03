@@ -6,6 +6,7 @@ import { useLanguage } from '../context/LanguageContext';
 import SearchBarClean from '../components/SearchBarClean';
 import ArticleCardCompact from '../components/ArticleCardCompact';
 import { StaggerList, StaggerItem } from '../components/StaggerList';
+import { ChoiceChip } from '../components/kinetics';
 import SentimentDonutChart from '../components/SentimentDonutChart';
 import SentimentHorizontalBar from '../components/SentimentHorizontalBar';
 import SentimentAreaChart from '../components/SentimentAreaChart';
@@ -1423,17 +1424,12 @@ const Dashboard = () => {
                       <SectionHeader title={t("recentArticles")} badge={filteredArticles.length} />
                       <div className="flex gap-2 overflow-x-auto pb-3 mb-4 scrollbar-hide -mx-1 px-1">
                         {FILTER_OPTIONS.map(opt => (
-                          <button 
-                            key={opt.key} 
-                            className={`shrink-0 px-3 py-1 text-[11px] uppercase tracking-wider font-medium transition-all border ${
-                              filter === opt.key 
-                                ? 'border-ink dark:border-paper text-ink dark:text-paper font-bold' 
-                                : 'border-transparent text-ink-muted dark:text-ink-faint hover:border-ink/20 dark:hover:border-paper/20'
-                            }`}
+                          <ChoiceChip
+                            key={opt.key}
+                            label={opt.label}
+                            active={filter === opt.key}
                             onClick={() => setFilter(opt.key)}
-                          >
-                            {opt.label}
-                          </button>
+                          />
                         ))}
                       </div>
 
@@ -1845,17 +1841,12 @@ const Dashboard = () => {
                   <SectionHeader title={t("recentArticles")} badge={filteredArticles.length}>
                     <div className="flex gap-1.5">
                       {FILTER_OPTIONS.map(opt => (
-                        <button
+                        <ChoiceChip
                           key={opt.key}
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                            filter === opt.key
-                              ? 'bg-blue-600 text-white shadow-sm'
-                              : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
-                          }`}
+                          label={opt.label}
+                          active={filter === opt.key}
                           onClick={() => setFilter(opt.key)}
-                        >
-                          {opt.label}
-                        </button>
+                        />
                       ))}
                     </div>
                   </SectionHeader>
