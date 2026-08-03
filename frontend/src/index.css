@@ -97,6 +97,23 @@ h3 { font-weight: 600; }
   scrollbar-width: none;
 }
 
+/* Kinetics component CSS variables */
+:root {
+  --ink: #1A1A1A;
+  --bg: #FAF8F3;
+  --bg-card: #FFFFFF;
+  --accent: #C0392B;
+  --paper: #FAF8F3;
+}
+
+.dark {
+  --ink: #F5F3EE;
+  --bg: #12110F;
+  --bg-card: #1A1917;
+  --accent: #E8A478;
+  --paper: #12110F;
+}
+
 /* Legacy CSS variable bridge for components that still use them */
 :root {
   --accent-rgb: 139 26 26;
