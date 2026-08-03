@@ -21,7 +21,14 @@ const articleSchema = new mongoose.Schema(
     stateLocation: { type: String, default: 'General' }, 
     language:      { type: String, default: 'en' },
     categories:    [{ type: String }],
-    analysis_source: { type: String, default: 'local' }, 
+    analysis_source: { type: String, default: 'local' },
+    modelVersion: { type: String, default: '' },
+    evidencePhrases: [{ type: String }],
+    entities: [{
+      name: { type: String, required: true },
+      category: { type: String, required: true },
+      type: { type: String, required: true },
+    }],
     embedding:     { type: [Number], index: false }, // 384 dimensions
 
     // ── Popularity & User Stats (#1-3) ────────────────────────
@@ -60,6 +67,12 @@ articleSchema.index({ createdAt: -1 });
 articleSchema.index({ updatedAt: -1 }); // #Fix for Bumping to top
 articleSchema.index({ isAlert: 1 });
 articleSchema.index({ stateLocation: 1 });
-articleSchema.index({ userId: 1, updatedAt: -1 }); // #Fix for User History performance
+articleSchema.index({ userId: 1, updatedAt: -1 }); // #Fix for Bumping to top
+articleSchema.index({ 'entities.name': 1 });
+
+articleSchema.pre('validate', function normalizeStateLocation() {
+  const { normalizeState } = require('../services/stateNormalizer');
+  this.stateLocation = normalizeState(this.stateLocation);
+});
 
 module.exports = mongoose.model('Article', articleSchema);

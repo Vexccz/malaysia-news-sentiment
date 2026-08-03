@@ -306,7 +306,9 @@ const dashboardInit = async (req, res) => {
     }
 
     const [rawArticles, sentimentsAgg, alertCount, trendsAgg, keywordDocs] = await Promise.all([
-      Article.find(match).sort({ updatedAt: -1 }).skip(skip).limit(limitNum * 2).lean(),
+      Article.find(match)
+        .select('title description source url urlToImage publishedAt topic sentiment aiSentiment confidence reason stateLocation language categories analysis_source modelVersion evidencePhrases entities impactScore isAlert viewCount bookmarksCount createdAt updatedAt')
+        .sort({ updatedAt: -1 }).skip(skip).limit(limitNum * 2).lean(),
       Article.aggregate([{ $match: match }, { $group: { _id: '$sentiment', count: { $sum: 1 } } }]),
       Article.countDocuments({ ...match, isAlert: true }),
       Article.aggregate([
@@ -422,6 +424,11 @@ const dashboardInit = async (req, res) => {
       trends:  Object.values(grouped),
       keywords,
       periodComparison,
+      scope: {
+        type: isValidObjectId(userId) ? 'workspace' : 'global',
+        label: isValidObjectId(userId) ? 'My Workspace' : 'Global Intelligence',
+        articleCount: total,
+      },
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

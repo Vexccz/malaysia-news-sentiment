@@ -6,43 +6,14 @@ let _cacheTime = 0;
 async function getCustomEntities() {
   const now = Date.now();
   if (now - _cacheTime > 300000) { // 5 min cache
-    try { _customEntitiesCache = await CustomEntity.find({ isActive: true }).select('name synonyms category').lean(); } catch(e) { _customEntitiesCache = []; }
+    try { _customEntitiesCache = await CustomEntity.find({ isActive: true }).select('name synonyms category isActive').lean(); } catch(e) { _customEntitiesCache = []; }
     _cacheTime = now;
   }
   return _customEntitiesCache;
 }
 const isValidObjectId = (id) => id && mongoose.Types.ObjectId.isValid(id) && id !== 'guest';
 const Article = require('../models/Article');
-
-// Malaysian entity extraction patterns
-const entityPatterns = {
-  politicians: [
-    'Anwar Ibrahim', 'Muhyiddin Yassin', 'Ismail Sabri', 'Najib Razak',
-    'Mahathir', 'Ahmad Zahid', 'Hadi Awang', 'Lim Guan Eng',
-    'Rafizi Ramli', 'Khairy Jamaluddin', 'Syed Saddiq', 'Wan Azizah',
-    'Tengku Zafrul', 'Fadillah Yusof', 'Johari Abdul Ghani',
-    'Anthony Loke', 'Nik Abduh', 'Mat Sabu', 'Azmin Ali',
-    'Hamzah Zainudin', 'Wee Ka Siong', 'Hannah Yeoh', 'Nurul Izzah',
-    'Saifuddin Nasution', 'Fahmi Fadzil', 'Gobind Singh',
-  ],
-  parties: [
-    'UMNO', 'PKR', 'DAP', 'PAS', 'Bersatu', 'GPS', 'MCA', 'MIC',
-    'Pakatan Harapan', 'Perikatan Nasional', 'Barisan Nasional',
-    'Gabungan Parti Sarawak', 'Warisan', 'MUDA', 'Pejuang',
-  ],
-  organizations: [
-    'MACC', 'SPR', 'Bank Negara', 'Petronas', 'Khazanah',
-    'EPF', 'KWSP', 'Bursa Malaysia', 'TNB', 'Proton', 'Maybank',
-    'PDRM', 'ATM', 'KKM', 'MOH', 'MOF', 'AGC',
-    'Suhakam', 'Election Commission', 'Parliament',
-    'IMF', 'World Bank', 'ASEAN', 'UN', 'WHO',
-  ],
-  locations: [
-    'Putrajaya', 'Kuala Lumpur', 'Sabah', 'Sarawak', 'Johor',
-    'Penang', 'Selangor', 'Perak', 'Kedah', 'Kelantan',
-    'Terengganu', 'Pahang', 'Melaka', 'Negeri Sembilan', 'Perlis',
-  ],
-};
+const { entityPatterns, extractEntities } = require('../services/entityExtraction');
 
 const getTimeFilter = (timeframe) => {
   if (!timeframe) return {};
@@ -57,20 +28,6 @@ const getTimeFilter = (timeframe) => {
   return { createdAt: { $gte: since } };
 };
 
-const extractEntities = (text, typeFilter) => {
-  const found = [];
-  const patterns = typeFilter ? { [typeFilter]: entityPatterns[typeFilter] } : entityPatterns;
-  for (const [category, entities] of Object.entries(patterns)) {
-    if (!entities) continue;
-    for (const entity of entities) {
-      if (text.toLowerCase().includes(entity.toLowerCase())) {
-        found.push({ name: entity, category });
-      }
-    }
-  }
-  return found;
-};
-
 /**
  * GET /api/entities/graph?query=&timeframe=24h|7d|30d&type=politicians|parties|organizations|locations
  */
@@ -78,10 +35,10 @@ const getEntityGraph = async (req, res) => {
   const customEnts = await getCustomEntities();
   try {
     const { query, timeframe, type } = req.query;
-    const userId = req.user?.id;
+    const userId = req.userId;
 
     const filter = { ...getTimeFilter(timeframe) };
-    if (isValidObjectId(userId)) filter.userId = userId;
+    if (req.userRole !== 'admin' && isValidObjectId(userId)) filter.userId = userId;
     if (query) {
       filter.$or = [
         { title: { $regex: query, $options: 'i' } },
@@ -92,8 +49,8 @@ const getEntityGraph = async (req, res) => {
 
     const articles = await Article.find(filter)
       .sort({ createdAt: -1 })
-      .limit(200)
-      .select('title description sentiment source content createdAt')
+      .limit(req.userRole === 'admin' ? 1000 : 500)
+      .select('title description sentiment source content createdAt entities')
       .lean();
 
     if (!articles.length) return res.json({ nodes: [], edges: [], totalArticles: 0 });
@@ -104,7 +61,9 @@ const getEntityGraph = async (req, res) => {
 
     for (const article of articles) {
       const text = `${article.title} ${article.description || ''} ${article.content || ''}`;
-      const foundEntities = extractEntities(text, type, customEnts);
+      const foundEntities = article.entities?.length
+        ? article.entities.filter(entity => !type || entity.category === type)
+        : extractEntities(text, type, customEnts);
 
       for (const entity of foundEntities) {
         if (!entityMentions[entity.name]) {
@@ -186,7 +145,7 @@ const getEntityGraph = async (req, res) => {
       .sort((a, b) => b.weight - a.weight)
       .slice(0, 60);
 
-    res.json({ nodes, edges, totalArticles: articles.length });
+    res.json({ nodes, edges, totalArticles: articles.length, scope: req.userRole === 'admin' ? 'global' : 'workspace' });
   } catch (error) {
     console.error('Entity graph error:', error);
     res.status(500).json({ error: 'Failed to generate entity graph' });
@@ -222,10 +181,10 @@ const getEntityDetail = async (req, res) => {
   const customEnts = await getCustomEntities();
   try {
     const { name } = req.params;
-    const userId = req.user?.id;
+    const userId = req.userId;
 
     const filter = {};
-    if (isValidObjectId(userId)) filter.userId = userId;
+    if (req.userRole !== 'admin' && isValidObjectId(userId)) filter.userId = userId;
     filter.$or = [
       { title: { $regex: name, $options: 'i' } },
       { description: { $regex: name, $options: 'i' } },

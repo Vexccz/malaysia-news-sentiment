@@ -7,6 +7,8 @@ const { fetchAstroAwaniNews } = require('../services/astroAwaniService');
 const { fetchMalaysiakiniNews } = require('../services/malaysiakiniService');
 const { analyzeSentiment, analyseArticle, getClient } = require('../services/openaiService');
 const Article = require('../models/Article');
+const { extractEntities } = require('../services/entityExtraction');
+const { normalizeState } = require('../services/stateNormalizer');
 
 // Helper: check if string is valid MongoDB ObjectId
 const isValidObjectId = (id) => id && mongoose.Types.ObjectId.isValid(id) && id !== 'guest';
@@ -328,6 +330,10 @@ const getAndAnalyzeNews = async (req, res) => {
               publishedAt: article.publishedAt ? new Date(article.publishedAt) : new Date(),
               topic:       q,
               ...analysis,
+              stateLocation: normalizeState(analysis.stateLocation),
+              modelVersion: analysis.modelVersion || analysis.analysis_source || 'local',
+              evidencePhrases: analysis.evidencePhrases || [],
+              entities: extractEntities(`${article.title} ${article.description || ''} ${article.content || ''}`),
               isAlert:     alert,
               userId:      (req.isGuest ? null : req.userId) || null,
               impactScore: impact,
@@ -504,7 +510,20 @@ const getRegionalSentiment = async (req, res) => {
       { $group: { _id: '$stateLocation', count: { $sum: 1 }, positive: { $sum: { $cond: [{ $eq: ['$sentiment', 'Positive'] }, 1, 0] } }, negative: { $sum: { $cond: [{ $eq: ['$sentiment', 'Negative'] }, 1, 0] } }, neutral:  { $sum: { $cond: [{ $eq: ['$sentiment', 'Neutral'] }, 1, 0] } } } },
       { $project: { state: '$_id', count: 1, avgScore: { $divide: [{ $add: ['$positive', { $multiply: ['$neutral', 0.5] }] }, '$count'] } } }
     ]);
-    res.json(regionalData);
+    const merged = new Map();
+    regionalData.forEach(row => {
+      const state = normalizeState(row.state);
+      if (state === 'General') return;
+      const current = merged.get(state) || { state, count: 0, weightedScore: 0 };
+      current.count += row.count;
+      current.weightedScore += row.avgScore * row.count;
+      merged.set(state, current);
+    });
+    res.json([...merged.values()].map(row => ({
+      state: row.state,
+      count: row.count,
+      avgScore: row.count ? row.weightedScore / row.count : 0,
+    })));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -37,6 +37,20 @@ const entityPatterns = {
   ],
 };
 
+const entityAliases = {
+  'Anwar Ibrahim': ['Anwar', 'PM Anwar', 'Datuk Seri Anwar'],
+  'Muhyiddin Yassin': ['Muhyiddin', 'Tan Sri Muhyiddin'],
+  'Najib Razak': ['Najib', 'Datuk Seri Najib'],
+  'Mahathir': ['Mahathir Mohamad', 'Dr Mahathir', 'Tun M'],
+  'Ahmad Zahid': ['Zahid Hamidi', 'Ahmad Zahid Hamidi'],
+  'Bank Negara': ['Bank Negara Malaysia', 'BNM'],
+  'MACC': ['Malaysian Anti-Corruption Commission', 'SPRM'],
+  'SPR': ['Election Commission'],
+  'EPF': ['Employees Provident Fund', 'KWSP'],
+  'Kuala Lumpur': ['KL'],
+  'Penang': ['Pulau Pinang'],
+};
+
 const categoryToType = (category) => {
   if (category === 'politicians') return 'PERSON';
   if (category === 'locations') return 'LOCATION';
@@ -83,7 +97,8 @@ const extractEntities = (text, typeFilter, customEntities = []) => {
   for (const [category, entities] of Object.entries(patterns)) {
     if (!entities) continue;
     for (const entity of entities) {
-      if (buildMatcher(entity).test(text)) {
+      const terms = [entity, ...(entityAliases[entity] || [])];
+      if (terms.some(term => buildMatcher(term).test(text))) {
         found.push({ name: entity, category, type: categoryToType(category) });
       }
     }
@@ -105,4 +120,4 @@ const extractEntities = (text, typeFilter, customEntities = []) => {
   return found;
 };
 
-module.exports = { entityPatterns, extractEntities, categoryToType };
+module.exports = { entityPatterns, entityAliases, extractEntities, categoryToType };
